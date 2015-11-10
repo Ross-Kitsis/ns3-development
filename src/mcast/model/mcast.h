@@ -48,7 +48,7 @@ namespace ns3
 		  virtual void PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const;
 
 		  //Set protocols parameters
-		  //void SetHelloEnable(bool f){EnableHello = f;}
+		  void SetHelloEnable(bool f){EnableHello = f;}
 
 		protected:
 		  virtual void DoInitialize(void);
@@ -56,6 +56,7 @@ namespace ns3
 
 		  Time HelloInterval; //Interval between which nodes (may) send hello msgs
 		  bool EnableBroadcast; //Indicates whether nodes should send broadcast msgs to neighbors
+		  bool EnableHello; //Indicates if hello packets should be sent
 
 		  //Ip Protocol
 		  Ptr<Ipv6> m_ipv6;
@@ -65,6 +66,29 @@ namespace ns3
 		  std::map< Ptr<Socket>, Ipv6InterfaceAddress > m_socketSubnetBroadcastAddresses;
 		  /// Loopback device used to defer transmissions until packets fully formed
 		  Ptr<NetDevice> m_lo;
+		private:
+		  //Start protocol operation
+		  void Start();
+
+		  ///Receive packets
+		  //Receive hello packets from neighbors
+		  void RecHello(Ptr<Socket> socket);
+
+		  ///Send packets
+		  //Send hello packet to all neighbors in range
+		  void SendHello();
+
+		  //Hello Time
+		  Timer m_htimer;
+
+		  //Schedule next hello message
+		  void HelloTimerExpire();
+
+		  //Uniform random variable provider
+		  Ptr<UniformRandomVariable> m_uniformRandomVariable;
+
+		  //Last broadcast time
+		  Time m_lastHelloBcastTime;
 
 		};
 	}
