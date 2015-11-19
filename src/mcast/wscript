@@ -10,23 +10,23 @@ def build(bld):
     module = bld.create_ns3_module('mcast', ['internet', 'wifi'])
     module.source = [
         'model/mcast.cc',
-        'helper/mcast-helper.cc',
+        'model/mcast-neighbor.cc',
         ]
 
-    module_test = bld.create_ns3_module_test_library('mcast')
-    module_test.source = [
-        'test/mcast-test-suite.cc',
-        ]
+#    module_test = bld.create_ns3_module_test_library('mcast')
+#    module_test.source = [
+#        'test/mcast-test-suite.cc',
+#        ]
 
     headers = bld(features='ns3header')
     headers.module = 'mcast'
     headers.source = [
         'model/mcast.h',
-        'helper/mcast-helper.h',
+        'model/mcast-neighbor.h',
         ]
 
-    if bld.env.ENABLE_EXAMPLES:
-        bld.recurse('examples')
+#    if bld.env.ENABLE_EXAMPLES:
+#        bld.recurse('examples')
 
     #bld.ns3_python_bindings()
 

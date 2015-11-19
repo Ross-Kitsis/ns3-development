@@ -17,6 +17,7 @@
 //#include "ns3/ipv4-l3-protocol.h"
 #include "ns3/ipv6-l3-protocol.h"
 
+#include "ns3/mcast-neighbor.h"
 
 #include <map>
 
@@ -28,35 +29,43 @@ namespace ns3
 		{
 		public:
 
-			static TypeId GetTypeID(void);
+			static TypeId GetTypeId(void);
 			static const uint32_t MCAST_PORT;
 
 			RoutingProtocol();
 			virtual ~RoutingProtocol();
 			virtual void DoDispose();
 
-			//Inherit from IPv6 Routing (virtual methods in header)
-		  Ptr<Ipv6Route> RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr);
+		  // From Ipv6RoutingProtocol
+		  Ptr<Ipv6Route> RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif,
+		                              Socket::SocketErrno &sockerr);
 		  bool RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const NetDevice> idev,
-		                     UnicastForwardCallback ucb, MulticastForwardCallback mcb,
-		                     LocalDeliverCallback lcb, ErrorCallback ecb);
+		                   UnicastForwardCallback ucb, MulticastForwardCallback mcb,
+		                   LocalDeliverCallback lcb, ErrorCallback ecb);
 		  virtual void NotifyInterfaceUp (uint32_t interface);
 		  virtual void NotifyInterfaceDown (uint32_t interface);
 		  virtual void NotifyAddAddress (uint32_t interface, Ipv6InterfaceAddress address);
 		  virtual void NotifyRemoveAddress (uint32_t interface, Ipv6InterfaceAddress address);
+		  virtual void NotifyAddRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address nextHop,
+		                               uint32_t interface, Ipv6Address prefixToUse = Ipv6Address::GetZero ());
+		  virtual void NotifyRemoveRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address nextHop,
+		                                  uint32_t interface, Ipv6Address prefixToUse = Ipv6Address::GetZero ());
 		  virtual void SetIpv6 (Ptr<Ipv6> ipv6);
 		  virtual void PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const;
 
+
+
 		  //Set protocols parameters
 		  void SetHelloEnable(bool f){EnableHello = f;}
+
 
 		protected:
 		  virtual void DoInitialize(void);
 		private:
 
 		  Time HelloInterval; //Interval between which nodes (may) send hello msgs
-		  bool EnableBroadcast; //Indicates whether nodes should send broadcast msgs to neighbors
 		  bool EnableHello; //Indicates if hello packets should be sent
+		  bool EnableBroadcast; //Indicates whether nodes should send broadcast msgs to neighbors
 
 		  //Ip Protocol
 		  Ptr<Ipv6> m_ipv6;
@@ -89,6 +98,11 @@ namespace ns3
 
 		  //Last broadcast time
 		  Time m_lastHelloBcastTime;
+
+		  /// Handle neighbors
+		  Neighbors m_nb;
+
+
 
 		};
 	}
