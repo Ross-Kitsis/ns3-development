@@ -7,9 +7,11 @@
 #include "ns3/node.h"
 #include "ns3/random-variable-stream.h"
 #include "ns3/output-stream-wrapper.h"
+#include "ns3/nstime.h"
 
 //#include "ns3/ipv4-routing-protocol.h"
 #include "ns3/ipv6-routing-protocol.h"
+#include "ns3/ipv6.h"
 
 //#include "ns3/ipv4-interface.h"
 #include "ns3/ipv6-interface.h"
@@ -17,7 +19,9 @@
 //#include "ns3/ipv4-l3-protocol.h"
 #include "ns3/ipv6-l3-protocol.h"
 
-#include "ns3/mcast-neighbor.h"
+#include "mcast-neighbor.h"
+#include "mcast-packet.h"
+
 
 #include <map>
 
@@ -63,18 +67,19 @@ namespace ns3
 		  virtual void DoInitialize(void);
 		private:
 
-		  Time HelloInterval; //Interval between which nodes (may) send hello msgs
+		  uint16_t HelloInterval; //Interval between which nodes (may) send hello msgs
 		  bool EnableHello; //Indicates if hello packets should be sent
 		  bool EnableBroadcast; //Indicates whether nodes should send broadcast msgs to neighbors
 
-		  //Ip Protocol
-		  Ptr<Ipv6> m_ipv6;
+
 		  //Unicast socket per IP interface, map socket to interface address
 		  std::map<Ptr<Socket>,Ipv6InterfaceAddress> m_socketAddresses;
 		  //Subnet directed broadcast for each interface (Use multiple interfaces?)
 		  std::map< Ptr<Socket>, Ipv6InterfaceAddress > m_socketSubnetBroadcastAddresses;
 		  /// Loopback device used to defer transmissions until packets fully formed
 		  Ptr<NetDevice> m_lo;
+
+
 		private:
 		  //Start protocol operation
 		  void Start();
@@ -87,11 +92,23 @@ namespace ns3
 		  //Send hello packet to all neighbors in range
 		  void SendHello();
 
+		  //Send packet via socket
+		  void SendTo (Ptr<Socket> socket, Ptr<Packet> packet, Ipv6Address destination);
+
+		  //Receive packets
+		  void RecvMcast(Ptr<Socket> socket);
+
 		  //Hello Time
 		  Timer m_htimer;
 
 		  //Schedule next hello message
 		  void HelloTimerExpire();
+
+		  //Get node position as a vector
+		  Vector GetNodePosition (Ptr<Ipv6> ipv6);
+
+		  //Get node position as a vector
+		  Vector GetNodeVelocity (Ptr<Ipv6> ipv6);
 
 		  //Uniform random variable provider
 		  Ptr<UniformRandomVariable> m_uniformRandomVariable;
@@ -102,6 +119,18 @@ namespace ns3
 		  /// Handle neighbors
 		  Neighbors m_nb;
 
+		  ///Multiple of hello interval to keep neighbor relationship alive
+		  uint8_t m_hMult;
+
+		  //Holdtime for neighbor
+//		  Time m_NeighborLifetime;
+		  uint16_t m_NeighborLifetime;
+
+		  ///Internal pointer to IPv6
+		  Ptr<Ipv6> m_ipv6;
+
+		  ///mcast Radius
+		  uint16_t m_radius;
 
 
 		};
