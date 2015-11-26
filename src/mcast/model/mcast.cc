@@ -30,15 +30,15 @@ NS_OBJECT_ENSURE_REGISTERED(RoutingProtocol);
 const uint32_t RoutingProtocol::MCAST_PORT = 701;
 
 RoutingProtocol::RoutingProtocol () :
-	  		HelloInterval (3), //Hello broadcast interval
-	  		EnableHello (false), //Enable hello msgs
-	  		EnableBroadcast(true), //Enable broadcasts
-	  		m_lastHelloBcastTime (Seconds (0)), //Initialize last broadcast time to 0
-	  		m_nb (Seconds (HelloInterval)), //Initialize neighbor broadcasting every hello interval seconds
-	  		m_hMult(5),
-	  		m_NeighborLifetime(m_hMult * HelloInterval),
-	  		m_ipv6 (0),
-	  		m_radius(50)
+	  				HelloInterval (3), //Hello broadcast interval
+	  				EnableHello (false), //Enable hello msgs
+	  				EnableBroadcast(true), //Enable broadcasts
+	  				m_lastHelloBcastTime (Seconds (0)), //Initialize last broadcast time to 0
+	  				m_nb (Seconds (HelloInterval)), //Initialize neighbor broadcasting every hello interval seconds
+	  				m_hMult(5),
+	  				m_NeighborLifetime(m_hMult * HelloInterval),
+	  				m_ipv6 (0),
+	  				m_radius(50)
 {
 
 }
@@ -52,43 +52,43 @@ RoutingProtocol::GetTypeId ()
 {
 
 
-  static TypeId tid = TypeId ("ns3::mcast::RoutingProtocol")
-    .SetParent<Ipv6RoutingProtocol> ()
-    .SetGroupName("mcast")
-    .AddConstructor<RoutingProtocol> ()
-    ;
+	static TypeId tid = TypeId ("ns3::mcast::RoutingProtocol")
+    		.SetParent<Ipv6RoutingProtocol> ()
+    		.SetGroupName("mcast")
+    		.AddConstructor<RoutingProtocol> ()
+    		;
 
-    return tid;
+	return tid;
 
 }
 
 void
 RoutingProtocol::Start ()
 {
-  NS_LOG_FUNCTION (this);
-  if (EnableHello)
-    {
-      m_nb.ScheduleTimer ();
-    }
-  //m_rreqRateLimitTimer.SetFunction (&RoutingProtocol::RreqRateLimitTimerExpire, this);
-  //m_rreqRateLimitTimer.Schedule (Seconds (1));
+	NS_LOG_FUNCTION (this);
+	if (EnableHello)
+	{
+		m_nb.ScheduleTimer ();
+	}
+	//m_rreqRateLimitTimer.SetFunction (&RoutingProtocol::RreqRateLimitTimerExpire, this);
+	//m_rreqRateLimitTimer.Schedule (Seconds (1));
 
-  //m_rerrRateLimitTimer.SetFunction (&RoutingProtocol::RerrRateLimitTimerExpire, this);
-  //m_rerrRateLimitTimer.Schedule (Seconds (1));
+	//m_rerrRateLimitTimer.SetFunction (&RoutingProtocol::RerrRateLimitTimerExpire, this);
+	//m_rerrRateLimitTimer.Schedule (Seconds (1));
 
 }
 
 Ptr<Ipv6Route>
 RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr)
 {
-  Ptr<Ipv6Route> route;
-  return route;
+	Ptr<Ipv6Route> route;
+	return route;
 }
 
 bool
 RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const NetDevice> idev,
-                   UnicastForwardCallback ucb, MulticastForwardCallback mcb,
-                   LocalDeliverCallback lcb, ErrorCallback ecb)
+		UnicastForwardCallback ucb, MulticastForwardCallback mcb,
+		LocalDeliverCallback lcb, ErrorCallback ecb)
 {
 	bool toReturn = false;
 	return toReturn;
@@ -130,7 +130,7 @@ RoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 	socket->SetAttribute ("IpTtl", UintegerValue (1));
 	m_socketSubnetBroadcastAddresses.insert (std::make_pair (socket, iface));
 
-	*/
+	 */
 
 
 	Ptr<NetDevice> dev = m_ipv6->GetNetDevice (m_ipv6->GetInterfaceForAddress (iface.GetAddress ()));
@@ -139,17 +139,17 @@ RoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 
 
 	// Add local broadcast record to the routing table
-//
-//	RoutingTableEntry rt (/*device=*/ dev, /*dst=*/ iface.GetBroadcast (), /*know seqno=*/ true, /*seqno=*/ 0, /*iface=*/ iface,
-//			/*hops=*/ 1, /*next hop=*/ iface.GetBroadcast (), /*lifetime=*/ Simulator::GetMaximumSimulationTime ());
-//	m_routingTable.AddRoute (rt);
+	//
+	//	RoutingTableEntry rt (/*device=*/ dev, /*dst=*/ iface.GetBroadcast (), /*know seqno=*/ true, /*seqno=*/ 0, /*iface=*/ iface,
+	//			/*hops=*/ 1, /*next hop=*/ iface.GetBroadcast (), /*lifetime=*/ Simulator::GetMaximumSimulationTime ());
+	//	m_routingTable.AddRoute (rt);
 
-//	if (l3->GetInterface (i)->GetArpCache ())
-//	{
-//		m_nb.AddArpCache (l3->GetInterface (i)->GetArpCache ());
-//	}
+	//	if (l3->GetInterface (i)->GetArpCache ())
+	//	{
+	//		m_nb.AddArpCache (l3->GetInterface (i)->GetArpCache ());
+	//	}
 
-//////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////
 
 	// Allow neighbor manager use this interface for layer 2 feedback if possible
 	Ptr<WifiNetDevice> wifi = dev->GetObject<WifiNetDevice> ();
@@ -181,6 +181,113 @@ void
 RoutingProtocol::RecvMcast(Ptr<Socket> socket)
 {
 
+	NS_LOG_FUNCTION (this << socket);
+	Address sourceAddress;
+	Ptr<Packet> packet = socket->RecvFrom (sourceAddress);
+	Inet6SocketAddress inetSourceAddr = Inet6SocketAddress::ConvertFrom (sourceAddress);
+	Ipv6Address sender = inetSourceAddr.GetIpv6();
+	Ipv6Address receiver;
+
+	/*
+
+	if (m_socketAddresses.find (socket) != m_socketAddresses.end ())
+	{
+		receiver = m_socketAddresses[socket].GetLocal ();
+	}
+	else if(m_socketSubnetBroadcastAddresses.find (socket) != m_socketSubnetBroadcastAddresses.end ())
+	{
+		receiver = m_socketSubnetBroadcastAddresses[socket].GetLocal ();
+	}
+	else
+	{
+		NS_ASSERT_MSG (false, "Received a packet from an unknown socket");
+	}
+	*/
+	receiver = m_socketAddresses[socket].GetAddress();
+	NS_LOG_DEBUG ("Thesis node " << this << " received a MCAST packet from " << sender << " to " << receiver);
+
+
+//	UpdateRouteToNeighbor (sender, receiver);
+	TypeHeader tHeader (HELLO);
+	packet->RemoveHeader (tHeader);
+
+
+	if (!tHeader.IsValid ())
+	{
+		//Unknown packet type
+		NS_LOG_DEBUG ("AODV message " << packet->GetUid () << " with unknown type received: " << tHeader.Get () << ". Drop");
+		return; // drop
+	}
+	switch (tHeader.Get ())
+	{
+	case HELLO:
+	{
+		RecvHello (packet, receiver, sender);
+		break;
+	}
+	}
+}
+
+/*
+ * Receive hello msgs
+ */
+void
+RoutingProtocol::RecvHello (Ptr<Packet> p, Ipv6Address receiver, Ipv6Address sender)
+{
+	NS_LOG_FUNCTION (this << " Receiving hello message");
+	HelloHeader HelloHeader;
+	p->RemoveHeader (HelloHeader);
+	Ipv6Address dst = HelloHeader.GetDst ();
+
+	//NS_LOG_LOGIC (this << " processing hello from  " << HelloHeader.GetOrigin ());
+
+	uint8_t hop = HelloHeader.GetHopCount () + 1;
+	HelloHeader.SetHopCount (hop);
+
+	ProcessHello (HelloHeader, receiver);
+	return;
+
+}
+
+
+void
+RoutingProtocol::ProcessHello(HelloHeader const & helloHeader, Ipv6Address receiver)
+{
+	NS_LOG_FUNCTION (this << " processing hello message ");
+
+
+	/*
+	 *  Whenever a node receives a Hello message from a neighbor, the node
+	 * SHOULD make sure that it has an active route to the neighbor, and
+	 * create one if necessary.
+	 */
+//	RoutingTableEntry toNeighbor;
+//	if (!m_routingTable.LookupRoute (rrepHeader.GetDst (), toNeighbor))
+//	{
+//		Ptr<NetDevice> dev = m_ipv4->GetNetDevice (m_ipv4->GetInterfaceForAddress (receiver));
+//		RoutingTableEntry newEntry (/*device=*/ dev, /*dst=*/ rrepHeader.GetDst (), /*validSeqNo=*/ true, /*seqno=*/ rrepHeader.GetDstSeqno (),
+//				/*iface=*/ m_ipv4->GetAddress (m_ipv4->GetInterfaceForAddress (receiver), 0),
+//				/*hop=*/ 1, /*nextHop=*/ rrepHeader.GetDst (), /*lifeTime=*/ rrepHeader.GetLifeTime ());
+//		m_routingTable.AddRoute (newEntry);
+//	}
+//	else
+//	{
+//		toNeighbor.SetLifeTime (std::max (Time (AllowedHelloLoss * HelloInterval), toNeighbor.GetLifeTime ()));
+//		toNeighbor.SetSeqNo (rrepHeader.GetDstSeqno ());
+//		toNeighbor.SetValidSeqNo (true);
+//		toNeighbor.SetFlag (VALID);
+//		toNeighbor.SetOutputDevice (m_ipv4->GetNetDevice (m_ipv4->GetInterfaceForAddress (receiver)));
+//		toNeighbor.SetInterface (m_ipv4->GetAddress (m_ipv4->GetInterfaceForAddress (receiver), 0));
+//		toNeighbor.SetHop (1);
+//		toNeighbor.SetNextHop (rrepHeader.GetDst ());
+//		m_routingTable.Update (toNeighbor);
+//	}
+
+
+
+	//Ipv6Address addr, Time expire, Vector velocity, Vector position
+	m_nb.Update (helloHeader.GetOrigin(), Time (m_NeighborLifetime), helloHeader.GetVelocity(), helloHeader.GetPosition());
+
 }
 
 /**
@@ -189,8 +296,8 @@ RoutingProtocol::RecvMcast(Ptr<Socket> socket)
 void
 RoutingProtocol::NotifyAddRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse)
 {
-  NS_LOG_INFO (this << dst << mask << nextHop << interface << prefixToUse);
-  // \todo this can be used to add delegate routes
+	NS_LOG_INFO (this << dst << mask << nextHop << interface << prefixToUse);
+	// \todo this can be used to add delegate routes
 }
 
 /**
@@ -199,38 +306,47 @@ RoutingProtocol::NotifyAddRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address n
 void
 RoutingProtocol::NotifyRemoveRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse)
 {
-  NS_LOG_FUNCTION (this << dst << mask << nextHop << interface);
-  // \todo this can be used to delete delegate routes
+	NS_LOG_FUNCTION (this << dst << mask << nextHop << interface);
+	// \todo this can be used to delete delegate routes
 }
 
 
 void
 RoutingProtocol::SetIpv6 (Ptr<Ipv6> ipv6)
 {
-  NS_ASSERT (ipv6 != 0);
-  NS_ASSERT (m_ipv6 == 0);
+	NS_ASSERT (ipv6 != 0);
+	NS_ASSERT (m_ipv6 == 0);
 
-  m_ipv6 = ipv6;
+	m_ipv6 = ipv6;
 
-  // Create lo route. It is asserted that the only one interface up for now is loopback
-  NS_ASSERT (m_ipv6->GetNInterfaces () == 1 && m_ipv6->GetAddress (0, 0).GetAddress() == Ipv6Address ("::1"));
-  m_lo = m_ipv6->GetNetDevice (0);
-  NS_ASSERT (m_lo != 0);
+	// Create lo route. It is asserted that the only one interface up for now is loopback
+	NS_ASSERT (m_ipv6->GetNInterfaces () == 1 && m_ipv6->GetAddress (0, 0).GetAddress() == Ipv6Address ("::1"));
+	m_lo = m_ipv6->GetNetDevice (0);
+	NS_ASSERT (m_lo != 0);
 
 
-  ///////////////// TO BE UPDATED LATER /////////////////////////////
+	///////////////// TO BE UPDATED LATER /////////////////////////////
 
-  // Remember lo route
-//  RoutingTableEntry rt (/*device=*/ m_lo, /*dst=*/ Ipv4Address::GetLoopback (), /*know seqno=*/ true, /*seqno=*/ 0,
-//                                    /*iface=*/ Ipv4InterfaceAddress (Ipv4Address::GetLoopback (), Ipv4Mask ("255.0.0.0")),
-//                                    /*hops=*/ 1, /*next hop=*/ Ipv4Address::GetLoopback (),
-//                                    /*lifetime=*/ Simulator::GetMaximumSimulationTime ());
-//  m_routingTable.AddRoute (rt);
+	// Remember lo route
+	//  RoutingTableEntry rt (/*device=*/ m_lo, /*dst=*/ Ipv4Address::GetLoopback (), /*know seqno=*/ true, /*seqno=*/ 0,
+	//                                    /*iface=*/ Ipv4InterfaceAddress (Ipv4Address::GetLoopback (), Ipv4Mask ("255.0.0.0")),
+	//                                    /*hops=*/ 1, /*next hop=*/ Ipv4Address::GetLoopback (),
+	//                                    /*lifetime=*/ Simulator::GetMaximumSimulationTime ());
+	//  m_routingTable.AddRoute (rt);
 
-  //////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////
 
-  Simulator::ScheduleNow (&RoutingProtocol::Start, this);
+	Simulator::ScheduleNow (&RoutingProtocol::Start, this);
 }
+
+int64_t
+RoutingProtocol::AssignStreams (int64_t stream)
+{
+  NS_LOG_FUNCTION (this << stream);
+  m_uniformRandomVariable->SetStream (stream);
+  return 1;
+}
+
 void
 RoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const
 {
@@ -247,99 +363,99 @@ RoutingProtocol::DoDispose ()
 void
 RoutingProtocol::HelloTimerExpire()
 {
-  NS_LOG_FUNCTION (this);
-  Time offset = Time (Seconds (0));
-  if (m_lastHelloBcastTime > Time (Seconds (0)))
-    {
-      offset = Simulator::Now () - m_lastHelloBcastTime;
-      NS_LOG_DEBUG ("Hello deferred due to last bcast at:" << m_lastHelloBcastTime);
-    }
-  else
-    {
-      SendHello ();
-    }
-  m_htimer.Cancel ();
-  Time diff = Seconds(HelloInterval) - offset;
-  m_htimer.Schedule (std::max (Time (Seconds (0)), diff));
-  m_lastHelloBcastTime = Time (Seconds (0));
+	NS_LOG_FUNCTION (this);
+	Time offset = Time (Seconds (0));
+	if (m_lastHelloBcastTime > Time (Seconds (0)))
+	{
+		offset = Simulator::Now () - m_lastHelloBcastTime;
+		NS_LOG_DEBUG ("Hello deferred due to last bcast at:" << m_lastHelloBcastTime);
+	}
+	else
+	{
+		SendHello ();
+	}
+	m_htimer.Cancel ();
+	Time diff = Seconds(HelloInterval) - offset;
+	m_htimer.Schedule (std::max (Time (Seconds (0)), diff));
+	m_lastHelloBcastTime = Time (Seconds (0));
 }
 
 void
 RoutingProtocol::SendHello ()
 {
-  NS_LOG_FUNCTION (this);
-  for (std::map<Ptr<Socket>, Ipv6InterfaceAddress>::const_iterator j = m_socketAddresses.begin (); j != m_socketAddresses.end (); ++j)
-  {
-  	Ptr<Socket> socket = j->first;
-  	Ipv6InterfaceAddress iface = j->second;
+	NS_LOG_FUNCTION (this);
+	for (std::map<Ptr<Socket>, Ipv6InterfaceAddress>::const_iterator j = m_socketAddresses.begin (); j != m_socketAddresses.end (); ++j)
+	{
+		Ptr<Socket> socket = j->first;
+		Ipv6InterfaceAddress iface = j->second;
 
-  	//Get node position
-  	Vector pos = GetNodePosition(m_ipv6);
+		//Get node position
+		Vector pos = GetNodePosition(m_ipv6);
 
-  	//Get node velocity
-  	Vector vel = GetNodeVelocity(m_ipv6);
+		//Get node velocity
+		Vector vel = GetNodeVelocity(m_ipv6);
 
-  	//Get Road ID
-  	uint64_t roadId = 0;
+		//Get Road ID
+		uint64_t roadId = 0;
 
-  	//hopCount
-  	uint8_t hopCount = 0;
+		//hopCount
+		uint8_t hopCount = 0;
 
-  	uint8_t type = 1;
+		uint8_t type = 1;
 
-  	uint16_t reserved = 0;
+		uint16_t reserved = 0;
 
-  	//Create hello header
-  	HelloHeader helloHeader(/*Type*/ type, /*roadId*/ roadId, /*roadId*/ hopCount, /*neighbor life time */m_NeighborLifetime, /*radius*/ m_radius,reserved, /**/Ipv6Address().GetOnes(), /**/iface.GetAddress(), /*Position*/ pos, /*Velocity*/ vel );
+		//Create hello header
+		HelloHeader helloHeader(/*Type*/ type, /*roadId*/ roadId, /*roadId*/ hopCount, /*neighbor life time */m_NeighborLifetime, /*radius*/ m_radius,reserved, /**/Ipv6Address().GetOnes(), /**/iface.GetAddress(), /*Position*/ pos, /*Velocity*/ vel );
 
-  	Ptr<Packet> packet = Create<Packet>();
-  	packet->AddHeader(helloHeader);
-  	TypeHeader theader (HELLO);
-  	packet->AddHeader(theader);
+		Ptr<Packet> packet = Create<Packet>();
+		packet->AddHeader(helloHeader);
+		TypeHeader theader (HELLO);
+		packet->AddHeader(theader);
 
-  	//Set Jitter time before sending
-  	Time jitter = Time (MilliSeconds (m_uniformRandomVariable->GetInteger (0, 10)));
-  	Simulator::Schedule (jitter, &RoutingProtocol::SendTo, this , socket, packet, Ipv6Address().GetOnes());
+		//Set Jitter time before sending
+		Time jitter = Time (MilliSeconds (m_uniformRandomVariable->GetInteger (0, 10)));
+		Simulator::Schedule (jitter, &RoutingProtocol::SendTo, this , socket, packet, Ipv6Address().GetOnes());
 
-  }
+	}
 }
 
 void
 RoutingProtocol::SendTo (Ptr<Socket> socket, Ptr<Packet> packet, Ipv6Address destination)
 {
-    socket->SendTo (packet, 0, Inet6SocketAddress (destination, MCAST_PORT));
+	socket->SendTo (packet, 0, Inet6SocketAddress (destination, MCAST_PORT));
 
 }
 
 Vector
 RoutingProtocol::GetNodePosition (Ptr<Ipv6> ipv6)
 {
-    Vector pos = ipv6->GetObject<MobilityModel>()->GetPosition();
-    NS_LOG_DEBUG (" Node " << ipv6->GetObject<Node>()->GetId() << " position =" << pos);
-        return pos;
+	Vector pos = ipv6->GetObject<MobilityModel>()->GetPosition();
+	NS_LOG_DEBUG (" Node " << ipv6->GetObject<Node>()->GetId() << " position =" << pos);
+	return pos;
 }
 
 Vector
 RoutingProtocol::GetNodeVelocity (Ptr<Ipv6> ipv6)
 {
-    Vector vel = ipv6->GetObject<MobilityModel>()->GetVelocity();
-    NS_LOG_DEBUG (" Node " << ipv6->GetObject<Node>()->GetId() << " velocity =" << vel);
-        return vel;
+	Vector vel = ipv6->GetObject<MobilityModel>()->GetVelocity();
+	NS_LOG_DEBUG (" Node " << ipv6->GetObject<Node>()->GetId() << " velocity =" << vel);
+	return vel;
 }
 
 void
 RoutingProtocol::DoInitialize ()
 {
-  NS_LOG_FUNCTION (this);
-  uint32_t startTime;
-  if (EnableHello)
-    {
-      m_htimer.SetFunction (&RoutingProtocol::HelloTimerExpire, this);
-      startTime = m_uniformRandomVariable->GetInteger (0, 100);
-      NS_LOG_DEBUG ("Starting at time " << startTime << "ms");
-      m_htimer.Schedule (MilliSeconds (startTime));
-    }
-  Ipv6RoutingProtocol::DoInitialize ();
+	NS_LOG_FUNCTION (this);
+	uint32_t startTime;
+	if (EnableHello)
+	{
+		m_htimer.SetFunction (&RoutingProtocol::HelloTimerExpire, this);
+		startTime = m_uniformRandomVariable->GetInteger (0, 100);
+		NS_LOG_DEBUG ("Starting at time " << startTime << "ms");
+		m_htimer.Schedule (MilliSeconds (startTime));
+	}
+	Ipv6RoutingProtocol::DoInitialize ();
 
 }
 

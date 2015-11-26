@@ -62,6 +62,9 @@ namespace ns3
 		  //Set protocols parameters
 		  void SetHelloEnable(bool f){EnableHello = f;}
 
+		  //Assign streams to each node
+		  int64_t AssignStreams (int64_t stream);
+
 
 		protected:
 		  virtual void DoInitialize(void);
@@ -97,6 +100,12 @@ namespace ns3
 
 		  //Receive packets
 		  void RecvMcast(Ptr<Socket> socket);
+
+		  //Handle receiving hello packets
+		  void RecvHello (Ptr<Packet> p, Ipv6Address receiver, Ipv6Address sender);
+
+		  //Process hello messages
+		  void ProcessHello(HelloHeader const & helloHeader, Ipv6Address receiver);
 
 		  //Hello Time
 		  Timer m_htimer;
