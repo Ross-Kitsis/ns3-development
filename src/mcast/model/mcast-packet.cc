@@ -38,6 +38,9 @@ namespace mcast
 
 NS_OBJECT_ENSURE_REGISTERED (TypeHeader);
 
+//Define mcast packet size
+const uint32_t HelloHeader::m_headerSize = 99;
+
 TypeHeader::TypeHeader (MessageType t) :
   		m_type (t), m_valid (true)
 {
@@ -179,7 +182,7 @@ HelloHeader::GetInstanceTypeId () const
 uint32_t
 HelloHeader::GetSerializedSize () const
 {
-	return 23;
+	return m_headerSize;
 }
 
 //Serialize header (convert vector double to int64 by multiplying by 1000 -

@@ -198,6 +198,11 @@ public:
       float_t xPos = 0.0, float_t yPos = 0.0, float_t zPos = 0.0,
       float_t xVel = 0.0, float_t yVel = 0.0, float_t zVel = 0.0);
 */
+
+
+  //Header size in bytes
+  static const uint32_t 		m_headerSize;
+
   // Header serialization/deserialization
   static TypeId GetTypeId ();
   TypeId GetInstanceTypeId () const;
@@ -267,6 +272,8 @@ private:
   float_t			m_xVel;								///< xVelocty
   float_t			m_yVel;								///< yVelocty
   float_t			m_zVel;								///< zVelocty
+
+
 
 };
 

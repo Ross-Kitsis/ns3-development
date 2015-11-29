@@ -61,6 +61,8 @@ namespace ns3
 
 		  //Set protocols parameters
 		  void SetHelloEnable(bool f){EnableHello = f;}
+		  bool GetHelloEnable () const { return EnableHello; }
+
 
 		  //Assign streams to each node
 		  int64_t AssignStreams (int64_t stream);

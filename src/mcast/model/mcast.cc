@@ -33,7 +33,7 @@ const uint32_t RoutingProtocol::MCAST_PORT = 701;
 
 RoutingProtocol::RoutingProtocol () :
 	  				HelloInterval (3), //Hello broadcast interval
-	  				EnableHello (false), //Enable hello msgs
+	  				EnableHello (true), //Enable hello msgs
 	  				EnableBroadcast(true), //Enable broadcasts
 	  				m_lastHelloBcastTime (Seconds (0)), //Initialize last broadcast time to 0
 	  				m_nb (Seconds (HelloInterval)), //Initialize neighbor broadcasting every hello interval seconds
@@ -58,6 +58,16 @@ RoutingProtocol::GetTypeId ()
     		.SetParent<Ipv6RoutingProtocol> ()
     		.SetGroupName("mcast")
     		.AddConstructor<RoutingProtocol> ()
+        .AddAttribute ("UniformRv",
+                       "Access to the underlying UniformRandomVariable",
+                       StringValue ("ns3::UniformRandomVariable"),
+                       MakePointerAccessor (&RoutingProtocol::m_uniformRandomVariable),
+                       MakePointerChecker<UniformRandomVariable> ())
+        .AddAttribute ("EnableHello", "Indicates whether a hello messages enable.",
+                       BooleanValue (true),
+                       MakeBooleanAccessor (&RoutingProtocol::SetHelloEnable,
+                       &RoutingProtocol::GetHelloEnable),
+                                      MakeBooleanChecker ())
     		;
 
 	return tid;
@@ -190,7 +200,7 @@ RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv6InterfaceAddress addr
                                                UdpSocketFactory::GetTypeId ());
     NS_ASSERT (socket != 0);
               socket->SetRecvCallback (MakeCallback (&RoutingProtocol::RecvMcast,this));
-              socket->Bind (InetSocketAddress (iface.GetAddress(), MCAST_PORT));
+              socket->Bind (Inet6SocketAddress (iface.GetAddress(), MCAST_PORT));
               socket->BindToNetDevice (l3->GetNetDevice (interface));
               socket->SetAllowBroadcast (true);
               m_socketAddresses.insert (std::make_pair (socket, iface));
@@ -415,8 +425,11 @@ RoutingProtocol::HelloTimerExpire()
 
 
   std::cout << "Sending hello and scheduling next hello " << this << std::endl;
+	NS_LOG_FUNCTION (this << HelloInterval);
 
-	NS_LOG_FUNCTION (this);
+	m_htimer.Cancel();
+
+	m_htimer.SetFunction (&RoutingProtocol::HelloTimerExpire, this);
 	m_htimer.Schedule(Time(Seconds(HelloInterval)));
 	SendHello();
 
