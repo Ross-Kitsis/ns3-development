@@ -19,6 +19,8 @@
 
 #include <algorithm>
 #include <limits>
+#include <iostream>
+
 
 namespace ns3
 {
@@ -66,10 +68,10 @@ void
 RoutingProtocol::Start ()
 {
 	NS_LOG_FUNCTION (this);
-	if (EnableHello)
-	{
+	//if (EnableHello)
+	//{
 		m_nb.ScheduleTimer ();
-	}
+	//}
 	//m_rreqRateLimitTimer.SetFunction (&RoutingProtocol::RreqRateLimitTimerExpire, this);
 	//m_rreqRateLimitTimer.Schedule (Seconds (1));
 
@@ -81,6 +83,7 @@ RoutingProtocol::Start ()
 Ptr<Ipv6Route>
 RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr)
 {
+	NS_LOG_FUNCTION (this);
 	Ptr<Ipv6Route> route;
 	return route;
 }
@@ -165,15 +168,39 @@ RoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 void
 RoutingProtocol::NotifyInterfaceDown (uint32_t interface)
 {
+	NS_LOG_FUNCTION (this);
 }
+
+/**
+ * Notify node the interface is up and running with the given address
+ */
 void
 RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv6InterfaceAddress address)
 {
+	NS_LOG_FUNCTION(this << " interface " << interface << " address " << address);
+  Ptr<Ipv6L3Protocol> l3 = m_ipv6->GetObject<Ipv6L3Protocol> ();
+  if (!l3->IsUp (interface))
+    return;
+  if(!l3->GetNAddresses(interface) == 1)
+  {
+    Ipv6InterfaceAddress iface = l3->GetAddress (interface, 0);
+
+    //Create socket to listen on this interface with given port
+    Ptr<Socket> socket = Socket::CreateSocket (GetObject<Node> (),
+                                               UdpSocketFactory::GetTypeId ());
+    NS_ASSERT (socket != 0);
+              socket->SetRecvCallback (MakeCallback (&RoutingProtocol::RecvMcast,this));
+              socket->Bind (InetSocketAddress (iface.GetAddress(), MCAST_PORT));
+              socket->BindToNetDevice (l3->GetNetDevice (interface));
+              socket->SetAllowBroadcast (true);
+              m_socketAddresses.insert (std::make_pair (socket, iface));
+  }
 }
 
 void
 RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv6InterfaceAddress address)
 {
+	NS_LOG_FUNCTION (this);
 }
 
 //TO DO ASAP
@@ -314,6 +341,7 @@ RoutingProtocol::NotifyRemoveRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Addres
 void
 RoutingProtocol::SetIpv6 (Ptr<Ipv6> ipv6)
 {
+	NS_LOG_FUNCTION (this);
 	NS_ASSERT (ipv6 != 0);
 	NS_ASSERT (m_ipv6 == 0);
 
@@ -350,6 +378,7 @@ RoutingProtocol::AssignStreams (int64_t stream)
 void
 RoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const
 {
+	NS_LOG_FUNCTION (this);
 }
 
 
@@ -357,12 +386,16 @@ RoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const
 void
 RoutingProtocol::DoDispose ()
 {
+	NS_LOG_FUNCTION (this);
+
 }
 
 
 void
 RoutingProtocol::HelloTimerExpire()
 {
+
+	/*
 	NS_LOG_FUNCTION (this);
 	Time offset = Time (Seconds (0));
 	if (m_lastHelloBcastTime > Time (Seconds (0)))
@@ -378,6 +411,15 @@ RoutingProtocol::HelloTimerExpire()
 	Time diff = Seconds(HelloInterval) - offset;
 	m_htimer.Schedule (std::max (Time (Seconds (0)), diff));
 	m_lastHelloBcastTime = Time (Seconds (0));
+	*/
+
+
+  std::cout << "Sending hello and scheduling next hello " << this << std::endl;
+
+	NS_LOG_FUNCTION (this);
+	m_htimer.Schedule(Time(Seconds(HelloInterval)));
+	SendHello();
+
 }
 
 void
@@ -423,13 +465,14 @@ RoutingProtocol::SendHello ()
 void
 RoutingProtocol::SendTo (Ptr<Socket> socket, Ptr<Packet> packet, Ipv6Address destination)
 {
+	NS_LOG_FUNCTION (this);
 	socket->SendTo (packet, 0, Inet6SocketAddress (destination, MCAST_PORT));
-
 }
 
 Vector
 RoutingProtocol::GetNodePosition (Ptr<Ipv6> ipv6)
 {
+	NS_LOG_FUNCTION (this);
 	Vector pos = ipv6->GetObject<MobilityModel>()->GetPosition();
 	NS_LOG_DEBUG (" Node " << ipv6->GetObject<Node>()->GetId() << " position =" << pos);
 	return pos;
@@ -438,6 +481,7 @@ RoutingProtocol::GetNodePosition (Ptr<Ipv6> ipv6)
 Vector
 RoutingProtocol::GetNodeVelocity (Ptr<Ipv6> ipv6)
 {
+	NS_LOG_FUNCTION (this);
 	Vector vel = ipv6->GetObject<MobilityModel>()->GetVelocity();
 	NS_LOG_DEBUG (" Node " << ipv6->GetObject<Node>()->GetId() << " velocity =" << vel);
 	return vel;
@@ -455,6 +499,9 @@ RoutingProtocol::DoInitialize ()
 		NS_LOG_DEBUG ("Starting at time " << startTime << "ms");
 		m_htimer.Schedule (MilliSeconds (startTime));
 	}
+
+  std::cout << "Initializing mcast for" << this << std::endl;
+
 	Ipv6RoutingProtocol::DoInitialize ();
 
 }
