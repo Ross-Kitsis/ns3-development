@@ -80,7 +80,10 @@ namespace ns3
 		  //Unicast socket per IP interface, map socket to interface address
 		  std::map<Ptr<Socket>,Ipv6InterfaceAddress> m_socketAddresses;
 		  //Subnet directed broadcast for each interface (Use multiple interfaces?)
-		  std::map< Ptr<Socket>, Ipv6InterfaceAddress > m_socketSubnetBroadcastAddresses;
+//		  std::map< Ptr<Socket>, Ipv6InterfaceAddress > m_socketSubnetBroadcastAddresses;
+
+		  Ptr<Socket> m_recvSocket; //!< receive socket
+
 		  /// Loopback device used to defer transmissions until packets fully formed
 		  Ptr<NetDevice> m_lo;
 
@@ -88,10 +91,6 @@ namespace ns3
 		private:
 		  //Start protocol operation
 		  void Start();
-
-		  ///Receive packets
-		  //Receive hello packets from neighbors
-		  void RecHello(Ptr<Socket> socket);
 
 		  ///Send packets
 		  //Send hello packet to all neighbors in range
@@ -101,13 +100,13 @@ namespace ns3
 		  void SendTo (Ptr<Socket> socket, Ptr<Packet> packet, Ipv6Address destination);
 
 		  //Receive packets
-		  void RecvMcast(Ptr<Socket> socket);
+		  void Receive(Ptr<Socket> socket);
 
 		  //Handle receiving hello packets
-		  void RecvHello (Ptr<Packet> p, Ipv6Address receiver, Ipv6Address sender);
+		  void RecvHello (Ptr<Packet> p);
 
 		  //Process hello messages
-		  void ProcessHello(HelloHeader const & helloHeader, Ipv6Address receiver);
+		  void ProcessHello(HelloHeader const & helloHeader);
 
 		  //Hello Time
 		  Timer m_htimer;
@@ -120,6 +119,9 @@ namespace ns3
 
 		  //Get node position as a vector
 		  Vector GetNodeVelocity (Ptr<Ipv6> ipv6);
+
+		  //Lookup routes
+		  Ptr<Ipv6Route> Lookup (Ipv6Address dst, Ptr<NetDevice> interface);
 
 		  //Uniform random variable provider
 		  Ptr<UniformRandomVariable> m_uniformRandomVariable;

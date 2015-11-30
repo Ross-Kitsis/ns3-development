@@ -21,6 +21,7 @@
 #include <limits>
 #include <iostream>
 
+#define MCAST_ALL_NODE "ff02::114"
 
 namespace ns3
 {
@@ -94,8 +95,56 @@ Ptr<Ipv6Route>
 RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr)
 {
 	NS_LOG_FUNCTION (this);
-	Ptr<Ipv6Route> route;
-	return route;
+	Ipv6Address destination = header.GetDestinationAddress();
+  Ptr<Ipv6Route> rtentry = 0;
+
+
+
+  if (destination.IsMulticast ())
+    {
+      // Note:  Multicast routes for outbound packets are stored in the
+      // normal unicast table.  An implication of this is that it is not
+      // possible to source multicast datagrams on multiple interfaces.
+      // This is a well-known property of sockets implementation on
+      // many Unix variants.
+      // So, we just log it and fall through to LookupStatic ()
+      NS_LOG_LOGIC ("RouteOutput (): Multicast destination");
+    }
+
+  rtentry = Lookup (destination, oif);
+  if (rtentry)
+    {
+      sockerr = Socket::ERROR_NOTERROR;
+    }
+  else
+    {
+      sockerr = Socket::ERROR_NOROUTETOHOST;
+    }
+  return rtentry;
+}
+
+Ptr<Ipv6Route>
+RoutingProtocol::Lookup (Ipv6Address dst, Ptr<NetDevice> interface)
+{
+	NS_LOG_FUNCTION (this << dst << interface);
+  Ptr<Ipv6Route> rtentry = 0;
+//  uint16_t longestMask = 0;
+
+  if(dst.IsMulticast())
+  {
+  	NS_LOG_LOGIC (this << dst << interface << " found as multicast destination");
+  	rtentry = Create<Ipv6Route> ();
+    rtentry->SetSource (m_ipv6->SourceAddressSelection (m_ipv6->GetInterfaceForDevice (interface), dst));
+    rtentry->SetDestination (dst);
+    rtentry->SetGateway (Ipv6Address::GetZero ());
+    rtentry->SetOutputDevice (interface);
+
+//    NS_LOG_LOGIC ("Returning route with : " << );
+
+    return rtentry;
+  }
+
+  return rtentry;
 }
 
 bool
@@ -110,6 +159,42 @@ RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<
 void
 RoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 {
+
+	for (uint32_t i = 0 ; i < m_ipv6->GetNInterfaces (); i++)
+	{
+		for(uint32_t j = 0; j < m_ipv6->GetNAddresses(i); j++)
+		{
+			Ipv6InterfaceAddress address = m_ipv6->GetAddress(i,j);
+			if(address.GetScope() != Ipv6InterfaceAddress::LINKLOCAL && address.GetScope() != Ipv6InterfaceAddress::HOST)
+			{
+				NS_LOG_LOGIC ("MCAST: adding socket to " << address.GetAddress () << " INIT - ACTIVE");
+				TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+				Ptr<Node> theNode = GetObject<Node> ();
+				Ptr<Socket> socket = Socket::CreateSocket (theNode, tid);
+				Inet6SocketAddress global = Inet6SocketAddress (address.GetAddress (), MCAST_PORT);
+				socket->SetRecvCallback (MakeCallback (&RoutingProtocol::Receive,this));
+				int ret = socket->Bind (global);
+				NS_ASSERT_MSG (ret == 0, "Bind unsuccessful");
+        socket->BindToNetDevice (m_ipv6->GetNetDevice (i));// Not sure if want this
+				socket->SetAllowBroadcast(true);
+				m_socketAddresses.insert (std::make_pair (socket, address));
+			}
+		}
+	}
+
+
+  //Create socket for hello msgs
+  NS_LOG_LOGIC ("MCAST: adding hello socket to " << MCAST_ALL_NODE << " INIT - HELLO");
+  TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+  Ptr<Node> theNode = GetObject<Node> ();
+  m_recvSocket = Socket::CreateSocket (theNode, tid);
+  Inet6SocketAddress local = Inet6SocketAddress (MCAST_ALL_NODE, MCAST_PORT);
+  m_recvSocket->Bind (local);
+  m_recvSocket->SetRecvCallback (MakeCallback (&RoutingProtocol::Receive, this));
+  //m_recvSocket->BindToNetDevice (m_ipv6->GetNetDevice (i));// Not sure if want this
+  m_recvSocket->SetRecvPktInfo (true);
+	/*
+
 	NS_LOG_FUNCTION (this << m_ipv6->GetAddress (interface, 0));
 	Ptr<Ipv6L3Protocol> l3 = m_ipv6->GetObject<Ipv6L3Protocol> ();
 
@@ -119,16 +204,20 @@ RoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 	if (iface.GetAddress() == Ipv6Address ("::1"))
 		return;
 
+  NS_LOG_LOGIC ("RIPng: adding sending socket to " << l3->GetAddress(0,0));
+
 	// Create a socket to listen only on this interface
 	Ptr<Socket> socket = Socket::CreateSocket (GetObject<Node> (),
 			UdpSocketFactory::GetTypeId ());
 	NS_ASSERT (socket != 0);
 	socket->SetRecvCallback (MakeCallback (&RoutingProtocol::RecvMcast, this));
-	socket->Bind (Inet6SocketAddress (Ipv6Address::GetAny (), MCAST_PORT));
+	socket->Bind (Inet6SocketAddress (Ipv6Address::GetAllNodesMulticast(), MCAST_PORT));
 	socket->BindToNetDevice (l3->GetNetDevice (interface));
 	socket->SetAllowBroadcast (true);
 	socket->SetAttribute ("IpTtl", UintegerValue (1));
 	m_socketAddresses.insert (std::make_pair (socket, iface));
+
+*/
 
 	/* Skip this??
 
@@ -146,7 +235,8 @@ RoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 	 */
 
 
-	Ptr<NetDevice> dev = m_ipv6->GetNetDevice (m_ipv6->GetInterfaceForAddress (iface.GetAddress ()));
+
+//	Ptr<NetDevice> dev = m_ipv6->GetNetDevice (m_ipv6->GetInterfaceForAddress (iface.GetAddress ()));
 
 	//////////////////////////////////// Update later, no routing table yet
 
@@ -164,6 +254,8 @@ RoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 
 	//////////////////////////////////////////////////////////////////////////
 
+	/*
+
 	// Allow neighbor manager use this interface for layer 2 feedback if possible
 	Ptr<WifiNetDevice> wifi = dev->GetObject<WifiNetDevice> ();
 	if (wifi == 0)
@@ -173,6 +265,7 @@ RoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 		return;
 
 	mac->TraceConnectWithoutContext ("TxErrHeader", m_nb.GetTxErrorCallback ());
+	*/
 }
 
 void
@@ -187,8 +280,11 @@ RoutingProtocol::NotifyInterfaceDown (uint32_t interface)
 void
 RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv6InterfaceAddress address)
 {
+
 	NS_LOG_FUNCTION(this << " interface " << interface << " address " << address);
-  Ptr<Ipv6L3Protocol> l3 = m_ipv6->GetObject<Ipv6L3Protocol> ();
+
+	/*
+	Ptr<Ipv6L3Protocol> l3 = m_ipv6->GetObject<Ipv6L3Protocol> ();
   if (!l3->IsUp (interface))
     return;
   if(!l3->GetNAddresses(interface) == 1)
@@ -205,6 +301,7 @@ RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv6InterfaceAddress addr
               socket->SetAllowBroadcast (true);
               m_socketAddresses.insert (std::make_pair (socket, iface));
   }
+  */
 }
 
 void
@@ -215,12 +312,12 @@ RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv6InterfaceAddress a
 
 //TO DO ASAP
 void
-RoutingProtocol::RecvMcast(Ptr<Socket> socket)
+RoutingProtocol::Receive(Ptr<Socket> socket)
 {
 
 	NS_LOG_FUNCTION (this << socket);
 	Address sourceAddress;
-	Ptr<Packet> packet = socket->RecvFrom (sourceAddress);
+	Ptr<Packet> packet = socket->Recv();//    RecvFrom (sourceAddress);
 	Inet6SocketAddress inetSourceAddr = Inet6SocketAddress::ConvertFrom (sourceAddress);
 	Ipv6Address sender = inetSourceAddr.GetIpv6();
 	Ipv6Address receiver;
@@ -240,7 +337,7 @@ RoutingProtocol::RecvMcast(Ptr<Socket> socket)
 		NS_ASSERT_MSG (false, "Received a packet from an unknown socket");
 	}
 	*/
-	receiver = m_socketAddresses[socket].GetAddress();
+	//receiver = m_socketAddresses[socket].GetAddress();
 	NS_LOG_DEBUG ("Thesis node " << this << " received a MCAST packet from " << sender << " to " << receiver);
 
 
@@ -252,14 +349,14 @@ RoutingProtocol::RecvMcast(Ptr<Socket> socket)
 	if (!tHeader.IsValid ())
 	{
 		//Unknown packet type
-		NS_LOG_DEBUG ("AODV message " << packet->GetUid () << " with unknown type received: " << tHeader.Get () << ". Drop");
+		NS_LOG_DEBUG ("MCAST message " << packet->GetUid () << " with unknown type received: " << tHeader.Get () << ". Drop");
 		return; // drop
 	}
 	switch (tHeader.Get ())
 	{
 	case HELLO:
 	{
-		RecvHello (packet, receiver, sender);
+		RecvHello (packet);
 		break;
 	}
 	}
@@ -269,7 +366,7 @@ RoutingProtocol::RecvMcast(Ptr<Socket> socket)
  * Receive hello msgs
  */
 void
-RoutingProtocol::RecvHello (Ptr<Packet> p, Ipv6Address receiver, Ipv6Address sender)
+RoutingProtocol::RecvHello (Ptr<Packet> p)
 {
 	NS_LOG_FUNCTION (this << " Receiving hello message");
 	HelloHeader HelloHeader;
@@ -281,14 +378,14 @@ RoutingProtocol::RecvHello (Ptr<Packet> p, Ipv6Address receiver, Ipv6Address sen
 	uint8_t hop = HelloHeader.GetHopCount () + 1;
 	HelloHeader.SetHopCount (hop);
 
-	ProcessHello (HelloHeader, receiver);
+	ProcessHello (HelloHeader);
 	return;
 
 }
 
 
 void
-RoutingProtocol::ProcessHello(HelloHeader const & helloHeader, Ipv6Address receiver)
+RoutingProtocol::ProcessHello(HelloHeader const & helloHeader)
 {
 	NS_LOG_FUNCTION (this << " processing hello message ");
 
@@ -430,7 +527,7 @@ RoutingProtocol::HelloTimerExpire()
 	m_htimer.Cancel();
 
 	m_htimer.SetFunction (&RoutingProtocol::HelloTimerExpire, this);
-	m_htimer.Schedule(Time(Seconds(HelloInterval)));
+	m_htimer.Schedule(Time(Seconds(HelloInterval + m_uniformRandomVariable->GetInteger(0,2))));
 	SendHello();
 
 }
@@ -439,6 +536,7 @@ void
 RoutingProtocol::SendHello ()
 {
 	NS_LOG_FUNCTION (this);
+
 	for (std::map<Ptr<Socket>, Ipv6InterfaceAddress>::const_iterator j = m_socketAddresses.begin (); j != m_socketAddresses.end (); ++j)
 	{
 		Ptr<Socket> socket = j->first;
@@ -461,7 +559,11 @@ RoutingProtocol::SendHello ()
 		uint16_t reserved = 0;
 
 		//Create hello header
-		HelloHeader helloHeader(/*Type*/ type, /*roadId*/ roadId, /*roadId*/ hopCount, /*neighbor life time */m_NeighborLifetime, /*radius*/ m_radius,reserved, /**/Ipv6Address().GetOnes(), /**/iface.GetAddress(), /*Position*/ pos, /*Velocity*/ vel );
+		HelloHeader helloHeader(/*Type*/ type, /*roadId*/ roadId, /*roadId*/ hopCount, /*neighbor life time */m_NeighborLifetime, /*radius*/ m_radius,reserved, /**/Ipv6Address().GetAllNodesMulticast(), /**/iface.GetAddress(), /*Position*/ pos, /*Velocity*/ vel );
+
+		Ipv6Address destination = MCAST_ALL_NODE;
+
+		NS_LOG_LOGIC("Sending packet to: " << destination << " from address " << iface.GetAddress());
 
 		Ptr<Packet> packet = Create<Packet>();
 		packet->AddHeader(helloHeader);
@@ -470,7 +572,8 @@ RoutingProtocol::SendHello ()
 
 		//Set Jitter time before sending
 		Time jitter = Time (MilliSeconds (m_uniformRandomVariable->GetInteger (0, 10)));
-		Simulator::Schedule (jitter, &RoutingProtocol::SendTo, this , socket, packet, Ipv6Address().GetOnes());
+		//Time delay = Time(Seconds(m_uniformRandomVariable->GetInteger(0,2)));
+		Simulator::Schedule (jitter, &RoutingProtocol::SendTo, this , socket, packet, destination);
 
 	}
 }
@@ -478,8 +581,9 @@ RoutingProtocol::SendHello ()
 void
 RoutingProtocol::SendTo (Ptr<Socket> socket, Ptr<Packet> packet, Ipv6Address destination)
 {
-	NS_LOG_FUNCTION (this);
+	NS_LOG_FUNCTION (this << destination);
 	socket->SendTo (packet, 0, Inet6SocketAddress (destination, MCAST_PORT));
+	//socket->Send(packet);
 }
 
 Vector
@@ -504,6 +608,46 @@ void
 RoutingProtocol::DoInitialize ()
 {
 	NS_LOG_FUNCTION (this);
+	/////////////////////////////////Bind sockets
+
+	NS_LOG_LOGIC("Adding socket for multicast");
+/*
+	for (uint32_t i = 0 ; i < m_ipv6->GetNInterfaces (); i++)
+	{
+		for(uint32_t j = 0; j < m_ipv6->GetNAddresses(i); j++)
+		{
+			Ipv6InterfaceAddress address = m_ipv6->GetAddress(i,j);
+			if(address.GetScope() != Ipv6InterfaceAddress::LINKLOCAL && address.GetScope() != Ipv6InterfaceAddress::HOST)
+			{
+				NS_LOG_LOGIC ("MCAST: adding socket to " << address.GetAddress () << " INIT - ACTIVE");
+				TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+				Ptr<Node> theNode = GetObject<Node> ();
+				Ptr<Socket> socket = Socket::CreateSocket (theNode, tid);
+				Inet6SocketAddress global = Inet6SocketAddress (address.GetAddress (), MCAST_PORT);
+				socket->SetRecvCallback (MakeCallback (&RoutingProtocol::Recieve,this));
+				int ret = socket->Bind (global);
+				NS_ASSERT_MSG (ret == 0, "Bind unsuccessful");
+//        socket->BindToNetDevice (l3->GetNetDevice (interface)); Not sure if want this
+				socket->SetAllowBroadcast(true);
+				m_socketAddresses.insert (std::make_pair (socket, address));
+			}
+		}
+	}
+
+  //Create socket for hello msgs
+  NS_LOG_LOGIC ("MCAST: adding hello socket to " << MCAST_ALL_NODE << " INIT - HELLO");
+  TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+  Ptr<Node> theNode = GetObject<Node> ();
+  m_recvSocket = Socket::CreateSocket (theNode, tid);
+  Inet6SocketAddress local = Inet6SocketAddress (MCAST_ALL_NODE, MCAST_PORT);
+  m_recvSocket->Bind (local);
+  m_recvSocket->SetRecvCallback (MakeCallback (&RoutingProtocol::Recieve, this));
+  //m_recvSocket->SetIpv6RecvHopLimit (true);
+  m_recvSocket->SetRecvPktInfo (true);
+*/
+  //Create sockets for sending data
+
+
 	uint32_t startTime;
 	if (EnableHello)
 	{
