@@ -108,7 +108,7 @@ RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDe
       // This is a well-known property of sockets implementation on
       // many Unix variants.
       // So, we just log it and fall through to LookupStatic ()
-      NS_LOG_LOGIC ("RouteOutput (): Multicast destination");
+      NS_LOG_LOGIC ("		RouteOutput (): Multicast destination" << destination);
     }
 
   rtentry = Lookup (destination, oif);
@@ -132,7 +132,7 @@ RoutingProtocol::Lookup (Ipv6Address dst, Ptr<NetDevice> interface)
 
   if(dst.IsMulticast())
   {
-  	NS_LOG_LOGIC (this << dst << interface << " found as multicast destination");
+  	NS_LOG_LOGIC (this << dst << interface->GetAddress() << " found as multicast destination");
   	rtentry = Create<Ipv6Route> ();
     rtentry->SetSource (m_ipv6->SourceAddressSelection (m_ipv6->GetInterfaceForDevice (interface), dst));
     rtentry->SetDestination (dst);
@@ -152,13 +152,21 @@ RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<
 		UnicastForwardCallback ucb, MulticastForwardCallback mcb,
 		LocalDeliverCallback lcb, ErrorCallback ecb)
 {
-	bool toReturn = false;
+
+	NS_LOG_FUNCTION (this);
+
+	bool toReturn = true;
+
+	Ipv6Address dst = header.GetDestinationAddress();
+
 	return toReturn;
 }
 
 void
 RoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 {
+
+	NS_LOG_FUNCTION (this);
 
 	for (uint32_t i = 0 ; i < m_ipv6->GetNInterfaces (); i++)
 	{
@@ -191,7 +199,7 @@ RoutingProtocol::NotifyInterfaceUp (uint32_t interface)
   Inet6SocketAddress local = Inet6SocketAddress (MCAST_ALL_NODE, MCAST_PORT);
   m_recvSocket->Bind (local);
   m_recvSocket->SetRecvCallback (MakeCallback (&RoutingProtocol::Receive, this));
-  //m_recvSocket->BindToNetDevice (m_ipv6->GetNetDevice (i));// Not sure if want this
+  m_recvSocket->BindToNetDevice (m_ipv6->GetNetDevice (0));// Not sure if want this
   m_recvSocket->SetRecvPktInfo (true);
 	/*
 
@@ -537,45 +545,50 @@ RoutingProtocol::SendHello ()
 {
 	NS_LOG_FUNCTION (this);
 
+	Ptr<Socket> socket;
+	Ipv6InterfaceAddress iface;
+
 	for (std::map<Ptr<Socket>, Ipv6InterfaceAddress>::const_iterator j = m_socketAddresses.begin (); j != m_socketAddresses.end (); ++j)
 	{
-		Ptr<Socket> socket = j->first;
-		Ipv6InterfaceAddress iface = j->second;
-
-		//Get node position
-		Vector pos = GetNodePosition(m_ipv6);
-
-		//Get node velocity
-		Vector vel = GetNodeVelocity(m_ipv6);
-
-		//Get Road ID
-		uint64_t roadId = 0;
-
-		//hopCount
-		uint8_t hopCount = 0;
-
-		uint8_t type = 1;
-
-		uint16_t reserved = 0;
-
-		//Create hello header
-		HelloHeader helloHeader(/*Type*/ type, /*roadId*/ roadId, /*roadId*/ hopCount, /*neighbor life time */m_NeighborLifetime, /*radius*/ m_radius,reserved, /**/Ipv6Address().GetAllNodesMulticast(), /**/iface.GetAddress(), /*Position*/ pos, /*Velocity*/ vel );
-
-		Ipv6Address destination = MCAST_ALL_NODE;
-
-		NS_LOG_LOGIC("Sending packet to: " << destination << " from address " << iface.GetAddress());
-
-		Ptr<Packet> packet = Create<Packet>();
-		packet->AddHeader(helloHeader);
-		TypeHeader theader (HELLO);
-		packet->AddHeader(theader);
-
-		//Set Jitter time before sending
-		Time jitter = Time (MilliSeconds (m_uniformRandomVariable->GetInteger (0, 10)));
-		//Time delay = Time(Seconds(m_uniformRandomVariable->GetInteger(0,2)));
-		Simulator::Schedule (jitter, &RoutingProtocol::SendTo, this , socket, packet, destination);
-
+		socket = j->first;
+		iface = j->second;
+		break;
 	}
+
+
+	//Get node position
+	Vector pos = GetNodePosition(m_ipv6);
+
+	//Get node velocity
+	Vector vel = GetNodeVelocity(m_ipv6);
+
+	//Get Road ID
+	uint64_t roadId = 0;
+
+	//hopCount
+	uint8_t hopCount = 0;
+
+	uint8_t type = 1;
+
+	uint16_t reserved = 0;
+
+	//Create hello header
+	HelloHeader helloHeader(/*Type*/ type, /*roadId*/ roadId, /*roadId*/ hopCount, /*neighbor life time */m_NeighborLifetime, /*radius*/ m_radius,reserved, /**/Ipv6Address().GetAllNodesMulticast(), /**/iface.GetAddress(), /*Position*/ pos, /*Velocity*/ vel );
+
+	Ipv6Address destination = MCAST_ALL_NODE;
+
+	NS_LOG_LOGIC("Sending packet to: " << destination << " from address " << iface.GetAddress());
+
+	Ptr<Packet> packet = Create<Packet>();
+	packet->AddHeader(helloHeader);
+	TypeHeader theader (HELLO);
+	packet->AddHeader(theader);
+
+	//Set Jitter time before sending
+	Time jitter = Time (MilliSeconds (m_uniformRandomVariable->GetInteger (0, 10)));
+	//Time delay = Time(Seconds(m_uniformRandomVariable->GetInteger(0,2)));
+	Simulator::Schedule (jitter, &RoutingProtocol::SendTo, this , socket, packet, destination);
+
 }
 
 void

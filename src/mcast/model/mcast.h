@@ -145,7 +145,6 @@ namespace ns3
 		  ///mcast Radius
 		  uint16_t m_radius;
 
-
 		};
 	}
 
