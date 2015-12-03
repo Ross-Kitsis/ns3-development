@@ -2,7 +2,7 @@
 
 
 
-#include "ns3/mcast-helper.h"
+#include "ns3/mcast-helper2.h"
 #include "ns3/mcast.h"
 #include "ns3/mcast-neighbor.h"
 #include "ns3/mcast-packet.h"
@@ -85,7 +85,7 @@ main (int argc, char *argv[])
 
   ///////////////////////// NETWORK AND MCAST ////////////////////////////
 
-  McastHelper mcast;
+  McastHelper2 mcast;
   //Configure mcast attirbutes if needed
 
   InternetStackHelper stack;

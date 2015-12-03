@@ -3,4 +3,7 @@
 def build(bld):
     obj = bld.create_ns3_program('mcast-example', ['mcast'])
     obj.source = 'mcast-example.cc'
+    
+    obj = bld.create_ns3_program('mcast-example2', ['mcast'])
+    obj.source = 'mcast-example2.cc'
 

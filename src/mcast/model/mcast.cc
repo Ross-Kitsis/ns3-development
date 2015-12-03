@@ -9,6 +9,7 @@
 #include "ns3/inet6-socket-address.h"
 #include "ns3/trace-source-accessor.h"
 #include "ns3/udp-socket-factory.h"
+#include "ns3/udp-socket.h"
 #include "ns3/wifi-net-device.h"
 #include "ns3/adhoc-wifi-mac.h" //Needed for hellos?
 #include "ns3/string.h"
@@ -21,7 +22,8 @@
 #include <limits>
 #include <iostream>
 
-#define MCAST_ALL_NODE "ff02::114"
+//#define MCAST_ALL_NODE "ff02::114"
+#define MCAST_ALL_NODE "2001::200"
 
 namespace ns3
 {
@@ -110,7 +112,7 @@ RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDe
       // So, we just log it and fall through to LookupStatic ()
       NS_LOG_LOGIC ("		RouteOutput (): Multicast destination" << destination);
     }
-
+  NS_LOG_LOGIC("Net device " << oif->GetAddress());
   rtentry = Lookup (destination, oif);
   if (rtentry)
     {
@@ -129,10 +131,13 @@ RoutingProtocol::Lookup (Ipv6Address dst, Ptr<NetDevice> interface)
 	NS_LOG_FUNCTION (this << dst << interface);
   Ptr<Ipv6Route> rtentry = 0;
 //  uint16_t longestMask = 0;
-
-  if(dst.IsMulticast())
+  if(true)
+//  if(dst.IsMulticast() || dst.IsEqual(Ipv6Address(MCAST_ALL_NODE)))
   {
-  	NS_LOG_LOGIC (this << dst << interface->GetAddress() << " found as multicast destination");
+  	NS_LOG_LOGIC (this);
+  	NS_LOG_LOGIC (dst);
+//  	NS_LOG_LOGIC (interface->GetAddress() << " found as multicast destination");
+
   	rtentry = Create<Ipv6Route> ();
     rtentry->SetSource (m_ipv6->SourceAddressSelection (m_ipv6->GetInterfaceForDevice (interface), dst));
     rtentry->SetDestination (dst);
@@ -147,6 +152,9 @@ RoutingProtocol::Lookup (Ipv6Address dst, Ptr<NetDevice> interface)
   return rtentry;
 }
 
+/*
+ *
+ */
 bool
 RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const NetDevice> idev,
 		UnicastForwardCallback ucb, MulticastForwardCallback mcb,
@@ -158,15 +166,94 @@ RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<
 	bool toReturn = true;
 
 	Ipv6Address dst = header.GetDestinationAddress();
+	Ipv6Address src = header.GetSourceAddress();
+	uint32_t iif = m_ipv6->GetInterfaceForDevice(idev);
+
+
+	NS_LOG_LOGIC ("		Route input destination: " << dst << " Source: " << src);
+
+	if(IsMyOwnAddress(src))
+	{
+		NS_LOG_LOGIC("Packet from own address" << src);
+		return false;
+	}
+
+	/*
+	if(lcb.IsNull() == false)
+	{
+		NS_LOG_LOGIC("LCB NOT NULL");
+	}else
+	{
+		NS_LOG_LOGIC("LCB NULL");
+	}*/
+
+
+	//uint32_t ri = m_recvSocket->GetBoundNetDevice()->GetIfIndex();
+
+	if(true)
+	{
+		NS_LOG_LOGIC("	Multicast packet detected, destination: " << dst << " interface  " << iif /* << " recvSocket int " << ri*/);
+		//NS_LOG_LOGIC("Multicast delivery to " << iface);
+
+
+		lcb (p, header, iif);
+		return true;
+	}
+
 
 	return toReturn;
 }
+
+/*
+ * Checks passed address against all registered sockets to determine
+ * if sending address if nodes own address
+ */
+bool
+RoutingProtocol::IsMyOwnAddress (Ipv6Address src)
+{
+  NS_LOG_FUNCTION (this << src);
+  for (std::map<Ptr<Socket>, Ipv6InterfaceAddress>::const_iterator j =
+         m_socketAddresses.begin (); j != m_socketAddresses.end (); ++j)
+    {
+      Ipv6InterfaceAddress iface = j->second;
+      if (src == iface.GetAddress())
+        {
+          return true;
+        }
+    }
+  return false;
+}
+
 
 void
 RoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 {
 
 	NS_LOG_FUNCTION (this);
+
+  //Create socket for hello msgs
+  NS_LOG_LOGIC ("MCAST: adding hello socket to " << MCAST_ALL_NODE << " INIT - HELLO");
+  TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+  Ptr<Node> theNode = GetObject<Node> ();
+  m_recvSocket = Socket::CreateSocket (theNode, tid);
+  Inet6SocketAddress local = Inet6SocketAddress (Ipv6Address(MCAST_ALL_NODE), MCAST_PORT);
+  m_recvSocket->Bind (local);
+  if(Ipv6Address(MCAST_ALL_NODE).IsMulticast())
+  {
+  	NS_LOG_LOGIC("Socket has a multicast address");
+  	Ptr<UdpSocket> UdpSocketTest = DynamicCast<UdpSocket>(m_recvSocket);
+  	if(UdpSocketTest)
+  	{
+  		UdpSocketTest -> MulticastJoinGroup(0,Ipv6Address(MCAST_ALL_NODE));
+  	}else
+  	{
+  		NS_FATAL_ERROR ("Error: Failed to join multicast group");
+  	}
+  }
+  m_recvSocket->SetRecvCallback (MakeCallback (&RoutingProtocol::Receive, this));
+  //m_recvSocket->BindToNetDevice (m_ipv6->GetNetDevice (0));// Not sure if want this
+  m_recvSocket->SetRecvPktInfo (true);
+
 
 	for (uint32_t i = 0 ; i < m_ipv6->GetNInterfaces (); i++)
 	{
@@ -182,25 +269,26 @@ RoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 				Inet6SocketAddress global = Inet6SocketAddress (address.GetAddress (), MCAST_PORT);
 				socket->SetRecvCallback (MakeCallback (&RoutingProtocol::Receive,this));
 				int ret = socket->Bind (global);
+			  if(Ipv6Address(MCAST_ALL_NODE).IsMulticast())
+			  {
+			  	NS_LOG_LOGIC("Socket has a multicast address");
+			  	Ptr<UdpSocket> UdpSocketTest = DynamicCast<UdpSocket>(socket);
+			  	if(UdpSocketTest)
+			  	{
+			  		UdpSocketTest -> MulticastJoinGroup(0,Ipv6Address(MCAST_ALL_NODE));
+			  	}else
+			  	{
+			  		NS_FATAL_ERROR ("Error: Failed to join multicast group");
+			  	}
+			  }
 				NS_ASSERT_MSG (ret == 0, "Bind unsuccessful");
-        socket->BindToNetDevice (m_ipv6->GetNetDevice (i));// Not sure if want this
+        //socket->BindToNetDevice (m_ipv6->GetNetDevice (i));// Not sure if want this
 				socket->SetAllowBroadcast(true);
 				m_socketAddresses.insert (std::make_pair (socket, address));
 			}
 		}
 	}
 
-
-  //Create socket for hello msgs
-  NS_LOG_LOGIC ("MCAST: adding hello socket to " << MCAST_ALL_NODE << " INIT - HELLO");
-  TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
-  Ptr<Node> theNode = GetObject<Node> ();
-  m_recvSocket = Socket::CreateSocket (theNode, tid);
-  Inet6SocketAddress local = Inet6SocketAddress (MCAST_ALL_NODE, MCAST_PORT);
-  m_recvSocket->Bind (local);
-  m_recvSocket->SetRecvCallback (MakeCallback (&RoutingProtocol::Receive, this));
-  m_recvSocket->BindToNetDevice (m_ipv6->GetNetDevice (0));// Not sure if want this
-  m_recvSocket->SetRecvPktInfo (true);
 	/*
 
 	NS_LOG_FUNCTION (this << m_ipv6->GetAddress (interface, 0));
@@ -438,7 +526,7 @@ RoutingProtocol::ProcessHello(HelloHeader const & helloHeader)
 void
 RoutingProtocol::NotifyAddRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse)
 {
-	NS_LOG_INFO (this << dst << mask << nextHop << interface << prefixToUse);
+	NS_LOG_FUNCTION (this << dst << mask << nextHop << interface << prefixToUse);
 	// \todo this can be used to add delegate routes
 }
 
@@ -465,7 +553,7 @@ RoutingProtocol::SetIpv6 (Ptr<Ipv6> ipv6)
 	// Create lo route. It is asserted that the only one interface up for now is loopback
 	NS_ASSERT (m_ipv6->GetNInterfaces () == 1 && m_ipv6->GetAddress (0, 0).GetAddress() == Ipv6Address ("::1"));
 	m_lo = m_ipv6->GetNetDevice (0);
-	NS_ASSERT (m_lo != 0);
+	//NS_ASSERT (m_lo != 0);
 
 
 	///////////////// TO BE UPDATED LATER /////////////////////////////
@@ -575,7 +663,7 @@ RoutingProtocol::SendHello ()
 	//Create hello header
 	HelloHeader helloHeader(/*Type*/ type, /*roadId*/ roadId, /*roadId*/ hopCount, /*neighbor life time */m_NeighborLifetime, /*radius*/ m_radius,reserved, /**/Ipv6Address().GetAllNodesMulticast(), /**/iface.GetAddress(), /*Position*/ pos, /*Velocity*/ vel );
 
-	Ipv6Address destination = MCAST_ALL_NODE;
+	Ipv6Address destination = Ipv6Address(MCAST_ALL_NODE);
 
 	NS_LOG_LOGIC("Sending packet to: " << destination << " from address " << iface.GetAddress());
 
@@ -596,6 +684,7 @@ RoutingProtocol::SendTo (Ptr<Socket> socket, Ptr<Packet> packet, Ipv6Address des
 {
 	NS_LOG_FUNCTION (this << destination);
 	socket->SendTo (packet, 0, Inet6SocketAddress (destination, MCAST_PORT));
+	//socket->Send(packet);
 	//socket->Send(packet);
 }
 

@@ -14,6 +14,8 @@ def build(bld):
         'model/mcast-packet.cc',
         'model/vector-utils.cc',
         'helper/mcast-helper.cc',
+        'model/mcast2.cc',
+        'helper/mcast-helper2.cc',
         ]
 
 #    module_test = bld.create_ns3_module_test_library('mcast')
@@ -29,6 +31,8 @@ def build(bld):
         'model/mcast-packet.h',
         'model/vector-utils.h',
         'helper/mcast-helper.h',
+        'helper/mcast-helper2.h',
+        'model/mcast2.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

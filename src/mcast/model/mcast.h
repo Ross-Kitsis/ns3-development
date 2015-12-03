@@ -123,6 +123,9 @@ namespace ns3
 		  //Lookup routes
 		  Ptr<Ipv6Route> Lookup (Ipv6Address dst, Ptr<NetDevice> interface);
 
+		  //Check is passed address is assiged to one of nodes addresses
+		  bool IsMyOwnAddress (Ipv6Address src);
+
 		  //Uniform random variable provider
 		  Ptr<UniformRandomVariable> m_uniformRandomVariable;
 
