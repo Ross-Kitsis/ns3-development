@@ -17,6 +17,7 @@
 //IPv6 Routing
 #include "ns3/ipv6-routing-protocol.h"
 #include "ns3/ipv6.h"
+#include "ns3/ipv6-address.h"
 
 //Interfaces & Sockets
 #include "ns3/ipv6-interface.h"
@@ -225,6 +226,11 @@ public:
 	 */
 	void AddDefaultRouteTo (Ipv6Address nextHop, uint32_t interface);
 
+	/**
+	 * \brief Checks if passed address is the same as one of the nodes interface addresses
+	 */
+	bool IsMyOwnAddress (Ipv6Address src);
+
 protected:
 	/**
 	 * \brief Dispose this object.
@@ -318,10 +324,20 @@ private:
 	 */
 	void HelloTimerExpire(void);
 
+  /**
+   * Get node position as a vector
+   */
+  Vector GetNodePosition (Ptr<Ipv6> ipv6);
+
+  /**
+   * Get node position as a vector
+   */
+  Vector GetNodeVelocity (Ptr<Ipv6> ipv6);
+
 	//Attributes
 
 	Routes m_routes; //!<  the forwarding table for network.
-	Ptr<Ipv6> m_ipv6; //!< IPv6 reference
+	Ptr<Ipv6> m_ipv6; //!< IPv6 protocol reference
 	Time m_startupDelay; //!< Random delay before protocol startup.
 	Time m_unsolicitedUpdate; //!< time between two Unsolicited Routing Updates (Convert to hello msgs timer)
 
@@ -346,7 +362,7 @@ private:
 	Time m_helloInterval; //Time between 2 hello messages
 	Time m_neighborInvalid; //Max time between neighbor relationship invalidated
 	Timer m_helloTimer; //Timer for hello messages; calls send hello when expires
-
+	Ipv6Address m_globalAddress; //Pointer to GLOBAL ipv6 address (Assumes single interface)
 
 
 };

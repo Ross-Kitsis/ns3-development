@@ -70,6 +70,12 @@ ThesisRoutingProtocol::GetTypeId (void)
     .SetParent<Ipv6RoutingProtocol> ()
     .SetGroupName ("mcast")
     .AddConstructor<ThesisRoutingProtocol> ()
+    .AddAttribute ("HelloTimer", "The time between two Hello msgs",
+                   TimeValue (Seconds(3)),
+                   MakeTimeAccessor (&ThesisRoutingProtocol::m_helloInterval),
+                   MakeTimeChecker ())
+
+
     /*
     .AddAttribute ("UnsolicitedRoutingUpdate", "The time between two Unsolicited Routing Updates.",
                    TimeValue (Seconds(30)),
@@ -110,8 +116,21 @@ Ptr<Ipv6Route>
 ThesisRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif,
 			Socket::SocketErrno &sockerr)
 {
-	Ptr<Ipv6Route> r = 0;
-	return r;
+  NS_LOG_FUNCTION (this << header << oif);
+  Ipv6Address destination = header.GetDestinationAddress ();
+  Ptr<Ipv6Route> rtentry = 0;
+
+  if(destination.IsMulticast())
+  {
+  	NS_LOG_LOGIC("	RoutingOutput: Multicast Destination " << destination);
+  }
+
+  rtentry = Lookup(destination, oif);
+
+  NS_LOG_LOGIC("	ROUTE FOUND " << rtentry);
+
+  //return 0;
+	return rtentry;
 }
 
 bool
@@ -119,7 +138,25 @@ ThesisRoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header &header
 			UnicastForwardCallback ucb, MulticastForwardCallback mcb,
 			LocalDeliverCallback lcb, ErrorCallback ecb)
 {
+  NS_LOG_FUNCTION (this << p << header << header.GetSourceAddress () << header.GetDestinationAddress () << idev);
 	bool toReturn = true;
+
+
+  NS_ASSERT (m_ipv6 != 0);
+  // Check if input device supports IP
+  NS_ASSERT (m_ipv6->GetInterfaceForDevice (idev) >= 0);
+  uint32_t iif = m_ipv6->GetInterfaceForDevice (idev);
+  Ipv6Address dst = header.GetDestinationAddress ();
+  Ipv6Address src = header.GetSourceAddress();
+
+	if(IsMyOwnAddress(src))
+	{
+		NS_LOG_LOGIC("Packet from own address" << src);
+		return false;
+	}
+
+  lcb(p,header,iif);
+
 	return toReturn;
 
 }
@@ -170,32 +207,33 @@ ThesisRoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 void
 ThesisRoutingProtocol::NotifyInterfaceDown (uint32_t interface)
 {
-
+	NS_LOG_FUNCTION(this);
 }
 
 void
 ThesisRoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv6InterfaceAddress address)
 {
-
+	NS_LOG_FUNCTION(this);
 }
 
 void
 ThesisRoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv6InterfaceAddress address)
 {
-
+	NS_LOG_FUNCTION(this);
 }
 
 void
 ThesisRoutingProtocol::NotifyAddRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address nextHop,
 			uint32_t interface, Ipv6Address prefixToUse)
 {
-
+	NS_LOG_FUNCTION(this);
 }
+
 void
 ThesisRoutingProtocol::NotifyRemoveRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address nextHop,
 			uint32_t interface, Ipv6Address prefixToUse)
 {
-
+	NS_LOG_FUNCTION(this);
 }
 void
 ThesisRoutingProtocol::SetIpv6 (Ptr<Ipv6> ipv6)
@@ -227,16 +265,15 @@ ThesisRoutingProtocol::HelloTimerExpire()
 {
 	NS_LOG_FUNCTION (this);
 
-
-	DoSendHello ();
-
-	Time delay = m_helloInterval + Seconds (m_rng->GetValue (0, 0.5*m_helloInterval.GetSeconds ()) );
+	Time delay = Seconds(m_helloInterval) + Seconds (m_rng->GetValue (0, 0.5*m_helloInterval.GetSeconds ()) );
 
 	//Cancel previous timer to reset
 	m_helloTimer.Cancel();
 
 	//Set new timer
 	m_helloTimer.Schedule(delay);
+
+	DoSendHello ();
 
 	//m_nextUnsolicitedUpdate = Simulator::Schedule (delay, &RipNg::SendUnsolicitedRouteUpdate, this);
 
@@ -255,9 +292,103 @@ ThesisRoutingProtocol::DoSendHello()
     //Skip MTU and RTE stuff
     Ptr<Packet> p = Create<Packet> ();
 
+  	//Get node position
+  	Vector pos = GetNodePosition(m_ipv6);
+
+  	//Get node velocity
+  	Vector vel = GetNodeVelocity(m_ipv6);
+
+  	//Get Road ID
+  	uint64_t roadId = 0;
+
+  	//hopCount
+  	uint8_t hopCount = 0;
+
+  	uint8_t type = 1;
+
+  	uint16_t reserved = 0;
+
+  	//Create hello header
+  	HelloHeader helloHeader(/*Type*/ type, /*roadId*/ roadId, /*roadId*/ hopCount, /*neighbor life time */ 0, /*radius*/ 0 ,reserved, /**/Ipv6Address(MCAST_ALL_NODE), /**/m_globalAddress, /*Position*/ pos, /*Velocity*/ vel );
+
+  	Ipv6Address destination = Ipv6Address(MCAST_ALL_NODE);
+
+  	Ptr<Packet> packet = Create<Packet>();
+  	packet->AddHeader(helloHeader);
+  	TypeHeader theader (HELLO);
+  	packet->AddHeader(theader);
+
+
+  	NS_LOG_LOGIC("Sending packet to: " << destination << " from address " << interface);
+  	iter->first->SendTo(packet, 0, Inet6SocketAddress(MCAST_ALL_NODE, MCAST_PORT));
 
   }
 
+}
+
+Ptr<Ipv6Route>
+ThesisRoutingProtocol::Lookup (Ipv6Address dst, Ptr<NetDevice> interface)
+{
+	NS_LOG_FUNCTION (this << dst << interface);
+
+	Ptr<Ipv6Route> rtentry=0;
+	//uint16_t longestMask = 0;
+
+	//Generally assume you would never send on link local multicast
+
+  for (RoutesI it = m_routes.begin (); it != m_routes.end (); it++)
+  {
+  	ThesisRoutingTableEntry* j = it->first;
+  	NS_LOG_LOGIC("  Route to: " << j->GetDest() << " Status " <<  j->GetRouteStatus());
+  	if (j->GetRouteStatus () == ThesisRoutingTableEntry::ROUTE_VALID)
+  	{
+      Ipv6Prefix mask = j->GetDestNetworkPrefix ();
+      uint16_t maskLen = mask.GetPrefixLength ();
+      Ipv6Address entry = j->GetDestNetwork ();
+
+      if (mask.IsMatch (dst, entry))
+      {
+      	NS_LOG_LOGIC ("	Found a route via " << j << " mask length " << maskLen);
+
+      	/*If interface given, check route will output on this interface*/
+        if (!interface || interface == m_ipv6->GetNetDevice (j->GetInterface ()))
+        {
+        	Ipv6RoutingTableEntry* route = j;
+        	uint32_t interfaceIdx = route->GetInterface ();
+        	rtentry = Create<Ipv6Route> ();
+
+        	rtentry->SetDestination (route->GetDest ());
+        	rtentry->SetGateway (route->GetGateway ());
+        	rtentry->SetOutputDevice (m_ipv6->GetNetDevice (interfaceIdx));
+
+        	NS_LOG_LOGIC ("Route entry created, ready to return");
+        }
+
+      }
+
+  	}
+  }
+//  return 0;
+	return rtentry;
+
+}
+
+Vector
+ThesisRoutingProtocol::GetNodePosition (Ptr<Ipv6> ipv6)
+{
+	NS_LOG_FUNCTION (this);
+	Vector pos = ipv6->GetObject<MobilityModel>()->GetPosition();
+	NS_LOG_DEBUG (" Node " << ipv6->GetObject<Node>()->GetId() << " position =" << pos);
+	return pos;
+}
+
+Vector
+ThesisRoutingProtocol::GetNodeVelocity (Ptr<Ipv6> ipv6)
+{
+	NS_LOG_FUNCTION (this);
+	Vector vel = ipv6->GetObject<MobilityModel>()->GetVelocity();
+	NS_LOG_DEBUG (" Node " << ipv6->GetObject<Node>()->GetId() << " velocity =" << vel);
+	return vel;
 }
 
 int64_t
@@ -285,13 +416,48 @@ ThesisRoutingProtocol::AddNetworkRouteTo (Ipv6Address network, Ipv6Prefix networ
 void
 ThesisRoutingProtocol::Receive (Ptr<Socket> socket)
 {
+	NS_LOG_FUNCTION("	Packet received " << socket << " IP address " << m_ipv6 );
 
+	Ptr<Packet> packet = socket->Recv();
+
+	TypeHeader tHeader(HELLO);
+	packet->RemoveHeader(tHeader);
+
+	NS_LOG_INFO("Received mcast packet" << *packet);
+
+	if (!tHeader.IsValid ())
+	{
+		//Unknown packet type
+		NS_LOG_DEBUG ("MCAST message " << packet->GetUid () << " with unknown type received: " << tHeader.Get () << ". Drop");
+		return; // drop
+	}
+	switch (tHeader.Get ())
+	{
+	case HELLO:
+	{
+	//	RecvHello (packet);
+		NS_LOG_DEBUG("		Receieved hello msg, process hello");
+		break;
+	}
+	}
+
+}
+
+bool
+ThesisRoutingProtocol::IsMyOwnAddress (Ipv6Address src)
+{
+  NS_LOG_FUNCTION (this << src);
+  if(src.IsEqual(m_globalAddress))
+  {
+  	return true;
+  }
+  return false;
 }
 
 void
 ThesisRoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const
 {
-
+	NS_LOG_FUNCTION(this);
 }
 
 /*
@@ -300,7 +466,7 @@ ThesisRoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const
 void
 ThesisRoutingTableEntry::SetRouteChanged(bool changed)
 {
-
+	NS_LOG_FUNCTION(this);
 }
 
 /*
@@ -309,6 +475,7 @@ ThesisRoutingTableEntry::SetRouteChanged(bool changed)
 void
 ThesisRoutingTableEntry::SetRouteStatus (Status_e status)
 {
+	NS_LOG_FUNCTION(this);
   if (m_status != status)
     {
       m_status = status;
@@ -321,11 +488,18 @@ ThesisRoutingTableEntry::SetRouteStatus (Status_e status)
  */
 void ThesisRoutingTableEntry::SetRouteMetric (uint8_t routeMetric)
 {
+	NS_LOG_FUNCTION(this);
   if (m_metric != routeMetric)
     {
       m_metric = routeMetric;
       m_changed = true;
     }
+}
+
+ThesisRoutingTableEntry::Status_e
+ThesisRoutingTableEntry::GetRouteStatus (void) const
+{
+	return m_status;
 }
 
 /*
@@ -335,6 +509,7 @@ void ThesisRoutingTableEntry::SetRouteMetric (uint8_t routeMetric)
 ThesisRoutingTableEntry::ThesisRoutingTableEntry ()
   : m_tag (0), m_metric (16), m_status (ROUTE_INVALID), m_changed (false)
 {
+
 }
 
 ThesisRoutingTableEntry::ThesisRoutingTableEntry (Ipv6Address network, Ipv6Prefix networkPrefix, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse)
@@ -359,7 +534,7 @@ ThesisRoutingTableEntry::~ThesisRoutingTableEntry ()
 void
 ThesisRoutingProtocol::DoDispose ()
 {
-
+	NS_LOG_FUNCTION(this);
 }
 
 void
