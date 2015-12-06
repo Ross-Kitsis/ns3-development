@@ -74,6 +74,8 @@ public:
       close (false), m_velocity(v), m_position(p)
     {
     }
+
+
   };
   /// Return expire time for neighbor node with address addr, if exists, else return 0.
   Time GetExpireTime (Ipv6Address addr);
@@ -81,6 +83,7 @@ public:
   bool IsNeighbor (Ipv6Address addr);
   /// Update expire time for entry with address addr, if it exists, else add new entry
   void Update (Ipv6Address addr, Time expire, Vector velocity, Vector position);
+
   /// Remove all expired entries
   void Purge ();
   /// Schedule m_ntimer.
@@ -99,6 +102,12 @@ public:
   void SetCallback (Callback<void, Ipv6Address> cb) { m_handleLinkFailure = cb; }
   /// Handle link failure callback
   Callback<void, Ipv6Address> GetCallback () const { return m_handleLinkFailure; }
+
+  /**
+   * \brief Called when timer on a neighbor relationship expires
+   * Should only be called when a neighbor relationship has not been renewed
+   */
+  void NeighborTimerExpire(void);
 
 private:
   /// link failure callback

@@ -334,6 +334,11 @@ private:
    */
   Vector GetNodeVelocity (Ptr<Ipv6> ipv6);
 
+  /**
+   * \brief Process hello headers and update neighbor table
+   */
+  void ProcessHello(HelloHeader const & helloHeader);
+
 	//Attributes
 
 	Routes m_routes; //!<  the forwarding table for network.
@@ -363,6 +368,7 @@ private:
 	Time m_neighborInvalid; //Max time between neighbor relationship invalidated
 	Timer m_helloTimer; //Timer for hello messages; calls send hello when expires
 	Ipv6Address m_globalAddress; //Pointer to GLOBAL ipv6 address (Assumes single interface)
+  //Neighbors m_nb; //List of neighbors from whom hello messages have been received
 
 
 };
