@@ -42,10 +42,24 @@ public:
 	Vector GetPosition(void);
 
 	/*
+	 * \brief Set the neighbor position
+	 */
+	void SetPosition(Vector pos);
+
+	/*
 	 * \brief Returns the neighbor velocity
 	 */
 	Vector GetVelocity(void);
 
+	/*
+	 * \brief Set the neighbor velocity
+	 */
+	void SetVelocity(Vector v);
+
+
+	/*
+	 * Timer counting down expiring of neighbor relationship
+	 */
 	Timer m_expire;
 
 private:
@@ -73,16 +87,6 @@ public:
 	 */
 	void Purge(Ipv6Address toRemove);
 
-private:
-
-
-
-	/*
-	 * \brief Return the list of neighbors
-	 *
-	 */
-	std::vector<Neighbor> GetNeighbors(void);
-
 	/*
 	 * \brief Update list of neighbors
 	 *
@@ -92,8 +96,19 @@ private:
 	 */
 	void Update(Ipv6Address address, Vector pos, Vector vel);
 
+private:
+
+
+
+	/*
+	 * \brief Return the list of neighbors
+	 *
+	 */
+	std::list<Neighbor> GetNeighbors(void);
+
+
 	//Attributes
-	std::vector<Neighbor> m_nb;
+	std::list<Neighbor> m_nb;
 	Time m_delay;
 
 

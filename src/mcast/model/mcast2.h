@@ -27,7 +27,7 @@
 #include "ns3/ipv6-l3-protocol.h"
 
 //MCAST packages
-#include "mcast-neighbor.h"
+#include "ThesisNeighbors.h"
 #include "mcast-packet.h"
 
 //Routing tables
@@ -337,7 +337,7 @@ private:
   /**
    * \brief Process hello headers and update neighbor table
    */
-  void ProcessHello(HelloHeader const & helloHeader);
+  void ProcessHello(HelloHeader helloHeader);
 
 	//Attributes
 
@@ -369,7 +369,7 @@ private:
 	Timer m_helloTimer; //Timer for hello messages; calls send hello when expires
 	Ipv6Address m_globalAddress; //Pointer to GLOBAL ipv6 address (Assumes single interface)
   //Neighbors m_nb; //List of neighbors from whom hello messages have been received
-
+	ThesisNeighbors m_neighbors;
 
 };
 

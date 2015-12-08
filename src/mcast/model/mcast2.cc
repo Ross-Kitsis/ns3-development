@@ -52,9 +52,10 @@ namespace mcast
 NS_OBJECT_ENSURE_REGISTERED(ThesisRoutingProtocol);
 
 ThesisRoutingProtocol::ThesisRoutingProtocol()
-	: m_ipv6(0), m_initialized(false), m_helloInterval(3)
+	: m_ipv6(0), m_initialized(false), m_helloInterval(3), m_neighbors(Seconds(m_helloInterval * 5))
 {
 	m_rng = CreateObject<UniformRandomVariable>();
+	//m_neighbors = ThesisNeighbors(Seconds(m_helloInterval * 5));
 }
 
 ThesisRoutingProtocol::~ThesisRoutingProtocol()
@@ -271,6 +272,7 @@ ThesisRoutingProtocol::HelloTimerExpire()
 	m_helloTimer.Cancel();
 
 	//Set new timer
+//	m_helloTimer.SetFunction(&ThesisRoutingProtocol::HelloTimerExpire, this);
 	m_helloTimer.Schedule(delay);
 
 	DoSendHello ();
@@ -308,8 +310,12 @@ ThesisRoutingProtocol::DoSendHello()
 
   	uint16_t reserved = 0;
 
+  	Ipv6Address origin = m_globalAddress;
+
+
+
   	//Create hello header
-  	HelloHeader helloHeader(/*Type*/ type, /*roadId*/ roadId, /*roadId*/ hopCount, /*neighbor life time */ 0, /*radius*/ 0 ,reserved, /**/Ipv6Address(MCAST_ALL_NODE), /**/m_globalAddress, /*Position*/ pos, /*Velocity*/ vel );
+  	HelloHeader helloHeader(/*Type*/ type, /*roadId*/ roadId, /*roadId*/ hopCount, /*neighbor life time */ 0, /*radius*/ 0 ,reserved, /**/Ipv6Address(MCAST_ALL_NODE), /**/origin, /*Position*/ pos, /*Velocity*/ vel );
 
   	Ipv6Address destination = Ipv6Address(MCAST_ALL_NODE);
 
@@ -338,6 +344,7 @@ ThesisRoutingProtocol::Lookup (Ipv6Address dst, Ptr<NetDevice> interface)
 
   for (RoutesI it = m_routes.begin (); it != m_routes.end (); it++)
   {
+
   	ThesisRoutingTableEntry* j = it->first;
   	NS_LOG_LOGIC("  Route to: " << j->GetDest() << " Status " <<  j->GetRouteStatus());
   	if (j->GetRouteStatus () == ThesisRoutingTableEntry::ROUTE_VALID)
@@ -425,6 +432,9 @@ ThesisRoutingProtocol::Receive (Ptr<Socket> socket)
 
 	NS_LOG_INFO("Received mcast packet" << *packet);
 
+	HelloHeader hHeader;
+	packet->RemoveHeader(hHeader);
+
 	if (!tHeader.IsValid ())
 	{
 		//Unknown packet type
@@ -437,11 +447,23 @@ ThesisRoutingProtocol::Receive (Ptr<Socket> socket)
 	{
 	//	RecvHello (packet);
 		NS_LOG_DEBUG("		Receieved hello msg, process hello");
+		ProcessHello(hHeader);
 		break;
 	}
 	}
 
 }
+
+void
+ThesisRoutingProtocol::ProcessHello(HelloHeader helloHeader)
+{
+  NS_LOG_FUNCTION (this << "Processing hello header");
+
+  NS_LOG_FUNCTION (" >>>> Origin" << helloHeader.GetOrigin() << " Position" << helloHeader.GetPosition() << " Velocity"  << helloHeader.GetVelocity());
+
+  m_neighbors.Update(helloHeader.GetOrigin(), helloHeader.GetPosition(), helloHeader.GetVelocity());
+}
+
 
 bool
 ThesisRoutingProtocol::IsMyOwnAddress (Ipv6Address src)
@@ -564,6 +586,9 @@ ThesisRoutingProtocol::DoInitialize ()
   			socket->ShutdownRecv ();
   			socket->SetIpv6RecvHopLimit (true);
   			m_sendSocketList[socket] = i;
+
+  			//Set global address pointer for easy reference later
+  			m_globalAddress = address.GetAddress();
 
 
   			//Add multicast route
