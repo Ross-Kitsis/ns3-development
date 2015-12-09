@@ -455,6 +455,11 @@ RoutingProtocol::Receive(Ptr<Socket> socket)
 		RecvHello (packet);
 		break;
 	}
+	case MCAST_CONTROL:
+	{
+		NS_LOG_DEBUG("		Receieved mcast control");
+		break;
+	}
 	}
 }
 

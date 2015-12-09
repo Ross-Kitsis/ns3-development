@@ -79,7 +79,7 @@ ThesisNeighbors::Update(Ipv6Address ip, Vector pos, Vector vel)
 		if(it->GetIp().IsEqual(ip))
 		{
 			//Found previous entry for this neighbor
-			it->m_expire.Suspend();
+			it->m_expire.Cancel();
 			it->m_expire.SetFunction(&ThesisNeighbors::Purge,this);
 			it->m_expire.SetArguments(ip);
 			it->m_expire.Schedule(m_delay);

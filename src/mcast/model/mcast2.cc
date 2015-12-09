@@ -41,6 +41,8 @@
 
 #define MCAST_ALL_NODE "ff02::114"
 #define MCAST_PORT 555
+#define MCAST_CONTROL_MSG "ff02::115"
+
 
 namespace ns3
 {
@@ -266,13 +268,16 @@ ThesisRoutingProtocol::HelloTimerExpire()
 {
 	NS_LOG_FUNCTION (this);
 
-	Time delay = Seconds(m_helloInterval) + Seconds (m_rng->GetValue (0, 0.5*m_helloInterval.GetSeconds ()) );
+	Time delay = m_helloInterval + m_rng->GetValue(0,0.5)*m_helloInterval;
+	//+ m_rng->GetValue (0, 0.5*m_helloInterval.GetSeconds() );
 
 	//Cancel previous timer to reset
 	m_helloTimer.Cancel();
 
+	NS_LOG_LOGIC("Scheduling next hello in: " << delay.GetSeconds());
+
 	//Set new timer
-//	m_helloTimer.SetFunction(&ThesisRoutingProtocol::HelloTimerExpire, this);
+	m_helloTimer.SetFunction(&ThesisRoutingProtocol::HelloTimerExpire, this);
 	m_helloTimer.Schedule(delay);
 
 	DoSendHello ();
@@ -441,13 +446,18 @@ ThesisRoutingProtocol::Receive (Ptr<Socket> socket)
 		NS_LOG_DEBUG ("MCAST message " << packet->GetUid () << " with unknown type received: " << tHeader.Get () << ". Drop");
 		return; // drop
 	}
-	switch (tHeader.Get ())
+	switch (tHeader.Get())
 	{
 	case HELLO:
 	{
 	//	RecvHello (packet);
 		NS_LOG_DEBUG("		Receieved hello msg, process hello");
 		ProcessHello(hHeader);
+		break;
+	}
+	case MCAST_CONTROL:
+	{
+		NS_LOG_DEBUG("		Receieved mcast control");
 		break;
 	}
 	}
@@ -593,6 +603,7 @@ ThesisRoutingProtocol::DoInitialize ()
 
   			//Add multicast route
   		  AddNetworkRouteTo (Ipv6Address(MCAST_ALL_NODE), Ipv6Prefix("ff"), i);
+
 
   		}
 

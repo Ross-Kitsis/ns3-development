@@ -43,10 +43,11 @@ namespace mcast {
 enum MessageType
 {
   HELLO  = 1,   //!< MCAST Hello type
+  MCAST_CONTROL = 2
 };
 
 /**
-* \ingroup aodv
+* \ingroup mcast
 * \brief MCAST types
 */
 class TypeHeader : public Header
@@ -278,6 +279,106 @@ private:
 };
 
 std::ostream & operator<< (std::ostream & os, HelloHeader const &);
+
+/////////////////////////////////////////////////////////////////////////////////
+
+class ControlHeader : public Header
+{
+public:
+  /// c-tor
+  ControlHeader (Ipv6Address Id = Ipv6Address(), uint32_t a,
+  							 uint32_t b, uint8_t type);
+
+  /*
+  HelloHeader(uint8_t type = 0, uint64_t roadId = 0, uint8_t hopCount = 0,
+      uint16_t neighborLifeTime = 0, uint16_t mCastRadius = 0,
+      uint16_t reserved = 0,
+      Ipv6Address dst = Ipv6Address (),
+      Ipv6Address origin = Ipv6Address (),
+      float_t xPos = 0.0, float_t yPos = 0.0, float_t zPos = 0.0,
+      float_t xVel = 0.0, float_t yVel = 0.0, float_t zVel = 0.0);
+*/
+
+
+  //Header size in bytes
+  static const uint32_t 		m_headerSize;
+
+  // Header serialization/deserialization
+  static TypeId GetTypeId ();
+  TypeId GetInstanceTypeId () const;
+  uint32_t GetSerializedSize () const;
+  void Serialize (Buffer::Iterator start) const;
+  uint32_t Deserialize (Buffer::Iterator start);
+  void Print (std::ostream &os) const;
+
+  // Fields
+  void SetHopCount (uint8_t count) { m_hopCount = count; }
+  uint8_t GetHopCount () const { return m_hopCount; }
+
+  void SetRadius (uint16_t radius) { m_mCastRadius = radius; }
+  uint16_t GetMcastRadius () const { return m_mCastRadius; }
+
+  void SetDst (Ipv6Address a) { m_dst = a; }
+  Ipv6Address GetDst () const { return m_dst; }
+
+  void SetOrigin (Ipv6Address a) { m_origin = a; }
+  Ipv6Address GetOrigin () const { return m_origin; }
+
+  void SetRoadID (uint64_t rId) { m_roadId = rId; }
+  uint64_t GetOriginSeqno () const { return m_roadId; }
+
+  void SetPosition(Vector pos) {m_position = pos;}
+  Vector GetPosition() const {return m_position;}
+
+  void SetVelocity(Vector pos) {m_velocity = pos;}
+  Vector GetVelocity() const {return m_velocity;}
+
+  void SetXPos(float xPos){m_xPos = xPos;}
+  float_t GetXPos() const{return m_xPos;}
+
+  void SetYPos(float yPos){m_yPos = yPos;}
+  float_t GetYPos() const{return m_yPos;}
+
+  void SetZPos(float zPos){m_zPos = zPos;}
+  float_t GetZPos() const{return m_xPos;}
+
+  void SetXVelocity(float xVel){m_xVel = xVel;}
+  float_t GetXVelocity() const{return m_xVel;}
+
+  void SetYVelocity(float yVel){m_yVel = yVel;}
+  float_t GetYVelocity() const{return m_yVel;}
+
+  void SetZVelocity(float zVel){m_zVel = zVel;}
+  float_t GetZVelocity() const{return m_zVel;}
+
+  bool operator== (HelloHeader const & o) const;
+private:
+  uint8_t        m_type;          		///< Type of packet
+  uint64_t 			 m_roadId;						///< Road ID
+  uint8_t        m_hopCount;       		///< Hop Count
+  uint16_t       m_neighborLifeTime;	///< Neighbor lifetime before expires
+  uint16_t 			 m_mCastRadius;				///< mcast radius
+  uint16_t			 m_reserved; 					///< reserved for future development
+  Ipv6Address    m_dst;            		///< Destination IP Address
+  Ipv6Address    m_origin;         		///< Originator IP Address
+  Vector				 m_position;					///< Current position of node
+  Vector				 m_velocity;					///< Current velocity of node
+
+  //Alternate position variables
+
+  float_t			m_xPos;								///< xPosition
+  float_t			m_yPos;								///< yPosition
+  float_t			m_zPos;								///< zPosition
+  float_t			m_xVel;								///< xVelocty
+  float_t			m_yVel;								///< yVelocty
+  float_t			m_zVel;								///< zVelocty
+
+
+
+};
+
+std::ostream & operator<< (std::ostream & os, HelloHeader const &);
+
 
 } //MCAST namespace
 } //

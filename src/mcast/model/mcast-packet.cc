@@ -88,6 +88,11 @@ TypeHeader::Deserialize (Buffer::Iterator start)
 		m_type = (MessageType) type;
 		break;
 	}
+	case MCAST_CONTROL:
+	{
+		m_type = (MessageType) type;
+		break;
+	}
 	default:
 		m_valid = false;
 	}
