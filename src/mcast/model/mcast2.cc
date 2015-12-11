@@ -41,7 +41,7 @@
 
 #define MCAST_ALL_NODE "ff02::114"
 #define MCAST_PORT 555
-#define MCAST_CONTROL_MSG "ff02::115"
+#define MCAST_CONTROL_GRP "ff02::115"
 
 
 namespace ns3
@@ -601,9 +601,11 @@ ThesisRoutingProtocol::DoInitialize ()
   			m_globalAddress = address.GetAddress();
 
 
-  			//Add multicast route
+  			//Add multicast route (Hello)
   		  AddNetworkRouteTo (Ipv6Address(MCAST_ALL_NODE), Ipv6Prefix("ff"), i);
 
+  		  //Add multicast route (Control)
+  		  AddNetworkRouteTo (Ipv6Address(MCAST_CONTROL_GRP), Ipv6Prefix("ff"), i);
 
   		}
 
@@ -634,6 +636,31 @@ ThesisRoutingProtocol::DoInitialize ()
   	m_recvSocket->SetRecvCallback (MakeCallback (&ThesisRoutingProtocol::Receive, this));
   	m_recvSocket->SetIpv6RecvHopLimit (true);
   	m_recvSocket->SetRecvPktInfo (true);
+  }
+
+  //Set Recieve Socket (MCAST_CONTROL)
+  if (!m_mctrlSocket)
+  {
+  	NS_LOG_LOGIC ("MCAST multicast interface: adding receiving socket for control");
+  	TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+  	Ptr<Node> theNode = GetObject<Node> ();
+  	m_mctrlSocket = Socket::CreateSocket (theNode, tid);
+  	Inet6SocketAddress local = Inet6SocketAddress (MCAST_CONTROL_GRP, MCAST_PORT);
+  	if(Ipv6Address(MCAST_CONTROL_GRP).IsMulticast())
+  	{
+	  	Ptr<UdpSocket> Udp = DynamicCast<UdpSocket>(m_mctrlSocket);
+	  	if(Udp)
+	  	{
+	  		Udp -> MulticastJoinGroup(0,Ipv6Address(MCAST_CONTROL_GRP));
+	  	}else
+	  	{
+	  		NS_FATAL_ERROR ("Error: Failed to join multicast group");
+	  	}
+  	}
+  	m_mctrlSocket->Bind (local);
+  	m_mctrlSocket->SetRecvCallback (MakeCallback (&ThesisRoutingProtocol::Receive, this));
+  	m_mctrlSocket->SetIpv6RecvHopLimit (true);
+  	m_mctrlSocket->SetRecvPktInfo (true);
   }
 
 

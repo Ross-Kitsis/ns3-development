@@ -359,6 +359,7 @@ private:
 	//Need to change this??
 	SocketList m_sendSocketList; //!< list of sockets for sending (socket, interface index)
 	Ptr<Socket> m_recvSocket; //!< receive socket
+	Ptr<Socket> m_mctrlSocket; //!< Receieve socket for
 
 	Ptr<UniformRandomVariable> m_rng; //!< Rng stream.
 	bool m_initialized; //!< flag to allow socket's late-creation.

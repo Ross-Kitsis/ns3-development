@@ -36,10 +36,16 @@ namespace ns3
 namespace mcast
 {
 
+//-----------------------------------------------------------------------------
+// TypeHeader
+//-----------------------------------------------------------------------------
+
 NS_OBJECT_ENSURE_REGISTERED (TypeHeader);
 
-//Define mcast packet size
+//Define packet sizes
 const uint32_t HelloHeader::m_headerSize = 99;
+const uint32_t ControlHeader::m_headerSize = 72;
+
 
 TypeHeader::TypeHeader (MessageType t) :
   		m_type (t), m_valid (true)
@@ -111,6 +117,11 @@ TypeHeader::Print (std::ostream &os) const
 		os << "HELLO";
 		break;
 	}
+	case MCAST_CONTROL:
+	{
+		os << "MCAST_CONTROL";
+		break;
+	}
 	default:
 		os << "UNKNOWN_TYPE";
 	}
@@ -130,17 +141,8 @@ operator<< (std::ostream & os, TypeHeader const & h)
 }
 
 //-----------------------------------------------------------------------------
-// RREQ
+// HELLO
 //-----------------------------------------------------------------------------
-/*
-HelloHeader::HelloHeader (uint8_t flags, uint8_t reserved, uint8_t hopCount, uint32_t requestID, Ipv4Address dst,
-                        uint32_t dstSeqNo, Ipv4Address origin, uint32_t originSeqNo) :
-  m_flags (flags), m_reserved (reserved), m_hopCount (hopCount), m_requestID (requestID), m_dst (dst),
-  m_dstSeqNo (dstSeqNo), m_origin (origin),  m_originSeqNo (originSeqNo)
-{
-}
- */
-
 
 HelloHeader::HelloHeader(uint8_t type, uint64_t roadId, uint8_t hopCount, uint16_t neighborLifeTime,
 		uint16_t mCastRadius,uint16_t reserved, Ipv6Address dst, Ipv6Address origin,
@@ -150,20 +152,6 @@ HelloHeader::HelloHeader(uint8_t type, uint64_t roadId, uint8_t hopCount, uint16
 {
 
 }
-
-
-/*
-HelloHeader::HelloHeader(uint8_t type, uint64_t roadId, uint8_t hopCount, uint16_t neighborLifeTime,
-												uint16_t mCastRadius,uint16_t reserved, Ipv6Address dst, Ipv6Address origin,
-												float_t xPos,float_t yPos, float_t zPos,
-												float_t xVel, float_t yVel, float_t zVel) :
-		m_type(type), m_roadId(roadId), m_hopCount(hopCount), m_neighborLifeTime(neighborLifeTime),
-		m_mCastRadius(mCastRadius),m_reserved(reserved), m_dst(dst), m_origin(origin), m_xPos(xPos),
-		m_yPos(yPos), m_zPos(zPos), m_xVel(xVel), m_yVel(yVel), m_zVel(zVel)
-{
-
-}
- */
 
 NS_OBJECT_ENSURE_REGISTERED (HelloHeader);
 
@@ -203,9 +191,6 @@ HelloHeader::Serialize (Buffer::Iterator i) const
 	WriteTo(i,m_dst);
 	WriteTo(i,m_origin);
 
-	//WriteTo(i, m_position);
-	//WriteTo(i, m_velocity);
-
 	i.WriteHtolsbU64((uint64_t) abs (m_position.x * 1000));
 	i.WriteHtolsbU64((uint64_t) abs ( m_position.y * 1000));
 	i.WriteHtolsbU64((uint64_t) abs (m_position.z * 1000));
@@ -242,16 +227,6 @@ HelloHeader::Serialize (Buffer::Iterator i) const
 	  i.WriteU8 (1);
   }
 
-	/*
-  i.WriteU8 (m_type);
-  i.WriteU8 (m_reserved);
-  i.WriteU8 (m_hopCount);
-  i.WriteHtonU32 (m_requestID);
-  WriteTo (i, m_dst);
-  i.WriteHtonU32 (m_dstSeqNo);
-  WriteTo (i, m_origin);
-  i.WriteHtonU32 (m_originSeqNo);
-	 */
 }
 
 uint32_t
@@ -266,8 +241,6 @@ HelloHeader::Deserialize (Buffer::Iterator start)
 	m_reserved = i.ReadU16();
 	ReadFrom (i, m_dst);
 	ReadFrom (i, m_origin);
-	//ReadFrom (i, m_position);
-	//ReadFrom (i, m_velocity);
 
 	m_position.x =(double) (i.ReadNtohU64 ()/1000.0);
 	m_position.y =(double) (i.ReadNtohU64 ()/1000.0);
@@ -317,5 +290,101 @@ HelloHeader::operator== (HelloHeader const & o) const
 			m_origin == o.m_origin && m_origin == o.m_origin);
 
 }
+
+//-----------------------------------------------------------------------------
+// MCAST_CONTROL
+//-----------------------------------------------------------------------------
+
+NS_OBJECT_ENSURE_REGISTERED (ControlHeader);
+
+ControlHeader::ControlHeader(Ipv6Address Id, Ipv6Address Source, uint32_t a, uint32_t b, uint64_t xpl, uint64_t ypl, uint64_t xpr, uint64_t ypr) :
+				m_Id(Id), m_Source(Source), m_a(a), m_b(b), m_xPl(xpl), m_yPl(ypl),m_xPr(xpr),m_yPr(ypr)
+{
+
+}
+
+ControlHeader::~ControlHeader()
+{
+}
+
+TypeId
+ControlHeader::GetTypeId ()
+{
+	static TypeId tid = TypeId ("ns3::mcast::ControlHeader")
+    		.SetParent<Header> ()
+    		.SetGroupName("Mcast")
+    		.AddConstructor<ControlHeader> ()
+    		;
+	return tid;
+}
+
+TypeId
+ControlHeader::GetInstanceTypeId () const
+{
+	return GetTypeId ();
+}
+
+uint32_t
+ControlHeader::GetSerializedSize () const
+{
+	return m_headerSize;
+}
+
+//Serialize header (convert vector double to int64 by multiplying by 1000 -
+void
+ControlHeader::Serialize (Buffer::Iterator i) const
+{
+
+	WriteTo(i,m_Id);
+	WriteTo(i,m_Source);
+	i.WriteU32(m_a);
+	i.WriteU32(m_b);
+	i.WriteU64(m_xPl);
+	i.WriteU64(m_yPl);
+	i.WriteU64(m_xPr);
+	i.WriteU64(m_yPl);
+}
+
+uint32_t
+ControlHeader::Deserialize (Buffer::Iterator start)
+{
+	Buffer::Iterator i = start;
+
+	ReadFrom (i, m_Id);
+	ReadFrom (i, m_Source);
+
+	m_a = i.ReadU32();
+	m_b = i.ReadU32();
+
+	m_xPl = i.ReadU64();
+	m_yPl = i.ReadU64();
+
+	m_xPr = i.ReadU64();
+	m_yPr = i.ReadU64();
+
+	uint32_t dist = i.GetDistanceFrom (start);
+	NS_ASSERT (dist == GetSerializedSize ());
+	return dist;
+}
+
+void
+ControlHeader::Print (std::ostream &os) const
+{
+	os << "MCAST Control Packet received" << std::endl;
+}
+
+std::ostream &
+operator<< (std::ostream & os, ControlHeader const & h)
+{
+	h.Print (os);
+	return os;
+}
+
+bool
+ControlHeader::operator== (ControlHeader const & o) const
+{
+	return (m_Id == o.m_Id && m_xPl == o.m_xPl && m_xPr == o.m_xPr);
+}
+
 }
 }
