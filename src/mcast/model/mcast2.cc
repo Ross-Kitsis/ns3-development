@@ -119,6 +119,7 @@ Ptr<Ipv6Route>
 ThesisRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif,
 			Socket::SocketErrno &sockerr)
 {
+
   NS_LOG_FUNCTION (this << header << oif);
   Ipv6Address destination = header.GetDestinationAddress ();
   Ptr<Ipv6Route> rtentry = 0;
@@ -127,6 +128,13 @@ ThesisRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr
   {
   	NS_LOG_LOGIC("	RoutingOutput: Multicast Destination " << destination);
   }
+
+  //////////////////////////////////////////////////////
+
+	TypeHeader tHeader(HELLO);
+	p->PeekHeader(tHeader);
+
+  //////////////////////////////////////////////////////
 
   rtentry = Lookup(destination, oif);
 
@@ -437,8 +445,6 @@ ThesisRoutingProtocol::Receive (Ptr<Socket> socket)
 
 	NS_LOG_INFO("Received mcast packet" << *packet);
 
-	HelloHeader hHeader;
-	packet->RemoveHeader(hHeader);
 
 	if (!tHeader.IsValid ())
 	{
@@ -451,6 +457,9 @@ ThesisRoutingProtocol::Receive (Ptr<Socket> socket)
 	case HELLO:
 	{
 	//	RecvHello (packet);
+		HelloHeader hHeader;
+		packet->RemoveHeader(hHeader);
+
 		NS_LOG_DEBUG("		Receieved hello msg, process hello");
 		ProcessHello(hHeader);
 		break;
@@ -458,6 +467,12 @@ ThesisRoutingProtocol::Receive (Ptr<Socket> socket)
 	case MCAST_CONTROL:
 	{
 		NS_LOG_DEBUG("		Receieved mcast control");
+
+
+		ControlHeader cHeader;
+		packet->RemoveHeader(cHeader);
+
+		ProcessMcastControl(cHeader);
 		break;
 	}
 	}
@@ -474,6 +489,11 @@ ThesisRoutingProtocol::ProcessHello(HelloHeader helloHeader)
   m_neighbors.Update(helloHeader.GetOrigin(), helloHeader.GetPosition(), helloHeader.GetVelocity());
 }
 
+void
+ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader)
+{
+			////////// TO DO
+}
 
 bool
 ThesisRoutingProtocol::IsMyOwnAddress (Ipv6Address src)

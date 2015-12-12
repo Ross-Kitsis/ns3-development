@@ -339,6 +339,12 @@ private:
    */
   void ProcessHello(HelloHeader helloHeader);
 
+  /**
+   * \brief Process control packet header
+   */
+  void ProcessMcastControl(ControlHeader cHeader);
+
+
 	//Attributes
 
 	Routes m_routes; //!<  the forwarding table for network.
