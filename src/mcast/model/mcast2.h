@@ -344,6 +344,18 @@ private:
    */
   void ProcessMcastControl(ControlHeader cHeader);
 
+  /**
+   * \brief send Mcast Control Packet (Must be triggered by transport layer)
+   *  Adds the mcast control header to the passed packet before sending it to the control
+   *  multicast group.
+   *
+   */
+  void DoSendMcastControl(Ptr<Packet> p);
+
+  /**
+   * \brief Returns the distance between 2 points
+   */
+
 
 	//Attributes
 

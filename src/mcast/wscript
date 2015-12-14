@@ -17,6 +17,7 @@ def build(bld):
         'model/mcast2.cc',
         'helper/mcast-helper2.cc',
         'model/ThesisNeighbors.cc',
+        'model/mcast-utils.cc',
         ]
 
 #    module_test = bld.create_ns3_module_test_library('mcast')
@@ -35,6 +36,7 @@ def build(bld):
         'helper/mcast-helper2.h',
         'model/mcast2.h',
         'model/ThesisNeighbors.h',
+        'model/mcast-utils.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

@@ -345,6 +345,16 @@ ThesisRoutingProtocol::DoSendHello()
 
 }
 
+void
+ThesisRoutingProtocol::DoSendMcastControl(Ptr<Packet> p)
+{
+	Ipv6Address Id = m_globalAddress;
+	Ipv6Address source = m_globalAddress;
+
+
+
+}
+
 Ptr<Ipv6Route>
 ThesisRoutingProtocol::Lookup (Ipv6Address dst, Ptr<NetDevice> interface)
 {
