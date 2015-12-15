@@ -275,9 +275,14 @@ class ControlHeader : public Header
 {
 public:
   /// c-tor
+	/*
   ControlHeader (Ipv6Address Id = Ipv6Address(), Ipv6Address Source = Ipv6Address(),
   							 uint32_t a=0, uint32_t b=0, uint64_t xPl=0, uint64_t yPl=0,
   							 uint64_t xPr=0, uint64_t yPr = 0);
+	*/
+  ControlHeader (Ipv6Address Id = Ipv6Address(), Ipv6Address Source = Ipv6Address(),
+  							 uint32_t a=0, uint32_t b=0, Vector Apxl=Vector(), Vector Apxr=Vector());
+
 
   ~ControlHeader();
 
@@ -305,6 +310,16 @@ public:
   void SetB (uint32_t b) { m_b = b; }
   uint32_t GetB () const { return m_b; }
 
+  void SetApxL(Vector v) {m_Apxl = v; }
+  Vector getApxL() const { return m_Apxl;}
+
+  void SetApxR(Vector v) {m_Apxr = v; }
+  Vector getApxR() const { return m_Apxr;}
+
+
+  ///////////////////////////////////////////////
+
+  /*
   void SetXpl (uint64_t xPl) { m_xPl = xPl; }
   uint64_t GetXpl () const { return m_xPl; }
 
@@ -317,17 +332,25 @@ public:
   void SetYpr (uint64_t yPr) { m_yPr = yPr; }
   uint64_t GetYpr () const { return m_yPr; }
 
+	*/
+
   bool operator== (ControlHeader const & o) const;
 private:
   Ipv6Address    m_Id;         				///< Origin and ID of sending node (IP Address)
   Ipv6Address		 m_Source;					  ///< IP Address of the node which sent the packet
   uint32_t			 m_a;								  ///< a value for mcast
   uint32_t			 m_b;								  ///< b value for mcast
+
+  Vector				 m_Apxl;							///< Vector containing coordinates of left apex
+  Vector				 m_Apxr;							///< Vector containing coordinates of right apex
+
+  /////////////////////////////////////////////////////////////////////
+  /*
   uint64_t			 m_xPl;								///< x Coordinate of left apex
   uint64_t			 m_yPl;								///< y Coordinate of left apex
   uint64_t			 m_xPr;								///< x Coordinate of right apex
   uint64_t			 m_yPr;								///< y Coordinate of right apex
-
+	*/
 };
 
 std::ostream & operator<< (std::ostream & os, ControlHeader const &);

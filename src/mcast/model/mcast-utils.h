@@ -5,8 +5,8 @@
  *      Author: ross
  */
 
-#ifndef SRC_MCAST_MODEL_MCAST_UTILS_H_
-#define SRC_MCAST_MODEL_MCAST_UTILS_H_
+#ifndef MCAST_UTILS_H_
+#define MCAST_UTILS_H_
 
 
 #include "ns3/ipv6.h"

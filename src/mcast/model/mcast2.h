@@ -29,6 +29,8 @@
 //MCAST packages
 #include "ThesisNeighbors.h"
 #include "mcast-packet.h"
+#include "mcast-utils.h"
+
 
 //Routing tables
 #include "ns3/ipv6-routing-table-entry.h"
@@ -389,6 +391,8 @@ private:
 	Ipv6Address m_globalAddress; //Pointer to GLOBAL ipv6 address (Assumes single interface)
   //Neighbors m_nb; //List of neighbors from whom hello messages have been received
 	ThesisNeighbors m_neighbors;
+
+	McastUtils m_mutils;
 
 };
 

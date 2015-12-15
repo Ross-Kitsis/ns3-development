@@ -11,7 +11,9 @@
 
 namespace ns3
 {
-	NS_LOG_COMPONENT_DEFINE("McastControlUtities");
+	NS_LOG_COMPONENT_DEFINE("McastUtils");
+
+
 	namespace mcast
 	{
 		const double McastUtils::LaneWidth = 3.5;

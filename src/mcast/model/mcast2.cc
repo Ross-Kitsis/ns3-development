@@ -351,7 +351,17 @@ ThesisRoutingProtocol::DoSendMcastControl(Ptr<Packet> p)
 	Ipv6Address Id = m_globalAddress;
 	Ipv6Address source = m_globalAddress;
 
+	Vector position = m_ipv6->GetObject<MobilityModel>()->GetPosition();
+	Vector velocity = m_ipv6->GetObject<MobilityModel>()->GetVelocity();
 
+	//Get A value
+	double a = m_mutils.getA(velocity, position);
+
+	//Get B value
+	double b = m_mutils.GetB();
+
+	a=b;
+	b=a;
 
 }
 

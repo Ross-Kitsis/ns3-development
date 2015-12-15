@@ -297,8 +297,16 @@ HelloHeader::operator== (HelloHeader const & o) const
 
 NS_OBJECT_ENSURE_REGISTERED (ControlHeader);
 
+/*
 ControlHeader::ControlHeader(Ipv6Address Id, Ipv6Address Source, uint32_t a, uint32_t b, uint64_t xpl, uint64_t ypl, uint64_t xpr, uint64_t ypr) :
 				m_Id(Id), m_Source(Source), m_a(a), m_b(b), m_xPl(xpl), m_yPl(ypl),m_xPr(xpr),m_yPr(ypr)
+{
+
+}
+*/
+
+ControlHeader::ControlHeader(Ipv6Address Id, Ipv6Address Source, uint32_t a, uint32_t b, Vector apxL, Vector apexR) :
+				m_Id(Id), m_Source(Source), m_a(a), m_b(b), m_Apxl(apxL), m_Apxr(apexR)
 {
 
 }
@@ -339,10 +347,19 @@ ControlHeader::Serialize (Buffer::Iterator i) const
 	WriteTo(i,m_Source);
 	i.WriteU32(m_a);
 	i.WriteU32(m_b);
+
+	i.WriteHtolsbU64((uint64_t) abs (m_Apxl.x * 1000));
+	i.WriteHtolsbU64((uint64_t) abs (m_Apxl.y * 1000));
+
+	i.WriteHtolsbU64((uint64_t) abs (m_Apxr.x * 1000));
+	i.WriteHtolsbU64((uint64_t) abs (m_Apxr.y * 1000));
+
+	/*
 	i.WriteU64(m_xPl);
 	i.WriteU64(m_yPl);
 	i.WriteU64(m_xPr);
 	i.WriteU64(m_yPl);
+	*/
 }
 
 uint32_t
@@ -356,11 +373,20 @@ ControlHeader::Deserialize (Buffer::Iterator start)
 	m_a = i.ReadU32();
 	m_b = i.ReadU32();
 
+	m_Apxl.x =(double) (i.ReadNtohU64 ()/1000.0);
+	m_Apxl.y =(double) (i.ReadNtohU64 ()/1000.0);
+
+	m_Apxr.x =(double) (i.ReadNtohU64 ()/1000.0);
+	m_Apxr.y =(double) (i.ReadNtohU64 ()/1000.0);
+
+
+	/*
 	m_xPl = i.ReadU64();
 	m_yPl = i.ReadU64();
 
 	m_xPr = i.ReadU64();
 	m_yPr = i.ReadU64();
+	*/
 
 	uint32_t dist = i.GetDistanceFrom (start);
 	NS_ASSERT (dist == GetSerializedSize ());
@@ -383,7 +409,7 @@ operator<< (std::ostream & os, ControlHeader const & h)
 bool
 ControlHeader::operator== (ControlHeader const & o) const
 {
-	return (m_Id == o.m_Id && m_xPl == o.m_xPl && m_xPr == o.m_xPr);
+	return (m_Id == o.m_Id && m_Apxl.x == o.m_Apxl.x && m_Apxl.y == o.m_Apxl.y);
 }
 
 }
