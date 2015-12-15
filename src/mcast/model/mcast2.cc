@@ -310,7 +310,7 @@ ThesisRoutingProtocol::DoSendHello()
   	//Get node position
   	Vector pos = GetNodePosition(m_ipv6);
 
-  	//Get node velocity
+  	//Get node velocityALL_NODE
   	Vector vel = GetNodeVelocity(m_ipv6);
 
   	//Get Road ID
@@ -348,21 +348,48 @@ ThesisRoutingProtocol::DoSendHello()
 void
 ThesisRoutingProtocol::DoSendMcastControl(Ptr<Packet> p)
 {
+	NS_LOG_FUNCTION(this);
+
 	Ipv6Address Id = m_globalAddress;
 	Ipv6Address source = m_globalAddress;
 
 	Vector position = m_ipv6->GetObject<MobilityModel>()->GetPosition();
 	Vector velocity = m_ipv6->GetObject<MobilityModel>()->GetVelocity();
 
-	//Get A value
-	double a = m_mutils.getA(velocity, position);
+  for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
+  {
+  	uint32_t interface = iter->second;
 
-	//Get B value
-	double b = m_mutils.GetB();
+  	//Get A value
+  	double a = m_mutils.getA(velocity, position);
 
-	a=b;
-	b=a;
+  	//Get B value
+  	double b = m_mutils.GetB();
 
+  	//Get left apex
+  	Vector left = m_mutils.GetApexL(velocity,position,a);
+
+  	//Get right apex
+  	Vector right = m_mutils.GetApexR(velocity,position,a);
+
+  	//Create control header
+  	ControlHeader cHeader(Id,source,a,b,left,right);
+
+  	Ipv6Address destination = Ipv6Address(MCAST_CONTROL_GRP);
+
+  	//Create packet and add control header
+  	Ptr<Packet> packet = Create<Packet>();
+  	packet->AddHeader(cHeader);
+
+  	//Create type header and add to packet
+  	TypeHeader theader (MCAST_CONTROL);
+  	packet->AddHeader(theader);
+
+  	//Send packet
+  	NS_LOG_LOGIC("Sending packet to: " << destination << " from address " << interface);
+  	iter->first->SendTo(packet, 0, Inet6SocketAddress(destination, MCAST_PORT));
+
+  }
 }
 
 Ptr<Ipv6Route>
