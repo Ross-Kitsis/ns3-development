@@ -44,7 +44,7 @@ NS_OBJECT_ENSURE_REGISTERED (TypeHeader);
 
 //Define packet sizes
 const uint32_t HelloHeader::m_headerSize = 99;
-const uint32_t ControlHeader::m_headerSize = 72;
+const uint32_t ControlHeader::m_headerSize = 88;
 
 
 TypeHeader::TypeHeader (MessageType t) :
@@ -305,8 +305,8 @@ ControlHeader::ControlHeader(Ipv6Address Id, Ipv6Address Source, uint32_t a, uin
 }
 */
 
-ControlHeader::ControlHeader(Ipv6Address Id, Ipv6Address Source, uint32_t a, uint32_t b, Vector apxL, Vector apexR) :
-				m_Id(Id), m_Source(Source), m_a(a), m_b(b), m_Apxl(apxL), m_Apxr(apexR)
+ControlHeader::ControlHeader(Ipv6Address Id, Ipv6Address Source, uint32_t a, uint32_t b, Vector apxL, Vector apexR, Vector center) :
+				m_Id(Id), m_Source(Source), m_a(a), m_b(b), m_Apxl(apxL), m_Apxr(apexR), m_center(center)
 {
 
 }
@@ -354,6 +354,9 @@ ControlHeader::Serialize (Buffer::Iterator i) const
 	i.WriteHtolsbU64((uint64_t) abs (m_Apxr.x * 1000));
 	i.WriteHtolsbU64((uint64_t) abs (m_Apxr.y * 1000));
 
+	i.WriteHtolsbU64((uint64_t) abs (m_center.x * 1000));
+	i.WriteHtolsbU64((uint64_t) abs (m_center.y * 1000));
+
 	/*
 	i.WriteU64(m_xPl);
 	i.WriteU64(m_yPl);
@@ -379,6 +382,8 @@ ControlHeader::Deserialize (Buffer::Iterator start)
 	m_Apxr.x =(double) (i.ReadNtohU64 ()/1000.0);
 	m_Apxr.y =(double) (i.ReadNtohU64 ()/1000.0);
 
+	m_center.x =(double) (i.ReadNtohU64 ()/1000.0);
+	m_center.y =(double) (i.ReadNtohU64 ()/1000.0);
 
 	/*
 	m_xPl = i.ReadU64();

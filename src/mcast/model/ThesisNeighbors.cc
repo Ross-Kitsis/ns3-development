@@ -134,6 +134,39 @@ ThesisNeighbors::Purge(Ipv6Address toRemove)
 	}
 }
 
+bool
+ThesisNeighbors::IsNeighbor(Ipv6Address toFind)
+{
+	bool toReturn = false;
+	for(std::list<Neighbor>::iterator it = m_nb.begin(); it!= m_nb.end(); ++it)
+	{
+		if(it->GetIp().IsEqual(toFind))
+		{
+			toReturn = true;
+			break;
+		}
+	}
+	return toReturn;
+}
+
+Vector
+ThesisNeighbors::GetNeighborPosition(Ipv6Address toGet)
+{
+	Vector toReturn;
+
+	for(std::list<Neighbor>::iterator it = m_nb.begin(); it!= m_nb.end(); ++it)
+	{
+		if(it->GetIp().IsEqual(toGet))
+		{
+			toReturn = it->GetPosition();
+			break;
+		}
+	}
+
+	return toReturn;
+}
+
+
 }
 
 }

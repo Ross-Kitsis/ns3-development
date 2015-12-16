@@ -7,7 +7,7 @@
 
 #include "mcast-utils.h"
 #include "ns3/log.h"
-
+#include "math.h"
 
 namespace ns3
 {
@@ -144,8 +144,26 @@ namespace ns3
 			return toReturn;
 		}
 
+		bool
+		McastUtils::IsInZor(Vector currentPos, Vector eventPos, double a, double b)
+		{
+			bool toReturn = false;
+
+			//Check based on formula given in 4.2.S1
+
+			double result = pow(currentPos.x - eventPos.x,2)/pow(a,2) + pow(currentPos.y - eventPos.y,2)/pow(b,2) - 1;
+
+			if(result <= 0)
+			{
+				//In the ZoR
+				toReturn = true;
+			}else
+			{
+				result = false;
+			}
+
+			return toReturn;
+		}
+
 	}
-
-
-
 }

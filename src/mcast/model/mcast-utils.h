@@ -53,6 +53,13 @@ namespace ns3
 		   */
 		  double GetB();
 
+		  /**
+		   * Check if node is within the ZoR
+		   *
+		   * Returns true if the node is within the ZoR; false otherwise
+		   */
+		  bool IsInZor(Vector position, Vector eventPos,double a, double b);
+
 		};
 	}
 }

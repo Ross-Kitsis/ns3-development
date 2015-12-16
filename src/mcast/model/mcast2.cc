@@ -519,7 +519,7 @@ ThesisRoutingProtocol::Receive (Ptr<Socket> socket)
 		ControlHeader cHeader;
 		packet->RemoveHeader(cHeader);
 
-		ProcessMcastControl(cHeader);
+		ProcessMcastControl(cHeader, packet);
 		break;
 	}
 	}
@@ -537,9 +537,20 @@ ThesisRoutingProtocol::ProcessHello(HelloHeader helloHeader)
 }
 
 void
-ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader)
+ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> packet)
 {
-			////////// TO DO
+
+	//Step 1: Is the node in the ZoR advertised in the ControlHeader?
+	Vector position = m_ipv6->GetObject<MobilityModel>()->GetPosition();
+	Vector eventPos = cHeader.GetCenter();
+
+
+	if(m_mutils.IsInZor(position,eventPos,cHeader.GetA(),cHeader.GetB()))
+	{
+		Ptr<Node> theNode = GetObject<Node> ();
+		//theNode->get
+	}
+
 }
 
 bool

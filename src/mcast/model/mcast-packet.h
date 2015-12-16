@@ -281,7 +281,8 @@ public:
   							 uint64_t xPr=0, uint64_t yPr = 0);
 	*/
   ControlHeader (Ipv6Address Id = Ipv6Address(), Ipv6Address Source = Ipv6Address(),
-  							 uint32_t a=0, uint32_t b=0, Vector Apxl=Vector(), Vector Apxr=Vector());
+  							 uint32_t a=0, uint32_t b=0, Vector Apxl=Vector(), Vector Apxr=Vector()
+  							 ,Vector center = Vector());
 
 
   ~ControlHeader();
@@ -316,6 +317,8 @@ public:
   void SetApxR(Vector v) {m_Apxr = v; }
   Vector getApxR() const { return m_Apxr;}
 
+  void SetCenter(Vector c) {m_center = c; }
+  Vector GetCenter() const { return m_center;}
 
   ///////////////////////////////////////////////
 
@@ -343,6 +346,7 @@ private:
 
   Vector				 m_Apxl;							///< Vector containing coordinates of left apex
   Vector				 m_Apxr;							///< Vector containing coordinates of right apex
+  Vector 				 m_center;						///< Vector containing coordinates of Ve (Center of ZoR)
 
   /////////////////////////////////////////////////////////////////////
   /*

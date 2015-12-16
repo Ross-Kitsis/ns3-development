@@ -344,7 +344,7 @@ private:
   /**
    * \brief Process control packet header
    */
-  void ProcessMcastControl(ControlHeader cHeader);
+  void ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> packet);
 
   /**
    * \brief send Mcast Control Packet (Must be triggered by transport layer)

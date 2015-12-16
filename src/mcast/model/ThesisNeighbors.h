@@ -96,9 +96,21 @@ public:
 	 */
 	void Update(Ipv6Address address, Vector pos, Vector vel);
 
+	/*
+	 * \brief Checks if a neighbor relationship exists between the node and the passed address
+	 */
+	bool IsNeighbor(Ipv6Address toFind);
+
+	/**
+	 * \brief Returns neighbor position with the given address
+	 *
+	 * Assumes the neighbor exists
+	 *
+	 */
+	Vector GetNeighborPosition(Ipv6Address toGet);
+
+
 private:
-
-
 
 	/*
 	 * \brief Return the list of neighbors
