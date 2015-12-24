@@ -84,8 +84,12 @@ namespace ns3
 			double yint;
 			if(velocity.x == 0)
 			{
-				m = 1;
-				yint = 0;
+				toReturn.x = position.x + dist;
+				toReturn.y = position.y;
+				return toReturn;
+
+				//m = 1;
+				//yint = 0;
 			}else
 			{
 				m = velocity.y/velocity.x;
@@ -121,8 +125,9 @@ namespace ns3
 			double yint;
 			if(velocity.x == 0)
 			{
-				m = 1;
-				yint = 0;
+				toReturn.x = position.x + dist;
+				toReturn.y = position.y;
+				return toReturn;
 			}else
 			{
 				m = velocity.y/velocity.x;

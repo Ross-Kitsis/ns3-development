@@ -547,8 +547,63 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 
 	if(m_mutils.IsInZor(position,eventPos,cHeader.GetA(),cHeader.GetB()))
 	{
-		Ptr<Node> theNode = GetObject<Node> ();
-		//theNode->get
+		//Node is in the Zor
+		if(m_neighbors.IsNeighbor(cHeader.GetSource()))
+		{
+			//Source of packet is a neighbor, have information on the last sender
+
+			//Use center coordinates to find apex current node is closest to
+			Vector ClosestApex;
+
+			double dl = m_mutils.GetDistanceBetweenPoints(position.x,position.y,cHeader.getApxL().x,cHeader.getApxL().y);
+			double dr = m_mutils.GetDistanceBetweenPoints(position.x,position.y,cHeader.getApxR().x,cHeader.getApxR().y);
+			double NodeDistanceToApex;
+
+
+			if(dl <= dr)
+			{
+				//Closest apex is left
+				ClosestApex = cHeader.getApxL();
+				NodeDistanceToApex = dl;
+
+			}else
+			{
+				//Closest apex is right
+				ClosestApex = cHeader.getApxR();
+				NodeDistanceToApex = dr;
+			}
+
+			//Check if packet is initial transmit or if a retransmission
+			if(cHeader.GetId().IsEqual(cHeader.GetSource()))
+			{
+				//Event vehicle sent this packet, use center in cHeader
+				double SenderDistanceToApex = m_mutils.GetDistanceBetweenPoints(ClosestApex.x, ClosestApex.y,
+						cHeader.GetCenter().x, cHeader.GetCenter().y);
+				if(NodeDistanceToApex < SenderDistanceToApex)
+				{
+					//Send packet and check effectivity////////////////////////////////////////////
+
+					//TO DO
+				}
+
+			}else
+			{
+				//Packet was retransmitted by some other node
+				Vector sourcePos = m_neighbors.GetNeighborPosition(cHeader.GetId());
+				double SenderDistanceToApex = m_mutils.GetDistanceBetweenPoints(ClosestApex.x, ClosestApex.y,
+						sourcePos.x, sourcePos.y);
+				if(NodeDistanceToApex < SenderDistanceToApex)
+				{
+					//Send packet and check effectivity////////////////////////////////////////////
+
+					//TO DO
+				}
+			}
+
+		}else
+		{
+			//Source of packet is not a neighbor, forward to be safe
+		}
 	}
 
 }
