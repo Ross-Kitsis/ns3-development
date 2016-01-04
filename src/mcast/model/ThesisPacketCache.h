@@ -25,7 +25,7 @@ public:
 	ThesisMcastCache(Time lifetime) : m_lifetime (lifetime){}
 
   /// Check that entry (addr, id) exists in cache. Add entry, if it doesn't exist.
-  bool IsDuplicate (Ipv4Address addr, Vector left, Vector right);
+  bool IsDuplicate (Ipv6Address addr, Vector left, Vector right);
 
   /// Remove all expired entries
   void Purge ();
@@ -48,10 +48,10 @@ private:
   	Ipv6Address m_sender;
 
   	//Left apex
-  	Vector left;
+  	Vector m_left;
 
   	//Right apex
-  	Vector right;
+  	Vector m_right;
 
   	// When record will expire
   	Time m_expire;
