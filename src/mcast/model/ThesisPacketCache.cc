@@ -7,6 +7,7 @@
 
 #include "ThesisPacketCache.h"
 #include <algorithm>
+#include "ns3/vector.h"
 
 namespace ns3
 {
@@ -24,7 +25,8 @@ ThesisMcastCache::IsDuplicate(Ipv6Address addr, Vector left, Vector right)
 	//Check all addresses in the chache for a match
   for (std::vector<UniqueId>::const_iterator i = m_idCache.begin ();
        i != m_idCache.end (); ++i)
-    if (i->m_sender == addr && i->m_left == left && i->m_right == right)
+    if (i->m_sender == addr && i->m_left.x == left.x && i->m_left.y == left.y
+    												&& i->m_right.x == right.x && i->m_right.y == right.y)
       return true;
   struct UniqueId uniqueId =
   { addr, left,right, m_lifetime + Simulator::Now () };

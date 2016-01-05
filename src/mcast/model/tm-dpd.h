@@ -11,6 +11,8 @@
 #include "ns3/header.h"
 #include "ns3/packet.h"
 #include "ns3/vector.h"
+#include "ThesisPacketCache.h"
+#include "mcast-packet.h"
 
 namespace ns3
 {
@@ -27,17 +29,17 @@ class ThesisMcastDuplicatePacketDetection
   */
 public:
 	//Constructor
-	ThesisMcastDuplicatePacketDetection(Time lifetime);
+	ThesisMcastDuplicatePacketDetection(Time lifetime) : m_idCache(lifetime) {};
 	// Check if packet is duplicate; if not save packet information
-	bool IsDuplicate (Ptr<const Packet> p, const Header &header);
+	bool IsDuplicate (Ptr<const Packet> p, const ControlHeader &header);
 	// Set duplicate record lifetime
 	void SetLifetime (Time lifetime);
 	//Get duplicate lifetime
-	Time GetLifeTime() const;
+	Time GetLifeTime(void) const;
 
 private:
 	//Implement a cache to hold entries
-
+	ThesisMcastCache m_idCache;
 };
 
 

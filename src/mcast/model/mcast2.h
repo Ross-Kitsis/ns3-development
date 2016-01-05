@@ -30,7 +30,7 @@
 #include "ThesisNeighbors.h"
 #include "mcast-packet.h"
 #include "mcast-utils.h"
-
+#include "tm-dpd.h"
 
 //Routing tables
 #include "ns3/ipv6-routing-table-entry.h"
@@ -389,10 +389,16 @@ private:
 	Time m_neighborInvalid; //Max time between neighbor relationship invalidated
 	Timer m_helloTimer; //Timer for hello messages; calls send hello when expires
 	Ipv6Address m_globalAddress; //Pointer to GLOBAL ipv6 address (Assumes single interface)
-  //Neighbors m_nb; //List of neighbors from whom hello messages have been received
+
+
+	//Neighbors m_nb; //List of neighbors from whom hello messages have been received
 	ThesisNeighbors m_neighbors;
 
+	//Utilities
 	McastUtils m_mutils;
+
+	//Duplicate packet detection for mcast packets
+	ThesisMcastDuplicatePacketDetection m_dpd;
 
 };
 

@@ -53,8 +53,12 @@ namespace mcast
 {
 NS_OBJECT_ENSURE_REGISTERED(ThesisRoutingProtocol);
 
-ThesisRoutingProtocol::ThesisRoutingProtocol()
-	: m_ipv6(0), m_initialized(false), m_helloInterval(3), m_neighbors(Seconds(m_helloInterval * 5))
+ThesisRoutingProtocol::ThesisRoutingProtocol():
+		m_ipv6(0),
+		m_initialized(false),
+		m_helloInterval(3),
+		m_neighbors(Seconds(m_helloInterval * 5)),
+		m_dpd(MilliSeconds(100))
 {
 	m_rng = CreateObject<UniformRandomVariable>();
 	//m_neighbors = ThesisNeighbors(Seconds(m_helloInterval * 5));

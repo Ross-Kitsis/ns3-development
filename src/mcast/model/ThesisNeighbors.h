@@ -12,6 +12,7 @@
 #include "ns3/timer.h"
 #include "ns3/ipv6-address.h"
 #include "ns3/vector.h"
+#include "mcast-packet.h"
 
 //Exclude mac pieces for the moment
 

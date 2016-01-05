@@ -11,6 +11,7 @@
 #include <vector>
 #include "ns3/vector.h"
 #include "ns3/ipv6-address.h"
+#include "ns3/simulator.h"
 
 namespace ns3
 {
