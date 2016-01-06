@@ -110,6 +110,17 @@ public:
 	 */
 	Vector GetNeighborPosition(Ipv6Address toGet);
 
+	/**
+	 * \brief Return the number of neighbors currently in the nieghbor list
+	 */
+	uint32_t GetNeighborTableSize(void) {return (uint32_t)m_nb.size();}
+
+	/**
+	 *	\brief Checks all neighbors in the neighbor table determine if have one
+	 *	close to to the passed point than the passed position. Returns true if
+	 *	there exists a close neighbor; otherwise false;
+	 */
+	bool HaveCloserNeighbor(Vector CurrentPos, Vector PosToCheck, double currentDistance);
 
 private:
 

@@ -548,6 +548,12 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 	Vector position = m_ipv6->GetObject<MobilityModel>()->GetPosition();
 	Vector eventPos = cHeader.GetCenter();
 
+	//Check if control packet is duplicate
+	//Must have been retransmitted by a closer node, no need to continue processing
+	if(m_dpd.IsDuplicate(packet,cHeader))
+	{
+		return;
+	}
 
 	if(m_mutils.IsInZor(position,eventPos,cHeader.GetA(),cHeader.GetB()))
 	{
@@ -583,11 +589,27 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 				//Event vehicle sent this packet, use center in cHeader
 				double SenderDistanceToApex = m_mutils.GetDistanceBetweenPoints(ClosestApex.x, ClosestApex.y,
 						cHeader.GetCenter().x, cHeader.GetCenter().y);
+				//This if statement should always evaluate true (Sending area focused around initial node)
 				if(NodeDistanceToApex < SenderDistanceToApex)
 				{
-					//Send packet and check effectivity////////////////////////////////////////////
+					//Send packet and check effectivity
+				/**
+				 * Checking efficancy of transmission:
+				 *
+				 * (Need to have at least one neighbor)
+				 * At least one of the neighbors in the nodes neighbor
+				 * table must be close to the apex than the current node
+				 *
+				 */
 
-					//TO DO
+					if(m_neighbors.GetNeighborTableSize() > 0)
+					{
+						//Condition 1 met: At least have 1 neighbor
+						//Check condition 2; have a neighbor close to apex
+						//If condition 2 met then send packet after backoff period
+
+					}
+
 				}
 
 			}else
