@@ -166,6 +166,43 @@ ThesisNeighbors::GetNeighborPosition(Ipv6Address toGet)
 	return toReturn;
 }
 
+bool
+ThesisNeighbors::HaveCloserNeighbor(Vector PosToCheck, double distance)
+{
+	bool toReturn = false;
+
+	for(std::list<Neighbor>::iterator it = m_nb.begin(); it!= m_nb.end(); ++it)
+	{
+		Vector nPos = it ->GetPosition();
+		double nDis = m_mutils.GetDistanceBetweenPoints(nPos.x, nPos.y, PosToCheck.x, PosToCheck.y);
+		if(nDis < distance)
+		{
+			toReturn = true;
+			break;
+		}
+	}
+
+	return toReturn;
+}
+
+double
+ThesisNeighbors::getDistanceClosestNeighborToApex(Vector PosToCheck, double currentDistance)
+{
+	double closest = 10000;
+
+	for(std::list<Neighbor>::iterator it = m_nb.begin(); it!= m_nb.end(); ++it)
+	{
+		Vector nPos = it ->GetPosition();
+		double nDis = m_mutils.GetDistanceBetweenPoints(nPos.x, nPos.y, PosToCheck.x, PosToCheck.y);
+		if(nDis < closest)
+		{
+			closest = nDis;
+		}
+	}
+
+	return closest;
+}
+
 
 }
 

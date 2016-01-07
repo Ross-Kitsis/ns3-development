@@ -355,9 +355,10 @@ private:
   void DoSendMcastControl(Ptr<Packet> p);
 
   /**
-   * \brief Returns the distance between 2 points
+   * \brief retransmits an mcast packet, assumes the retransmit backoff has expired
+   * Expects a fully formed packet with all appropriate headers as argument
    */
-
+  void DoSendMcastRetransmit(Ptr<Packet> packet);
 
 	//Attributes
 
@@ -399,6 +400,25 @@ private:
 
 	//Duplicate packet detection for mcast packets
 	ThesisMcastDuplicatePacketDetection m_dpd;
+
+	/**
+	 * struct type_name {
+	 * member_type1 member_name1;
+	 * member_type2 member_name2;
+	 * member_type3 member_name3;
+	 * } object_names;
+	 */
+
+	/**
+	 * \brief Struc to hold a packet and a timer; once timer expires the packet is sent
+	 */
+	struct McastRetransmit
+	{
+		Ptr<Packet> p;
+		Timer timerToSend;
+	};
+
+	std::list<McastRetransmit> m_mr;
 
 };
 

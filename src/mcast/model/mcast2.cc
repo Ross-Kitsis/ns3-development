@@ -552,6 +552,7 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 	//Must have been retransmitted by a closer node, no need to continue processing
 	if(m_dpd.IsDuplicate(packet,cHeader))
 	{
+		//////////// ALSO IMORTANT: CHECK IF POSSIBLE RETRANSMIT
 		return;
 	}
 
@@ -608,6 +609,41 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 						//Check condition 2; have a neighbor close to apex
 						//If condition 2 met then send packet after backoff period
 
+						if(m_neighbors.HaveCloserNeighbor(ClosestApex,NodeDistanceToApex))
+						{
+							/**
+							 * Have a neighbor closer to the apex than current position
+							 * Transmission will be effective, send packet after backoff
+							*/
+
+							McastRetransmit toSend;
+
+					  	//Create packet and add control header
+							cHeader.SetSource(m_globalAddress);
+					  	packet->AddHeader(cHeader);
+
+					  	//Create type header and add to packet
+					  	TypeHeader theader (MCAST_CONTROL);
+					  	packet->AddHeader(theader);
+
+					  	//Set packet to send
+					  	toSend.p = packet;
+
+					  	double Vj = m_neighbors.getDistanceClosestNeighborToApex(ClosestApex,NodeDistanceToApex);
+
+					  	double backoff = Vj/NodeDistanceToApex;
+
+					  	int delay = ((int)((10 * backoff) * 10))/10;
+
+
+					  	toSend.timerToSend.Schedule(Time(MilliSeconds(delay)));
+					  	toSend.timerToSend.SetFunction(&ThesisRoutingProtocol::DoSendMcastRetransmit, this);
+					  	toSend.timerToSend.SetArguments(toSend.p);
+
+					  	//Add to retransmit queue
+					  	m_mr.push_back(toSend);
+						}
+
 					}
 
 				}
@@ -633,6 +669,13 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 	}
 
 }
+
+void
+ThesisRoutingProtocol::DoSendMcastRetransmit(Ptr<Packet> packet)
+{
+ //To implement later
+}
+
 
 bool
 ThesisRoutingProtocol::IsMyOwnAddress (Ipv6Address src)

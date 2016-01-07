@@ -12,7 +12,11 @@
 #include "ns3/timer.h"
 #include "ns3/ipv6-address.h"
 #include "ns3/vector.h"
+
+//Thesis includes
 #include "mcast-packet.h"
+#include "mcast-utils.h"
+
 
 //Exclude mac pieces for the moment
 
@@ -57,7 +61,6 @@ public:
 	 */
 	void SetVelocity(Vector v);
 
-
 	/*
 	 * Timer counting down expiring of neighbor relationship
 	 */
@@ -70,7 +73,6 @@ private:
 	Time m_delay;
 	Vector m_velocity;
 	Vector m_position;
-
 };
 
 class ThesisNeighbors
@@ -120,7 +122,13 @@ public:
 	 *	close to to the passed point than the passed position. Returns true if
 	 *	there exists a close neighbor; otherwise false;
 	 */
-	bool HaveCloserNeighbor(Vector CurrentPos, Vector PosToCheck, double currentDistance);
+	bool HaveCloserNeighbor(Vector PosToCheck, double currentDistance);
+
+	/**
+	 * \brief Finds and returns the closest neighbor to the apex (Furthest distance from current node)
+	 *
+	 */
+	double getDistanceClosestNeighborToApex(Vector PosToCheck, double currentDistance);
 
 private:
 
@@ -134,7 +142,7 @@ private:
 	//Attributes
 	std::list<Neighbor> m_nb;
 	Time m_delay;
-
+	McastUtils m_mutils;
 
 };
 
