@@ -552,7 +552,27 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 	//Must have been retransmitted by a closer node, no need to continue processing
 	if(m_dpd.IsDuplicate(packet,cHeader))
 	{
-		//////////// ALSO IMORTANT: CHECK IF POSSIBLE RETRANSMIT
+		//////////// ALSO IMORTANT: CHECK IF POSSIBLE RETRANSMIT scheduled
+
+		//Check if have packet in queue to send (Other node must have had a better neighbor)
+		for(std::list<McastRetransmit>::iterator it = m_mr.begin(); it != m_mr.end(); ++it)
+		{
+			ControlHeader temp;
+			it -> p ->PeekHeader(temp);
+
+			Ipv6Address Id = temp.GetId();
+			Vector ApxL = temp.getApxL();
+			Vector ApxR = temp.getApxR();
+
+			if(Id.IsEqual(cHeader.GetId()) && ApxL.x == cHeader.getApxL().x && ApxL.y == cHeader.getApxL().y
+					&& ApxR.x == cHeader.getApxR().x && ApxR.y == cHeader.getApxR().y)
+			{
+				it->timerToSend.Cancel();
+				m_mr.erase(it);
+				break;
+			}
+
+		}
 		return;
 	}
 
@@ -673,7 +693,17 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 void
 ThesisRoutingProtocol::DoSendMcastRetransmit(Ptr<Packet> packet)
 {
- //To implement later
+ //Timer expired; retransmit the packet - assume packet is correctly formed at this point
+	for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
+	  {
+	  	uint32_t interface = iter->second;
+
+	  	//Send packet
+	  	Ipv6Address destination = Ipv6Address(MCAST_CONTROL_GRP);
+	  	NS_LOG_LOGIC("Sending packet to: " << destination << " from address " << interface);
+	  	iter->first->SendTo(packet, 0, Inet6SocketAddress(destination, MCAST_PORT));
+
+	  }
 }
 
 
