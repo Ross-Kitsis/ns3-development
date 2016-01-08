@@ -670,22 +670,119 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 
 			}else
 			{
+
+				/*
+				 * //Event vehicle sent this packet, use center in cHeader
+				double SenderDistanceToApex = m_mutils.GetDistanceBetweenPoints(ClosestApex.x, ClosestApex.y,
+						cHeader.GetCenter().x, cHeader.GetCenter().y);
+				 */
+
 				//Packet was retransmitted by some other node
-				Vector sourcePos = m_neighbors.GetNeighborPosition(cHeader.GetId());
+				Vector sourcePos = m_neighbors.GetNeighborPosition(cHeader.GetSource());
 				double SenderDistanceToApex = m_mutils.GetDistanceBetweenPoints(ClosestApex.x, ClosestApex.y,
 						sourcePos.x, sourcePos.y);
 				if(NodeDistanceToApex < SenderDistanceToApex)
 				{
-					//Send packet and check effectivity////////////////////////////////////////////
+					//Retransmitted; use source position (Last known)
+					double SenderDistanceToApex = m_mutils.GetDistanceBetweenPoints(ClosestApex.x, ClosestApex.y,
+							sourcePos.x, sourcePos.y);
+					//This if statement should always evaluate true (Sending area focused around initial node)
+					if(NodeDistanceToApex < SenderDistanceToApex)
+					{
+						//Send packet and check effectivity
+						/**
+						 * Checking efficancy of transmission:
+						 *
+						 * (Need to have at least one neighbor)
+						 * At least one of the neighbors in the nodes neighbor
+						 * table must be close to the apex than the current node
+						 *
+						 */
 
-					//TO DO
+						if(m_neighbors.GetNeighborTableSize() > 0)
+						{
+							//Condition 1 met: At least have 1 neighbor
+							//Check condition 2; have a neighbor close to apex
+							//If condition 2 met then send packet after backoff period
+
+							if(m_neighbors.HaveCloserNeighbor(ClosestApex,NodeDistanceToApex))
+							{
+								/**
+								 * Have a neighbor closer to the apex than current position
+								 * Transmission will be effective, send packet after backoff
+								 */
+
+								McastRetransmit toSend;
+
+								//Create packet and add control header
+								cHeader.SetSource(m_globalAddress);
+								packet->AddHeader(cHeader);
+
+								//Create type header and add to packet
+								TypeHeader theader (MCAST_CONTROL);
+								packet->AddHeader(theader);
+
+								//Set packet to send
+								toSend.p = packet;
+
+								double Vj = m_neighbors.getDistanceClosestNeighborToApex(ClosestApex,NodeDistanceToApex);
+
+								double backoff = Vj/NodeDistanceToApex;
+
+								int delay = ((int)((10 * backoff) * 10))/10;
+
+
+								toSend.timerToSend.Schedule(Time(MilliSeconds(delay)));
+								toSend.timerToSend.SetFunction(&ThesisRoutingProtocol::DoSendMcastRetransmit, this);
+								toSend.timerToSend.SetArguments(toSend.p);
+
+								//Add to retransmit queue
+								m_mr.push_back(toSend);
+							}
+
+						}
+
+					}
+
 				}
 			}
 
 		}else
 		{
-			//Source of packet is not a neighbor, forward to be safe
+			/**
+			 * Source of packet is not a neighbor
+			 * Start forwarding process anyway but set a large delay to allow
+			 * better candidates to send first
+			 */
+			McastRetransmit toSend;
+
+			//Create packet and add control header
+			cHeader.SetSource(m_globalAddress);
+			packet->AddHeader(cHeader);
+
+			//Create type header and add to packet
+			TypeHeader theader (MCAST_CONTROL);
+			packet->AddHeader(theader);
+
+			//Set packet to send
+			toSend.p = packet;
+
+			double backoff = 1;
+
+			int delay = ((int)((10 * backoff) * 10))/10;
+
+
+			toSend.timerToSend.Schedule(Time(MilliSeconds(delay)));
+			toSend.timerToSend.SetFunction(&ThesisRoutingProtocol::DoSendMcastRetransmit, this);
+			toSend.timerToSend.SetArguments(toSend.p);
+
+			//Add to retransmit queue
+			m_mr.push_back(toSend);
 		}
+	}else
+	{
+		//Not in ZoR; drop packet and do nothing at the moment
+		return;
 	}
 
 }
