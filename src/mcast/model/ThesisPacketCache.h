@@ -2,7 +2,7 @@
  * ThesisPacketCache.h
  *
  *  Created on: Jan 4, 2016
- *      Author: ross
+ *      Author: Ross Kitsis
  */
 
 #ifndef SRC_MCAST_MODEL_THESISPACKETCACHE_H_
@@ -12,6 +12,8 @@
 #include "ns3/vector.h"
 #include "ns3/ipv6-address.h"
 #include "ns3/simulator.h"
+
+#include "mcast-packet.h"
 
 namespace ns3
 {

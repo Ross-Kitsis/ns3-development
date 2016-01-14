@@ -9,38 +9,40 @@
 def build(bld):
     module = bld.create_ns3_module('mcast', ['internet', 'wifi','mobility'])
     module.source = [
-        'model/mcast.cc',
+ #       'model/mcast.cc',
         'model/mcast-neighbor.cc',
         'model/mcast-packet.cc',
         'model/vector-utils.cc',
-        'helper/mcast-helper.cc',
+ #       'helper/mcast-helper.cc',
         'model/mcast2.cc',
         'helper/mcast-helper2.cc',
         'model/ThesisNeighbors.cc',
         'model/mcast-utils.cc',
-        'model/tm-dpd.cc',
         'model/ThesisPacketCache.cc',
+        'model/tm-dpd.cc',
+        'application/MobiCastApp.cc',
         ]
 
-#    module_test = bld.create_ns3_module_test_library('mcast')
-#    module_test.source = [
-#        'test/mcast-test-suite.cc',
-#        ]
+    module_test = bld.create_ns3_module_test_library('mcast')
+    module_test.source = [
+        'test/mcast-test-suite.cc',
+        ]
 
     headers = bld(features='ns3header')
     headers.module = 'mcast'
     headers.source = [
-        'model/mcast.h',
+ #       'model/mcast.h',
         'model/mcast-neighbor.h',
         'model/mcast-packet.h',
         'model/vector-utils.h',
-        'helper/mcast-helper.h',
+ #       'helper/mcast-helper.h',
         'helper/mcast-helper2.h',
         'model/mcast2.h',
         'model/ThesisNeighbors.h',
         'model/mcast-utils.h',
-        'model/tm-dpd.h',
         'model/ThesisPacketCache.h',
+        'model/tm-dpd.h',
+        'application/MobiCastApp.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

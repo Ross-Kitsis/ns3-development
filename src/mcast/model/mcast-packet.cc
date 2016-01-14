@@ -160,7 +160,7 @@ HelloHeader::GetTypeId ()
 {
 	static TypeId tid = TypeId ("ns3::mcast::HelloHeader")
     		.SetParent<Header> ()
-    		.SetGroupName("Mcast")
+    		.SetGroupName("mcast")
     		.AddConstructor<HelloHeader> ()
     		;
 	return tid;
@@ -320,7 +320,7 @@ ControlHeader::GetTypeId ()
 {
 	static TypeId tid = TypeId ("ns3::mcast::ControlHeader")
     		.SetParent<Header> ()
-    		.SetGroupName("Mcast")
+    		.SetGroupName("mcast")
     		.AddConstructor<ControlHeader> ()
     		;
 	return tid;

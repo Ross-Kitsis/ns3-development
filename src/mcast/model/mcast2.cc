@@ -6,6 +6,7 @@
  */
 
 #include "mcast2.h"
+
 #include <iomanip>
 #include "ns3/log.h"
 #include "ns3/abort.h"
@@ -39,9 +40,9 @@
 
 
 
-#define MCAST_ALL_NODE "ff02::114"
+#define MCAST_ALL_NODE "ff02::114" //Used for hello packets
 #define MCAST_PORT 555
-#define MCAST_CONTROL_GRP "ff02::115"
+#define MCAST_CONTROL_GRP "ff02::115" //Used to send mcast control packets
 
 
 namespace ns3

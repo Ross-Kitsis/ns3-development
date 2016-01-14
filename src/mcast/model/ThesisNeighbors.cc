@@ -13,7 +13,7 @@
 
 namespace ns3
 {
-NS_LOG_COMPONENT_DEFINE("ThesisNeighbors");
+//NS_LOG_COMPONENT_DEFINE("ThesisNeighbors");
 
 namespace mcast
 {

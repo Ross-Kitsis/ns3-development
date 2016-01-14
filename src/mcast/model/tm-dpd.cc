@@ -10,6 +10,7 @@
 
 namespace ns3
 {
+
 namespace mcast
 {
 

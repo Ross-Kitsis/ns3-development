@@ -2,7 +2,7 @@
  * ThesisNeighbors.h
  *
  *  Created on: Dec 5, 2015
- *      Author: ross
+ *      Author: Ross Kitsis
  */
 
 #ifndef MODEL_THESISNEIGHBORS

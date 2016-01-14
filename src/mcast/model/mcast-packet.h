@@ -178,6 +178,8 @@ std::ostream & operator<< (std::ostream & os, TypeHeader const & h);
 
   \endverbatim
 */
+
+
 class HelloHeader : public Header
 {
 public:
@@ -188,7 +190,7 @@ public:
               Ipv6Address dst = Ipv6Address (),
               Ipv6Address origin = Ipv6Address (),
               Vector position = Vector(),
-              Vector veloity = Vector());
+              Vector velocity = Vector());
 
   //Header size in bytes
   static const uint32_t 		m_headerSize;

@@ -30,6 +30,7 @@
 #include "ThesisNeighbors.h"
 #include "mcast-packet.h"
 #include "mcast-utils.h"
+#include "ThesisPacketCache.h"
 #include "tm-dpd.h"
 
 //Routing tables
@@ -48,6 +49,7 @@
 
 namespace ns3
 {
+
 namespace mcast
 {
 
@@ -178,6 +180,16 @@ public:
 			uint32_t interface, Ipv6Address prefixToUse = Ipv6Address::GetZero ());
 	virtual void SetIpv6 (Ptr<Ipv6> ipv6);
 	virtual void PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const;
+
+
+  /**
+   * \brief send Mcast Control Packet (Must be triggered by transport layer)
+   *  Adds the mcast control header to the passed packet before sending it to the control
+   *  multicast group.
+   *
+   */
+  void DoSendMcastControl(Ptr<Packet> p);
+
 
 	///////Skip split horizon implementation in Ripng/////////////////
 
@@ -346,13 +358,7 @@ private:
    */
   void ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> packet);
 
-  /**
-   * \brief send Mcast Control Packet (Must be triggered by transport layer)
-   *  Adds the mcast control header to the passed packet before sending it to the control
-   *  multicast group.
-   *
-   */
-  void DoSendMcastControl(Ptr<Packet> p);
+
 
   /**
    * \brief retransmits an mcast packet, assumes the retransmit backoff has expired

@@ -3,8 +3,8 @@
 
 
 #include "ns3/mcast-helper2.h"
-#include "ns3/mcast.h"
-#include "ns3/mcast-neighbor.h"
+//#include "ns3/mcast.h"
+//#include "ns3/mcast-neighbor.h"
 #include "ns3/mcast-packet.h"
 
 #include "ns3/core-module.h"
@@ -69,7 +69,9 @@ main (int argc, char *argv[])
 
   NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
   wifiMac.SetType ("ns3::AdhocWifiMac");
+
   YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
   WifiHelper wifi = WifiHelper::Default ();
