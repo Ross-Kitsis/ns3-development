@@ -37,6 +37,21 @@ MobiCastApp::GetTypeId()
         .SetParent<Application>()
         .SetGroupName("Applications")
         .AddConstructor<MobiCastApp>()
+        .AddAttribute ("EventProbability",
+                       "The probability of sending a packet",
+                       DoubleValue (10.0),
+                       MakeDoubleAccessor (&MobiCastApp::m_eventProbability),
+                       MakeDoubleChecker<double>())
+        .AddAttribute("LocalIP",
+        							"The IP address of the current node",
+        							Ipv6AddressValue(),
+        							MakeIpv6AddressAccessor(&MobiCastApp::m_address),
+        							MakeIpv6AddressChecker())
+        .AddAttribute ("PacketSize",
+        								"Size of packets generated",
+        								UintegerValue (1024),
+        								MakeUintegerAccessor (&MobiCastApp::m_size),
+        								MakeUintegerChecker<uint32_t>())
         ;
 	return tid;
 }
@@ -44,6 +59,7 @@ MobiCastApp::GetTypeId()
 MobiCastApp::MobiCastApp()
 {
   NS_LOG_FUNCTION_NOARGS ();
+
   m_sent = 0;
   m_socket = 0;
   m_seq = 0;
@@ -143,6 +159,12 @@ MobiCastApp::Send ()
 	Ptr<Packet> p = Create<Packet> ();
 
 	m_routing.DoSendMcastControl(p);
+}
+
+void
+MobiCastApp::SetLocal(Ipv6Address ip)
+{
+	m_localAddress = ip;
 }
 
 void

@@ -21,6 +21,7 @@ def build(bld):
         'model/ThesisPacketCache.cc',
         'model/tm-dpd.cc',
         'application/MobiCastApp.cc',
+        'helper/MobiCastAppHelper.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('mcast')
@@ -43,6 +44,7 @@ def build(bld):
         'model/ThesisPacketCache.h',
         'model/tm-dpd.h',
         'application/MobiCastApp.h',
+        'helper/MobiCastAppHelper.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

@@ -186,6 +186,14 @@ private:
    */
   mcast::ThesisRoutingProtocol m_routing;
 
+  /**
+   * \brief Random transmission mode
+   *
+   * 0 - Single theshold used by all nodes for all transmission decisions
+   * 1 - Use random variable
+   *
+   */
+
 };
 
 } /* namespace ns3 */

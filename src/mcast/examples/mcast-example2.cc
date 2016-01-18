@@ -6,6 +6,7 @@
 //#include "ns3/mcast.h"
 //#include "ns3/mcast-neighbor.h"
 #include "ns3/mcast-packet.h"
+//#include "ns3/MobiCastAppHelper.h"
 
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
@@ -70,12 +71,25 @@ main (int argc, char *argv[])
   NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
   wifiMac.SetType ("ns3::AdhocWifiMac");
 
+
   YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+
+  /*
 
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
+
+  */
+
+  YansWifiChannelHelper wifiChannel;
+  wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+  wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel","MinDistance",DoubleValue (250));
+  wifiPhy.SetChannel (wifiChannel.Create ());
+
+
   WifiHelper wifi = WifiHelper::Default ();
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager", "DataMode", StringValue ("OfdmRate6Mbps"), "RtsCtsThreshold", UintegerValue (0));
+
   devices = wifi.Install (wifiPhy, wifiMac, nodes);
 
 
@@ -97,6 +111,9 @@ main (int argc, char *argv[])
   Ipv6AddressHelper address;
   address.SetBase(Ipv6Address("2001::"), Ipv6Prefix(64));
   interfaces = address.Assign(devices);
+
+
+
 
 
   std::cout << "Starting simulation for " << totalTime << " s ...\n";
