@@ -52,6 +52,16 @@ MobiCastApp::GetTypeId()
         								UintegerValue (1024),
         								MakeUintegerAccessor (&MobiCastApp::m_size),
         								MakeUintegerChecker<uint32_t>())
+        .AddAttribute ("Interval",
+        								"Interval between attempts to send a safety message",
+        								TimeValue(),
+        								MakeTimeAccessor (&MobiCastApp::m_interval),
+        								MakeTimeChecker())
+				.AddAttribute ("SendInterval",
+											 "Interval between successful transmissions",
+											 	TimeValue(),
+											 	MakeTimeAccessor (&MobiCastApp::m_sendSafetyMessageInterval),
+											 	MakeTimeChecker())
         ;
 	return tid;
 }
@@ -138,11 +148,11 @@ MobiCastApp::ScheduleTransmit()
 
   if(v < m_eventProbability)
   {
-  	m_transmitEvent = Simulator::Schedule(Time(Seconds(1)) + Time(Seconds(m_interval)),&MobiCastApp::ScheduleTransmit,this);
+  	m_transmitEvent = Simulator::Schedule(Time(Seconds(m_sendSafetyMessageInterval)),&MobiCastApp::ScheduleTransmit,this);
   	m_sendEvent = Simulator::Schedule(Time(Seconds(0.1)),&MobiCastApp::Send, this);
   }else
   {
-  	m_transmitEvent = Simulator::Schedule(Time(Seconds(1)) + Time(Seconds(m_interval)),&MobiCastApp::ScheduleTransmit,this);
+  	m_transmitEvent = Simulator::Schedule(Time(Seconds(m_interval)),&MobiCastApp::ScheduleTransmit,this);
   }
 }
 
@@ -164,7 +174,32 @@ MobiCastApp::Send ()
 void
 MobiCastApp::SetLocal(Ipv6Address ip)
 {
-	m_localAddress = ip;
+	m_localAddress = ip;  /**
+   * \brief Interval between packets sent.
+   *
+   *  Can this be modified as minimum time?
+   *
+   */
+  Time m_interval;
+
+  /**
+   * \brief Schedule interval
+   *
+   * Time between 2 consecutive safety messages
+   */
+  Time m_sendSafetyMessageInterval;
+}
+
+void
+MobiCastApp::SetAttemptInterval(Time interval)
+{
+	m_interval = interval;
+}
+
+void
+MobiCastApp::SetSuccessInterval(Time interval)
+{
+	m_sendSafetyMessageInterval = interval;
 }
 
 void

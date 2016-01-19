@@ -6,7 +6,7 @@
 //#include "ns3/mcast.h"
 //#include "ns3/mcast-neighbor.h"
 #include "ns3/mcast-packet.h"
-//#include "ns3/MobiCastAppHelper.h"
+#include "ns3/MobiCastAppHelper.h"
 
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
@@ -74,16 +74,27 @@ main (int argc, char *argv[])
 
   YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
 
+
   /*
+   * Yans Default helper uses the LogDistancePropogation Model
+   * Default distance is 250m
+   * Signals get weaker as go further away
+   *
+   * Good for suburban enviroments (May want to switch it later based on the
+   * paper detailing ns3 propogation models)
+   *
+   */
+
 
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
 
-  */
 
-  YansWifiChannelHelper wifiChannel;
-  wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
-  wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel","MinDistance",DoubleValue (250));
+
+//  YansWifiChannelHelper wifiChannel;
+//  wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+  //Propogration loss model is Friis, maximum distance a packet can travel is 250m, -1000 dB past that
+//  wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel","MinDistance",DoubleValue (250));
   wifiPhy.SetChannel (wifiChannel.Create ());
 
 
@@ -111,6 +122,8 @@ main (int argc, char *argv[])
   Ipv6AddressHelper address;
   address.SetBase(Ipv6Address("2001::"), Ipv6Prefix(64));
   interfaces = address.Assign(devices);
+
+  MobiCastAppHelper mc;
 
 
 

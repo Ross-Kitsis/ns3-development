@@ -32,6 +32,18 @@ MobiCastAppHelper::SetLocal (Ipv6Address ip)
 }
 
 void
+MobiCastAppHelper::SetInterval(Time interval)
+{
+	m_interval = interval;
+}
+
+void
+MobiCastAppHelper::SetSafetyInterval(Time interval)
+{
+	m_safetyMessageInterval = interval;
+}
+
+void
 MobiCastAppHelper::SetAttribute (std::string name, const AttributeValue& value)
 {
   m_factory.Set (name, value);
@@ -46,6 +58,8 @@ MobiCastAppHelper::Install (NodeContainer c)
       Ptr<Node> node = *i;
       Ptr<MobiCastApp> client = m_factory.Create<MobiCastApp> ();
       client->SetLocal (m_localIp);
+      client->SetAttemptInterval(m_interval);
+      client->SetSuccessInterval(m_safetyMessageInterval);
       //client->SetRemote (m_remoteIp);
       //client->SetIfIndex (m_ifIndex);
       //client->SetRouters (m_routers);

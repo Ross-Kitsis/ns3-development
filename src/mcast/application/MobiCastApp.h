@@ -51,6 +51,17 @@ public:
 	 */
 	void SetLocal(Ipv6Address ipv6);
 
+
+	/*
+	 * \brief Set interval between transmissions
+	 */
+	void SetAttemptInterval(Time interval);
+
+	/*
+	 * \brief Set interval between successful transmissions
+	 */
+	void SetSuccessInterval(Time interval);
+
   /**
    * \brief Set the remote peer.
    * \param ipv6 IPv6 address of the peer
@@ -125,6 +136,13 @@ private:
    *
    */
   Time m_interval;
+
+  /**
+   * \brief Schedule interval
+   *
+   * Time between 2 consecutive safety messages
+   */
+  Time m_sendSafetyMessageInterval;
 
   /**
    * \brief Probability to trigger and event

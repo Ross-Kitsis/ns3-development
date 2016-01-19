@@ -38,6 +38,15 @@ public:
    */
   void SetLocal (Ipv6Address ip);
 
+  void SetInterval (Time interval);
+
+  /**
+   * \brief Set the local IPv6 address.
+   * \param ip local IPv6 address
+   */
+  void SetSafetyInterval (Time interval);
+
+
   /**
    * \brief Set some attributes.
    * \param name attribute name
@@ -63,6 +72,10 @@ private:
    * \brief The local IPv6 address.
    */
   Ipv6Address m_localIp;
+
+  Time m_interval;
+
+  Time m_safetyMessageInterval;
 
 };
 
