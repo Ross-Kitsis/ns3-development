@@ -57,9 +57,21 @@ MobiCastAppHelper::Install (NodeContainer c)
     {
       Ptr<Node> node = *i;
       Ptr<MobiCastApp> client = m_factory.Create<MobiCastApp> ();
-      client->SetLocal (m_localIp);
+      //client->SetLocal (m_localIp);
       client->SetAttemptInterval(m_interval);
       client->SetSuccessInterval(m_safetyMessageInterval);
+
+      Ptr<Ipv6> ipv6 = node->GetObject<Ipv6>();
+
+      std::cout << "Attempting to set Ipv6 and routing protocol" << std::endl;
+
+      client->SetIpV6(ipv6);
+
+  		Ptr<Ipv6RoutingProtocol> proto = ipv6->GetRoutingProtocol ();
+  		Ptr<mcast::ThesisRoutingProtocol> mcast = DynamicCast<mcast::ThesisRoutingProtocol> (proto);
+
+
+      client->SetRoutingProtocol(mcast);
       //client->SetRemote (m_remoteIp);
       //client->SetIfIndex (m_ifIndex);
       //client->SetRouters (m_routers);

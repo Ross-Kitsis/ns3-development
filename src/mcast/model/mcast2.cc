@@ -255,6 +255,8 @@ void
 ThesisRoutingProtocol::SetIpv6 (Ptr<Ipv6> ipv6)
 {
 
+	std::cout << "Setting IPv6 in routing protocol \n";
+
 	NS_LOG_FUNCTION (this << ipv6);
   NS_ASSERT (m_ipv6 == 0 && ipv6 != 0);
   uint32_t i = 0;

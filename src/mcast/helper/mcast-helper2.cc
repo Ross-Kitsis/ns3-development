@@ -41,6 +41,7 @@ McastHelper2::Set (std::string name, const AttributeValue &value)
 int64_t
 McastHelper2::AssignStreams (NodeContainer c, int64_t stream)
 {
+	std::cout << "Assigning Streams" << std::endl;
 	int64_t currentStream = stream;
 	Ptr<Node> node;
 	for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)

@@ -36,6 +36,9 @@ main (int argc, char *argv[])
   //Capture packets
   bool pcap = false;
 
+  Time retryInterval = Seconds(1);
+  Time successInterval = Seconds(10);
+
   CommandLine cmd;
   cmd.AddValue ("verbose", "Tell application to log if true", verbose);
   cmd.AddValue ("numNodes","Number of nodes to include in the simulation", numNodes);
@@ -71,6 +74,7 @@ main (int argc, char *argv[])
   NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
   wifiMac.SetType ("ns3::AdhocWifiMac");
 
+  std::cout << "Creating Wifi" << std::endl;
 
   YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
 
@@ -123,11 +127,17 @@ main (int argc, char *argv[])
   address.SetBase(Ipv6Address("2001::"), Ipv6Prefix(64));
   interfaces = address.Assign(devices);
 
+
+  //Create applications
+
   MobiCastAppHelper mc;
 
+  mc.SetInterval(retryInterval);
+  mc.SetSafetyInterval(successInterval);
 
-
-
+  ApplicationContainer apps = mc.Install(nodes);
+  apps.Start(Seconds(5));
+  apps.Stop(Seconds(totalTime - 5));
 
   std::cout << "Starting simulation for " << totalTime << " s ...\n";
 

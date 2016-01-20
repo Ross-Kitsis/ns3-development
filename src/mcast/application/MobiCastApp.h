@@ -76,6 +76,18 @@ public:
    */
   void SetIfIndex (uint32_t ifIndex);
 
+  /**
+   * \brief Set a pointer to IPv6
+   *
+   */
+  void SetIpV6(Ptr<Ipv6>);
+
+  /**
+   * \brief Set the routing protocol pointer
+   *
+   */
+  void SetRoutingProtocol(Ptr<mcast::ThesisRoutingProtocol>);
+
 protected:
   /**
    * \brief Dispose this object;
@@ -202,7 +214,7 @@ private:
   /**
    * \brief Pointer to the Mcast routing protocol
    */
-  mcast::ThesisRoutingProtocol m_routing;
+  Ptr<mcast::ThesisRoutingProtocol> m_routing;
 
   /**
    * \brief Random transmission mode

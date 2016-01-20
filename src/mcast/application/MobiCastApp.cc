@@ -75,16 +75,27 @@ MobiCastApp::MobiCastApp()
   m_seq = 0;
   m_sendEvent = EventId ();
 
+  std::cout << "Creating new Mobicast app on node" << std::endl;
+
+  /*
+
   // Set IPv6 references
   Ptr<Node> node;
 
+  std::cout << "Attempting to get IPv6 in mobicast app" << std::endl;
+
   Ptr<Ipv6> ipv6 = node->GetObject<Ipv6> ();
   NS_ASSERT_MSG (ipv6, "Ipv6 not installed on node");
+
+  std::cout << "Attempting to get Routing Protocol in mobicast app" << std::endl;
+
+
   Ptr<Ipv6RoutingProtocol> proto = ipv6->GetRoutingProtocol ();
   NS_ASSERT_MSG (proto, "Ipv6 routing not installed on node");
   Ptr<mcast::ThesisRoutingProtocol> mcast = DynamicCast<mcast::ThesisRoutingProtocol> (proto);
   NS_ASSERT_MSG (mcast, "ThesisRoutingProtocol not installed on node");
 
+   */
 
   Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable> ();
   m_rng = uv;
@@ -148,6 +159,7 @@ MobiCastApp::ScheduleTransmit()
 
   if(v < m_eventProbability)
   {
+  	std::cout << "Sending mcast packet" << std::endl;
   	m_transmitEvent = Simulator::Schedule(Time(Seconds(m_sendSafetyMessageInterval)),&MobiCastApp::ScheduleTransmit,this);
   	m_sendEvent = Simulator::Schedule(Time(Seconds(0.1)),&MobiCastApp::Send, this);
   }else
@@ -168,7 +180,7 @@ MobiCastApp::Send ()
 
 	Ptr<Packet> p = Create<Packet> ();
 
-	m_routing.DoSendMcastControl(p);
+	m_routing->DoSendMcastControl(p);
 }
 
 void
@@ -188,6 +200,18 @@ MobiCastApp::SetLocal(Ipv6Address ip)
    * Time between 2 consecutive safety messages
    */
   Time m_sendSafetyMessageInterval;
+}
+
+void
+MobiCastApp::SetIpV6(Ptr<Ipv6> ipv6)
+{
+	m_ipv6 = ipv6;
+}
+
+void
+MobiCastApp::SetRoutingProtocol(Ptr<mcast::ThesisRoutingProtocol> routing)
+{
+	m_routing = routing;
 }
 
 void
