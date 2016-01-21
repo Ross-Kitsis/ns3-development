@@ -426,6 +426,8 @@ private:
 
 	std::list<McastRetransmit> m_mr;
 
+	bool m_sendHello;
+
 };
 
 }//namespace mcast

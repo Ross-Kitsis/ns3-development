@@ -69,13 +69,17 @@ main (int argc, char *argv[])
   // Create static grid
   MobilityHelper mobility;
   mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-                                 "MinX", DoubleValue (0.0),
-                                 "MinY", DoubleValue (0.0),
+                                 "MinX", DoubleValue (1.0),
+                                 "MinY", DoubleValue (1.0),
                                  "DeltaX", DoubleValue (step),
                                  "DeltaY", DoubleValue (0),
                                  "GridWidth", UintegerValue (numNodes),
                                  "LayoutType", StringValue ("RowFirst"));
-  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  //mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+
+  mobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
+  													"Bounds", RectangleValue (Rectangle (0, 100, 0, 100)));
+
   mobility.Install (nodes);
 
   /////////////////////////////MAC//////////////////////////////////////
