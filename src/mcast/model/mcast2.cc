@@ -355,6 +355,7 @@ ThesisRoutingProtocol::DoSendHello()
 void
 ThesisRoutingProtocol::DoSendMcastControl(Ptr<Packet> p)
 {
+	std::cout << "Running doSendMCastControl" << std::endl;
 	NS_LOG_FUNCTION(this);
 
 	Ipv6Address Id = m_globalAddress;

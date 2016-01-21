@@ -51,6 +51,10 @@ public:
 	 */
 	void SetLocal(Ipv6Address ipv6);
 
+	/**
+	 * Sets to probability to send
+	 */
+//	void SetSendProbability(double v);
 
 	/*
 	 * \brief Set interval between transmissions
@@ -61,6 +65,11 @@ public:
 	 * \brief Set interval between successful transmissions
 	 */
 	void SetSuccessInterval(Time interval);
+
+	/**
+	 * \brief Set send probability
+	 */
+	void SetSendProbability(double v);
 
   /**
    * \brief Set the remote peer.
@@ -221,7 +230,6 @@ private:
    *
    * 0 - Single theshold used by all nodes for all transmission decisions
    * 1 - Use random variable
-   *
    */
 
 };

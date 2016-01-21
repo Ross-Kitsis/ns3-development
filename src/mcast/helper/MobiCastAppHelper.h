@@ -40,6 +40,8 @@ public:
 
   void SetInterval (Time interval);
 
+  void SetEventProbability(double v);
+
   /**
    * \brief Set the local IPv6 address.
    * \param ip local IPv6 address
@@ -76,6 +78,8 @@ private:
   Time m_interval;
 
   Time m_safetyMessageInterval;
+
+  double m_eventProbability;
 
 };
 

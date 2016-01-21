@@ -109,6 +109,12 @@ MobiCastApp::~MobiCastApp()
 }
 
 void
+MobiCastApp::SetSendProbability(double v)
+{
+	m_eventProbability = v;
+}
+
+void
 MobiCastApp::DoDispose()
 {
   NS_LOG_FUNCTION_NOARGS ();
@@ -159,12 +165,13 @@ MobiCastApp::ScheduleTransmit()
 
   if(v < m_eventProbability)
   {
-  	std::cout << "Sending mcast packet" << std::endl;
-  	m_transmitEvent = Simulator::Schedule(Time(Seconds(m_sendSafetyMessageInterval)),&MobiCastApp::ScheduleTransmit,this);
-  	m_sendEvent = Simulator::Schedule(Time(Seconds(0.1)),&MobiCastApp::Send, this);
+  	std::cout << "value: " << v << "Sending mcast packet" << std::endl;
+  	m_transmitEvent = Simulator::Schedule(m_sendSafetyMessageInterval,&MobiCastApp::ScheduleTransmit,this);
+  	m_sendEvent = Simulator::Schedule(Seconds(0.1),&MobiCastApp::Send, this);
   }else
   {
-  	m_transmitEvent = Simulator::Schedule(Time(Seconds(m_interval)),&MobiCastApp::ScheduleTransmit,this);
+  	std::cout << "waiting to send" << std::endl;
+  	m_transmitEvent = Simulator::Schedule(m_interval,&MobiCastApp::ScheduleTransmit,this);
   }
 }
 
@@ -173,10 +180,13 @@ void
 MobiCastApp::Send ()
 {
 	NS_LOG_FUNCTION_NOARGS ();
-	NS_ASSERT (m_sendEvent.IsExpired ());
+
+//	NS_ASSERT (m_sendEvent.IsExpired ());
 
 	///////////////////// Add more to packet to make it more realistic
 	// Make packet 1024 bytes??
+
+	std::cout << "Sending packet via mcast routing protocol" << std::endl;
 
 	Ptr<Packet> p = Create<Packet> ();
 

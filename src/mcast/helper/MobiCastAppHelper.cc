@@ -38,6 +38,12 @@ MobiCastAppHelper::SetInterval(Time interval)
 }
 
 void
+MobiCastAppHelper::SetEventProbability(double v)
+{
+	m_eventProbability = v;
+}
+
+void
 MobiCastAppHelper::SetSafetyInterval(Time interval)
 {
 	m_safetyMessageInterval = interval;
@@ -60,6 +66,7 @@ MobiCastAppHelper::Install (NodeContainer c)
       //client->SetLocal (m_localIp);
       client->SetAttemptInterval(m_interval);
       client->SetSuccessInterval(m_safetyMessageInterval);
+      client->SetSendProbability(m_eventProbability);
 
       Ptr<Ipv6> ipv6 = node->GetObject<Ipv6>();
 

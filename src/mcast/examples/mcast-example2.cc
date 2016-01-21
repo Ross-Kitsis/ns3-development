@@ -32,6 +32,15 @@ main (int argc, char *argv[])
   int step = 25;
   //total time to run simulation
   int totalTime = 90;
+  //Probability to send an mcast packet
+  double eventProbability = 0.1;
+
+  /*
+  //Time to wait between successful transmissions
+  Time SuccessTimer = Seconds(20);
+  //Time between unsuccessful events triggered, wait to try again
+  Time RetyTimer = Seconds(5);
+	*/
 
   //Capture packets
   bool pcap = false;
@@ -134,6 +143,7 @@ main (int argc, char *argv[])
 
   mc.SetInterval(retryInterval);
   mc.SetSafetyInterval(successInterval);
+  mc.SetEventProbability(eventProbability);
 
   ApplicationContainer apps = mc.Install(nodes);
   apps.Start(Seconds(5));
