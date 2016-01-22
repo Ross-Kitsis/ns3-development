@@ -83,7 +83,11 @@ ThesisRoutingProtocol::GetTypeId (void)
                    TimeValue (Seconds(3)),
                    MakeTimeAccessor (&ThesisRoutingProtocol::m_helloInterval),
                    MakeTimeChecker ())
-
+		.AddAttribute ("HelloBroadcast",
+									 "Switch to enable/disable hello msgs",
+										BooleanValue (true),
+										MakeBooleanAccessor (&ThesisRoutingProtocol::m_sendHello),
+										MakeBooleanChecker ())
 
     /*
     .AddAttribute ("UnsolicitedRoutingUpdate", "The time between two Unsolicited Routing Updates.",
@@ -795,6 +799,8 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 void
 ThesisRoutingProtocol::DoSendMcastRetransmit(Ptr<Packet> packet)
 {
+	NS_LOG_FUNCTION(this);
+	std::cout << "Retransmitting mcast packet" << std::endl;
  //Timer expired; retransmit the packet - assume packet is correctly formed at this point
 	for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
 	  {

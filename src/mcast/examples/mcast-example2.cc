@@ -47,6 +47,8 @@ main (int argc, char *argv[])
 
   Time retryInterval = Seconds(1);
   Time successInterval = Seconds(10);
+  bool SendHello = false;
+
 
   CommandLine cmd;
   cmd.AddValue ("verbose", "Tell application to log if true", verbose);
@@ -78,7 +80,7 @@ main (int argc, char *argv[])
   //mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
 
   mobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-  													"Bounds", RectangleValue (Rectangle (0, 100, 0, 100)));
+  													"Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)));
 
   mobility.Install (nodes);
 
@@ -131,6 +133,7 @@ main (int argc, char *argv[])
 
   McastHelper2 mcast;
   //Configure mcast attirbutes if needed
+  mcast.Set("HelloBroadcast",BooleanValue(SendHello));
 
   InternetStackHelper stack;
   stack.SetRoutingHelper (mcast); // has effect on the next Install ()
