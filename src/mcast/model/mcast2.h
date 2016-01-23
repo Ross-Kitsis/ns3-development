@@ -32,6 +32,7 @@
 #include "mcast-utils.h"
 #include "ThesisPacketCache.h"
 #include "tm-dpd.h"
+#include "McastRetransmit.h"
 
 //Routing tables
 #include "ns3/ipv6-routing-table-entry.h"
@@ -364,7 +365,7 @@ private:
    * \brief retransmits an mcast packet, assumes the retransmit backoff has expired
    * Expects a fully formed packet with all appropriate headers as argument
    */
-  void DoSendMcastRetransmit(Ptr<Packet> packet);
+  void DoSendMcastRetransmit(McastRetransmit mr);
 
 	//Attributes
 
@@ -407,22 +408,7 @@ private:
 	//Duplicate packet detection for mcast packets
 	ThesisMcastDuplicatePacketDetection m_dpd;
 
-	/**
-	 * struct type_name {
-	 * member_type1 member_name1;
-	 * member_type2 member_name2;
-	 * member_type3 member_name3;
-	 * } object_names;
-	 */
-
-	/**
-	 * \brief Struc to hold a packet and a timer; once timer expires the packet is sent
-	 */
-	struct McastRetransmit
-	{
-		Ptr<Packet> p;
-		Timer timerToSend;
-	};
+	void PurgeMcastRetransmitEntry(McastRetransmit);
 
 	std::list<McastRetransmit> m_mr;
 

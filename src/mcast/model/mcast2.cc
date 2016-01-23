@@ -567,7 +567,9 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 		for(std::list<McastRetransmit>::iterator it = m_mr.begin(); it != m_mr.end(); ++it)
 		{
 			ControlHeader temp;
-			it -> p ->PeekHeader(temp);
+			//it -> p ->PeekHeader(temp);
+
+			it ->GetPacket()->PeekHeader(temp);
 
 			Ipv6Address Id = temp.GetId();
 			Vector ApxL = temp.getApxL();
@@ -645,7 +647,7 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 							 * Transmission will be effective, send packet after backoff
 							*/
 
-							McastRetransmit toSend;
+							McastRetransmit * toSend = new McastRetransmit();
 
 					  	//Create packet and add control header
 							cHeader.SetSource(m_globalAddress);
@@ -656,7 +658,7 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 					  	packet->AddHeader(theader);
 
 					  	//Set packet to send
-					  	toSend.p = packet;
+					  	toSend->SetPacket(packet);
 
 					  	double Vj = m_neighbors.getDistanceClosestNeighborToApex(ClosestApex,NodeDistanceToApex);
 
@@ -665,12 +667,12 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 					  	int delay = ((int)((10 * backoff) * 10))/10;
 
 
-					  	toSend.timerToSend.Schedule(Time(MilliSeconds(delay)));
-					  	toSend.timerToSend.SetFunction(&ThesisRoutingProtocol::DoSendMcastRetransmit, this);
-					  	toSend.timerToSend.SetArguments(toSend.p);
+					  	toSend->timerToSend.Schedule(Time(MilliSeconds(delay)));
+					  	toSend->timerToSend.SetFunction(&ThesisRoutingProtocol::DoSendMcastRetransmit, this);
+					  	toSend->timerToSend.SetArguments(toSend);
 
 					  	//Add to retransmit queue
-					  	m_mr.push_back(toSend);
+					  	m_mr.push_back(*toSend);
 						}
 
 					}
@@ -721,7 +723,7 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 								 * Transmission will be effective, send packet after backoff
 								 */
 
-								McastRetransmit toSend;
+								McastRetransmit * toSend = new McastRetransmit();
 
 								//Create packet and add control header
 								cHeader.SetSource(m_globalAddress);
@@ -732,7 +734,7 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 								packet->AddHeader(theader);
 
 								//Set packet to send
-								toSend.p = packet;
+								toSend->SetPacket(packet);
 
 								double Vj = m_neighbors.getDistanceClosestNeighborToApex(ClosestApex,NodeDistanceToApex);
 
@@ -741,12 +743,12 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 								int delay = ((int)((10 * backoff) * 10))/10;
 
 
-								toSend.timerToSend.Schedule(Time(MilliSeconds(delay)));
-								toSend.timerToSend.SetFunction(&ThesisRoutingProtocol::DoSendMcastRetransmit, this);
-								toSend.timerToSend.SetArguments(toSend.p);
+								toSend->timerToSend.Schedule(Time(MilliSeconds(delay)));
+								toSend->timerToSend.SetFunction(&ThesisRoutingProtocol::DoSendMcastRetransmit, this);
+								toSend->timerToSend.SetArguments(toSend);
 
 								//Add to retransmit queue
-								m_mr.push_back(toSend);
+								m_mr.push_back(*toSend);
 							}
 
 						}
@@ -763,7 +765,7 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 			 * Start forwarding process anyway but set a large delay to allow
 			 * better candidates to send first
 			 */
-			McastRetransmit toSend;
+			McastRetransmit * toSend = new McastRetransmit();
 
 			//Create packet and add control header
 			cHeader.SetSource(m_globalAddress);
@@ -774,22 +776,27 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 			packet->AddHeader(theader);
 
 			//Set packet to send
-			toSend.p = packet;
+			toSend -> SetPacket(packet);
 
 			double backoff = 1;
 
 			int delay = ((int)((10 * backoff) * 10))/10;
 
+			std::cout << "Mcast received but source not in "
+					<< " not in ntable. Retransmitting" << std::endl;
 
-			toSend.timerToSend.Schedule(Time(MilliSeconds(delay)));
-			toSend.timerToSend.SetFunction(&ThesisRoutingProtocol::DoSendMcastRetransmit, this);
-			toSend.timerToSend.SetArguments(toSend.p);
+			toSend->timerToSend.Schedule(Time(MilliSeconds(delay)));
+			toSend->timerToSend.SetFunction(&ThesisRoutingProtocol::DoSendMcastRetransmit, this);
+			toSend->timerToSend.SetArguments(toSend->GetPacket());
+
+			std::cout << "Time set, pushing in queue" << std::endl;
 
 			//Add to retransmit queue
-			m_mr.push_back(toSend);
+			m_mr.push_back(*toSend);
 		}
 	}else
 	{
+		std::cout << "Mcast received but node not in ZoR, drop packet" << std::endl;
 		//Not in ZoR; drop packet and do nothing at the moment
 		return;
 	}
@@ -797,11 +804,45 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 }
 
 void
-ThesisRoutingProtocol::DoSendMcastRetransmit(Ptr<Packet> packet)
+ThesisRoutingProtocol::PurgeMcastRetransmitEntry(McastRetransmit mr)
 {
+	ControlHeader cHeader;
+	mr.GetPacket() -> PeekHeader(cHeader);
+
+	for(std::list<McastRetransmit>::iterator it = m_mr.begin(); it != m_mr.end(); ++it)
+	{
+		ControlHeader temp;
+		//it -> p ->PeekHeader(temp);
+
+		it ->GetPacket()->PeekHeader(temp);
+
+		Ipv6Address Id = temp.GetId();
+		Vector ApxL = temp.getApxL();
+		Vector ApxR = temp.getApxR();
+
+		if(Id.IsEqual(cHeader.GetId()) && ApxL.x == cHeader.getApxL().x && ApxL.y == cHeader.getApxL().y
+				&& ApxR.x == cHeader.getApxR().x && ApxR.y == cHeader.getApxR().y)
+		{
+//			it->timerToSend.Cancel();
+			m_mr.erase(it);
+			break;
+		}
+	}
+	return;
+}
+
+void
+ThesisRoutingProtocol::DoSendMcastRetransmit(McastRetransmit mr)
+{
+
+	Ptr<Packet> packet = mr.GetPacket();
 	NS_LOG_FUNCTION(this);
-	std::cout << "Retransmitting mcast packet" << std::endl;
- //Timer expired; retransmit the packet - assume packet is correctly formed at this point
+	std::cout << " <<<<<<<<< Retransmitting mcast packet >>>>>>>>>>>>>>>>" << std::endl;
+
+	//Purge mcast entry from list of entries to retransmit
+	PurgeMcastRetransmitEntry(mr);
+
+	//Timer expired; retransmit the packet - assume packet is correctly formed at this point
 	for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
 	  {
 	  	uint32_t interface = iter->second;

@@ -14,6 +14,7 @@
 #include "ns3/mobility-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/wifi-module.h"
+#include "ns3/random-variable-stream.h"
 
 #include <iostream>
 #include <cmath>
@@ -29,7 +30,7 @@ main (int argc, char *argv[])
   //Number of nodes to create
   int numNodes = 2;
   //Distance between nodes (Meters)
-  int step = 25;
+  int step = 10;
   //total time to run simulation
   int totalTime = 90;
   //Probability to send an mcast packet
@@ -68,6 +69,13 @@ main (int argc, char *argv[])
   //Create Nodes
    nodes.Create(numNodes);
 
+   double min = 0.0;
+   double max = 10.0;
+
+   Ptr<UniformRandomVariable> speed = CreateObject<UniformRandomVariable> ();
+   speed->SetAttribute ("Min", DoubleValue (min));
+   speed->SetAttribute ("Max", DoubleValue (max));
+
   // Create static grid
   MobilityHelper mobility;
   mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
@@ -79,9 +87,16 @@ main (int argc, char *argv[])
                                  "LayoutType", StringValue ("RowFirst"));
   //mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
 
+  /*
   mobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-  													"Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)));
+  													"Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000))
+  													,"Speed",UniformRandomVariable());
+	*/
 
+  mobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
+                                "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
+                                "Speed", StringValue ("ns3::UniformRandomVariable[Min=5.0|Max=10.0]"),
+                                "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=0.2]"));
   mobility.Install (nodes);
 
   /////////////////////////////MAC//////////////////////////////////////

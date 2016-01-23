@@ -22,6 +22,7 @@ def build(bld):
         'model/tm-dpd.cc',
         'application/MobiCastApp.cc',
         'helper/MobiCastAppHelper.cc',
+        'model/McastRetransmit.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('mcast')
@@ -45,6 +46,7 @@ def build(bld):
         'model/tm-dpd.h',
         'application/MobiCastApp.h',
         'helper/MobiCastAppHelper.h',
+        'model/McastRetransmit.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:
