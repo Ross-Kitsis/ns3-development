@@ -13,6 +13,8 @@
 #include "ns3/ptr.h"
 #include "ns3/packet.h"
 
+#include "mcast-packet.h"
+
 /**
  * A holder for packet and timer to retransmit
  */
@@ -38,10 +40,15 @@ public:
 
 	Timer timerToSend;
 
+	ControlHeader GetControlHeader();
+
+	void SetControlHeader(ControlHeader c);
+
 private:
 
 	Ptr<Packet> toRetransmit;
 
+	ControlHeader ctrl;
 
 };
 } /* namespace mcast*/

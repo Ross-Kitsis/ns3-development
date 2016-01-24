@@ -41,5 +41,17 @@ McastRetransmit::GetTimer()
 	return timerToSend;
 }
 
+void
+McastRetransmit::SetControlHeader(ControlHeader cHeader)
+{
+	ctrl = cHeader;
+}
+
+ControlHeader
+McastRetransmit::GetControlHeader()
+{
+	return ctrl;
+}
+
 } /* namespace mcast*/
 } /* namespace ns3 */

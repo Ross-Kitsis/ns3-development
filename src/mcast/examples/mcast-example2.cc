@@ -30,7 +30,7 @@ main (int argc, char *argv[])
   //Number of nodes to create
   int numNodes = 2;
   //Distance between nodes (Meters)
-  int step = 10;
+  int step = 5;
   //total time to run simulation
   int totalTime = 90;
   //Probability to send an mcast packet
@@ -94,7 +94,7 @@ main (int argc, char *argv[])
 	*/
 
   mobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
-                                "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
+                                "Bounds", RectangleValue (Rectangle (0, 500, 0, 500)),
                                 "Speed", StringValue ("ns3::UniformRandomVariable[Min=5.0|Max=10.0]"),
                                 "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=0.2]"));
   mobility.Install (nodes);

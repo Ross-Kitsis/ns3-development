@@ -365,7 +365,7 @@ private:
    * \brief retransmits an mcast packet, assumes the retransmit backoff has expired
    * Expects a fully formed packet with all appropriate headers as argument
    */
-  void DoSendMcastRetransmit(McastRetransmit mr);
+  void DoSendMcastRetransmit(McastRetransmit *mr);
 
 	//Attributes
 
@@ -408,7 +408,7 @@ private:
 	//Duplicate packet detection for mcast packets
 	ThesisMcastDuplicatePacketDetection m_dpd;
 
-	void PurgeMcastRetransmitEntry(McastRetransmit);
+	void PurgeMcastRetransmitEntry(McastRetransmit *mr);
 
 	std::list<McastRetransmit> m_mr;
 

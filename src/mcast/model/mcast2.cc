@@ -498,6 +498,8 @@ ThesisRoutingProtocol::Receive (Ptr<Socket> socket)
 {
 	NS_LOG_FUNCTION("	Packet received " << socket << " IP address " << m_ipv6 );
 
+	std::cout<<"Rec packet" << std::endl;
+
 	Ptr<Packet> packet = socket->Recv();
 
 	TypeHeader tHeader(HELLO);
@@ -771,12 +773,16 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 			cHeader.SetSource(m_globalAddress);
 			packet->AddHeader(cHeader);
 
+
 			//Create type header and add to packet
 			TypeHeader theader (MCAST_CONTROL);
 			packet->AddHeader(theader);
 
 			//Set packet to send
 			toSend -> SetPacket(packet);
+
+			//Set control header to avoid removing from packet when doing checks
+			toSend -> SetControlHeader(cHeader);
 
 			double backoff = 1;
 
@@ -785,9 +791,11 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 			std::cout << "Mcast received but source not in "
 					<< " not in ntable. Retransmitting" << std::endl;
 
-			toSend->timerToSend.Schedule(Time(MilliSeconds(delay)));
+			//DoSendMcastRetransmit(toSend);
+
 			toSend->timerToSend.SetFunction(&ThesisRoutingProtocol::DoSendMcastRetransmit, this);
-			toSend->timerToSend.SetArguments(toSend->GetPacket());
+			toSend->timerToSend.SetArguments(toSend);
+			toSend->timerToSend.Schedule(Time(MilliSeconds(delay)));
 
 			std::cout << "Time set, pushing in queue" << std::endl;
 
@@ -804,17 +812,38 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 }
 
 void
-ThesisRoutingProtocol::PurgeMcastRetransmitEntry(McastRetransmit mr)
+ThesisRoutingProtocol::PurgeMcastRetransmitEntry(McastRetransmit *mr)
 {
+
+	std::cout << "Attempting to purge retransmit entry" << std::endl;
+
+	/*
+	TypeHeader tHeader(HELLO);
+	mr->GetPacket()->RemoveHeader(tHeader);
+
+	std::cout << "Hello Header Removed" << std::endl;
+
 	ControlHeader cHeader;
-	mr.GetPacket() -> PeekHeader(cHeader);
+	mr->GetPacket() -> RemoveHeader(cHeader);
+
+	std::cout << "Control header removed" << std::endl;
+	 */
+
+	ControlHeader cHeader = mr -> GetControlHeader();
 
 	for(std::list<McastRetransmit>::iterator it = m_mr.begin(); it != m_mr.end(); ++it)
 	{
-		ControlHeader temp;
-		//it -> p ->PeekHeader(temp);
 
-		it ->GetPacket()->PeekHeader(temp);
+
+		/*
+		TypeHeader tHeader(HELLO);
+		it->GetPacket()->RemoveHeader(tHeader);
+
+		ControlHeader temp;
+		it ->GetPacket()->RemoveHeader(temp);
+		*/
+
+		ControlHeader temp = it -> GetControlHeader();
 
 		Ipv6Address Id = temp.GetId();
 		Vector ApxL = temp.getApxL();
@@ -824,23 +853,39 @@ ThesisRoutingProtocol::PurgeMcastRetransmitEntry(McastRetransmit mr)
 				&& ApxR.x == cHeader.getApxR().x && ApxR.y == cHeader.getApxR().y)
 		{
 //			it->timerToSend.Cancel();
+//			it ->GetPacket()->AddHeader(temp);
+//			it ->GetPacket()->AddHeader(tHeader);
 			m_mr.erase(it);
+			std::cout << "REMOVED" << std::endl;
 			break;
 		}
 	}
+
+//	mr->GetPacket()->AddHeader(cHeader);
+//	mr->GetPacket()->AddHeader(tHeader);
+
+	std::cout << "Packet purged, going back to resend >>>>>>>>>" << std::endl;
+
 	return;
 }
 
 void
-ThesisRoutingProtocol::DoSendMcastRetransmit(McastRetransmit mr)
+ThesisRoutingProtocol::DoSendMcastRetransmit(McastRetransmit *mr)
 {
 
-	Ptr<Packet> packet = mr.GetPacket();
-	NS_LOG_FUNCTION(this);
-	std::cout << " <<<<<<<<< Retransmitting mcast packet >>>>>>>>>>>>>>>>" << std::endl;
+	Ptr<Packet> packet = mr->GetPacket();
 
-	//Purge mcast entry from list of entries to retransmit
-	PurgeMcastRetransmitEntry(mr);
+	Ptr<Packet> toSend = Create<Packet>();
+	//toSend = packet -> Copy();
+
+	toSend -> AddHeader(mr->GetControlHeader());
+
+	TypeHeader tHeader(MCAST_CONTROL);
+	toSend -> AddHeader(tHeader);
+
+	NS_LOG_FUNCTION(this);
+	std::cout << " <<<<<<<<<<<<<<<<<<<<<<<<< Retransmitting mcast packet >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+	std::cout << " <<<<<<<<<<<<<<<<<<<<<<<<<$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
 
 	//Timer expired; retransmit the packet - assume packet is correctly formed at this point
 	for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
@@ -850,9 +895,12 @@ ThesisRoutingProtocol::DoSendMcastRetransmit(McastRetransmit mr)
 	  	//Send packet
 	  	Ipv6Address destination = Ipv6Address(MCAST_CONTROL_GRP);
 	  	NS_LOG_LOGIC("Sending packet to: " << destination << " from address " << interface);
-	  	iter->first->SendTo(packet, 0, Inet6SocketAddress(destination, MCAST_PORT));
+	  	iter->first->SendTo(toSend, 0, Inet6SocketAddress(destination, MCAST_PORT));
 
 	  }
+	//Purge mcast entry from list of entries to retransmit
+	PurgeMcastRetransmitEntry(mr);
+
 }
 
 
