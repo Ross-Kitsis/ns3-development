@@ -8,6 +8,7 @@
 #ifndef MCAST2_H_
 #define MCAST2_H_
 
+
 /*NS3 L3 and code components*/
 #include "ns3/node.h"
 #include "ns3/random-variable-stream.h"
@@ -33,6 +34,7 @@
 #include "ThesisPacketCache.h"
 #include "tm-dpd.h"
 #include "McastRetransmit.h"
+#include "properties.h"
 
 //Routing tables
 #include "ns3/ipv6-routing-table-entry.h"
@@ -413,6 +415,8 @@ private:
 	std::list<McastRetransmit> m_mr;
 
 	bool m_sendHello;
+
+	uint32_t m_mcastPacketSize;
 
 };
 

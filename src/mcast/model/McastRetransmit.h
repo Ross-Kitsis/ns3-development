@@ -12,6 +12,7 @@
 #include "ns3/timer.h"
 #include "ns3/ptr.h"
 #include "ns3/packet.h"
+#include "ns3/ipv6-routing-protocol.h"
 
 #include "mcast-packet.h"
 
@@ -43,6 +44,7 @@ public:
 	ControlHeader GetControlHeader();
 
 	void SetControlHeader(ControlHeader c);
+
 
 private:
 

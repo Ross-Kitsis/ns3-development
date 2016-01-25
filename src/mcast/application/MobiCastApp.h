@@ -19,7 +19,6 @@
 //Mcast includes
 #include "ns3/mcast2.h"
 
-
 namespace ns3
 {
 

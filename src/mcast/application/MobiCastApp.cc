@@ -22,6 +22,8 @@
 
 #define MCAST_PORT 555
 #define MCAST_CONTROL_GRP "ff02::115" //Used to send mcast control packets
+//#define MCAST_PACKET_SIZE 1024
+
 
 namespace ns3
 {
@@ -188,7 +190,7 @@ MobiCastApp::Send ()
 
 	std::cout << "Sending packet via mcast routing protocol" << std::endl;
 
-	Ptr<Packet> p = Create<Packet> ();
+	Ptr<Packet> p = Create<Packet> (1024);
 
 	m_routing->DoSendMcastControl(p);
 }

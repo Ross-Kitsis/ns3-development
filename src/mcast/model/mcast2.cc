@@ -44,7 +44,6 @@
 #define MCAST_PORT 555
 #define MCAST_CONTROL_GRP "ff02::115" //Used to send mcast control packets
 
-
 namespace ns3
 {
 
@@ -60,7 +59,8 @@ ThesisRoutingProtocol::ThesisRoutingProtocol():
 		m_helloInterval(3),
 		m_neighbors(Seconds(m_helloInterval * 5)),
 		m_dpd(MilliSeconds(100)),
-		m_sendHello(true)
+		m_sendHello(true),
+		m_mcastPacketSize(1024)
 {
 	m_rng = CreateObject<UniformRandomVariable>();
 	//m_neighbors = ThesisNeighbors(Seconds(m_helloInterval * 5));
@@ -875,8 +875,10 @@ ThesisRoutingProtocol::DoSendMcastRetransmit(McastRetransmit *mr)
 
 	Ptr<Packet> packet = mr->GetPacket();
 
-	Ptr<Packet> toSend = Create<Packet>();
-	//toSend = packet -> Copy();
+	//uint8_t *buffer = new uint8_t();
+	//packet -> CopyData(buffer, 1024);
+
+	Ptr<Packet> toSend = Create<Packet>(1024);
 
 	toSend -> AddHeader(mr->GetControlHeader());
 
