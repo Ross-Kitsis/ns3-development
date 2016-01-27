@@ -498,7 +498,7 @@ ThesisRoutingProtocol::Receive (Ptr<Socket> socket)
 {
 	NS_LOG_FUNCTION("	Packet received " << socket << " IP address " << m_ipv6 );
 
-	std::cout<<"Rec packet" << std::endl;
+	//std::cout<<"Rec packet" << std::endl;
 
 	Ptr<Packet> packet = socket->Recv();
 
@@ -592,8 +592,10 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 	if(m_mutils.IsInZor(position,eventPos,cHeader.GetA(),cHeader.GetB()))
 	{
 		//Node is in the Zor
+		std::cout << "Node is in ZoR" << std::endl;
 		if(m_neighbors.IsNeighbor(cHeader.GetSource()))
 		{
+			std::cout << "Mcast Sender is a neighbor" << std::endl;
 			//Source of packet is a neighbor, have information on the last sender
 
 			//Use center coordinates to find apex current node is closest to
@@ -620,6 +622,7 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 			//Check if packet is initial transmit or if a retransmission
 			if(cHeader.GetId().IsEqual(cHeader.GetSource()))
 			{
+				std::cout << "Initial transmit receieved" << std::endl;
 				//Event vehicle sent this packet, use center in cHeader
 				double SenderDistanceToApex = m_mutils.GetDistanceBetweenPoints(ClosestApex.x, ClosestApex.y,
 						cHeader.GetCenter().x, cHeader.GetCenter().y);
@@ -649,6 +652,8 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 							 * Transmission will be effective, send packet after backoff
 							*/
 
+							std::cout << "Efficent retransmission -> resending" << std::endl;
+
 							McastRetransmit * toSend = new McastRetransmit();
 
 					  	//Create packet and add control header
@@ -669,9 +674,9 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 					  	int delay = ((int)((10 * backoff) * 10))/10;
 
 
-					  	toSend->timerToSend.Schedule(Time(MilliSeconds(delay)));
 					  	toSend->timerToSend.SetFunction(&ThesisRoutingProtocol::DoSendMcastRetransmit, this);
 					  	toSend->timerToSend.SetArguments(toSend);
+					  	toSend->timerToSend.Schedule(Time(MilliSeconds(delay)));
 
 					  	//Add to retransmit queue
 					  	m_mr.push_back(*toSend);
@@ -683,7 +688,7 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 
 			}else
 			{
-
+				std::cout << "Event vehicle sent packet, processing" << std::endl;
 				/*
 				 * //Event vehicle sent this packet, use center in cHeader
 				double SenderDistanceToApex = m_mutils.GetDistanceBetweenPoints(ClosestApex.x, ClosestApex.y,
@@ -720,6 +725,9 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 
 							if(m_neighbors.HaveCloserNeighbor(ClosestApex,NodeDistanceToApex))
 							{
+
+								std::cout << "Efficent transmission -> resending after original sender sent" << std::endl;
+
 								/**
 								 * Have a neighbor closer to the apex than current position
 								 * Transmission will be effective, send packet after backoff
@@ -745,18 +753,15 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 								int delay = ((int)((10 * backoff) * 10))/10;
 
 
-								toSend->timerToSend.Schedule(Time(MilliSeconds(delay)));
 								toSend->timerToSend.SetFunction(&ThesisRoutingProtocol::DoSendMcastRetransmit, this);
 								toSend->timerToSend.SetArguments(toSend);
+								toSend->timerToSend.Schedule(Time(MilliSeconds(delay)));
 
 								//Add to retransmit queue
 								m_mr.push_back(*toSend);
 							}
-
 						}
-
 					}
-
 				}
 			}
 

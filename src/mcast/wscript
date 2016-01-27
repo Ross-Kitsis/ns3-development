@@ -23,6 +23,7 @@ def build(bld):
         'application/MobiCastApp.cc',
         'helper/MobiCastAppHelper.cc',
         'model/McastRetransmit.cc',
+        'database/Db.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('mcast')
@@ -47,6 +48,7 @@ def build(bld):
         'application/MobiCastApp.h',
         'helper/MobiCastAppHelper.h',
         'model/McastRetransmit.h',
+        'database/Db.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

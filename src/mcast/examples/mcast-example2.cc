@@ -48,7 +48,7 @@ main (int argc, char *argv[])
 
   Time retryInterval = Seconds(1);
   Time successInterval = Seconds(10);
-  bool SendHello = false;
+  bool SendHello = true;
 
 
   CommandLine cmd;

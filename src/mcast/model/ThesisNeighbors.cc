@@ -86,7 +86,7 @@ ThesisNeighbors::Update(Ipv6Address ip, Vector pos, Vector vel)
 			it->SetVelocity(vel);
 			it->SetPosition(pos);
 
-			std::cout<< "	<<<<<	Updating neighbor velocity and position" << std::endl;
+		//	std::cout<< "	<<<<<	Updating neighbor velocity and position" << std::endl;
 
 			return;
 		}
@@ -94,7 +94,7 @@ ThesisNeighbors::Update(Ipv6Address ip, Vector pos, Vector vel)
 
 	//Unable to find neighbor; must be new, create new neighbor object and add to list
 	Neighbor * neighbor = new Neighbor (ip, m_delay, vel, pos);
-	std::cout<< "		Adding new neighbor >>>>" << m_delay.GetSeconds() << " IP: " << neighbor->GetIp() <<  std::endl;
+//	std::cout<< "		Adding new neighbor >>>>" << m_delay.GetSeconds() << " IP: " << neighbor->GetIp() <<  std::endl;
 
 	if(neighbor->m_expire.IsRunning())
 	{
@@ -127,7 +127,7 @@ ThesisNeighbors::Purge(Ipv6Address toRemove)
 	{
 		if(it->GetIp().IsEqual(toRemove))
 		{
-			std::cout << "Removing IP " << toRemove << " from list" << std::endl;
+//			std::cout << "Removing IP " << toRemove << " from list" << std::endl;
 			m_nb.erase(it);
 			return;
 		}
