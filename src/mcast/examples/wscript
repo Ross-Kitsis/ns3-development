@@ -7,6 +7,9 @@ def build(bld):
     obj = bld.create_ns3_program('mcast-example2', ['mcast'])
     obj.source = 'mcast-example2.cc'
     
-    obj = bld.create_ns3_program('dbtest', ['mcast'])
+    obj = bld.create_ns3_program('dbtest', ['mcast','bridge', 'csma', 'internet', 'applications'])
     obj.source = 'DbTest.cc'
+    
+    obj = bld.create_ns3_program('dbtest', ['mcast','bridge', 'csma', 'internet', 'applications'])
+    obj.source = 'RsuPlacementTest.cc'
 
