@@ -7,6 +7,7 @@
 
 #include "Db.h"
 
+#include "ns3/wifi-module.h"
 namespace ns3
 {
 //DB ENTRY ///////////////////////////////
@@ -108,7 +109,23 @@ Db::CreateDatabase(NodeContainer c, uint32_t length, uint32_t width)
 		Vector bottomCorner(position.x - length/2,position.y - width/2,0);
 		Vector topCorner(position.x + length/2,position.y + width/2,0);
 
-		Ipv6Address RsuAddress = ipv6 ->GetAddress(1,1).GetAddress();
+		//Ipv6Address RsuAddress = ipv6 ->GetAddress(1,1).GetAddress();
+
+		Ipv6Address RsuAddress;
+
+		WifiNetDevice wi;
+		//wi.GetTypeId();
+
+		for(uint32_t j = 0; j < ipv6 -> GetNInterfaces(); j++)
+		{
+			if(ipv6->GetNetDevice(j)->GetInstanceTypeId().GetName().compare(wi.GetTypeId().GetName()) == 0)
+			{
+				//Found wifiNetDevice
+				RsuAddress = ipv6 ->GetAddress(j,1).GetAddress();
+			}
+			//std::cout << ipv6->GetNetDevice(j)->GetInstanceTypeId().GetName()/*wi.GetInstanceTypeId()*/ << std::endl;
+			//std::cout << wi.GetTypeId().GetName() << std::endl;
+		}
 
 		std::cout << RsuAddress << std::endl;
 

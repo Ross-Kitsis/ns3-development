@@ -3,12 +3,15 @@
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
-#include "ns3/mobility-module.h"
 #include "ns3/point-to-point-module.h"
+#include "ns3/applications-module.h"
+#include "ns3/point-to-point-layout-module.h"
+
+#include "ns3/mobility-module.h"
+
 #include "ns3/wifi-module.h"
 #include "ns3/random-variable-stream.h"
 #include "ns3/csma-module.h"
-#include "ns3/bridge-module.h"
 
 #include <iostream>
 #include <cmath>
@@ -17,8 +20,10 @@
 
 #include "ns3/Db.h"
 
+
 using namespace ns3;
 
+NS_LOG_COMPONENT_DEFINE ("RsuPlacementTest");
 
 int
 main (int argc, char *argv[])
@@ -36,6 +41,7 @@ main (int argc, char *argv[])
 
   uint32_t length = step*step;
   uint32_t width = step;
+
 
   /*
   //Time to wait between successful transmissions
@@ -63,6 +69,8 @@ main (int argc, char *argv[])
   Ipv6InterfaceContainer interfaces;
 
   std::cout << "Creating " << (unsigned)numNodes << " nodes " << step << " m apart.\n";
+
+
 
   //Create Nodes
    nodes.Create(numNodes);
@@ -162,33 +170,24 @@ main (int argc, char *argv[])
    testDb.CreateDatabase(nodes,length,width);
 
    //Create switch to connect RSUs, connect nodes to switch
-   NodeContainer RSUSwitch;
-   RSUSwitch.Create(1);
+   NodeContainer RSURouter;
+   RSURouter.Create(1);
 
-   CsmaHelper csma;
-   csma.SetChannelAttribute ("DataRate", StringValue ("1Gbps"));
-   csma.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (1)));
+   int nSpokes = numNodes;
 
-   NetDeviceContainer terminalDevices;
-   NetDeviceContainer switchDevices;
+   NS_LOG_INFO ("Build star topology.");
+   PointToPointHelper pointToPoint;
+   pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("1Gbps"));
+   pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
+   PointToPointStarHelper star (nSpokes, pointToPoint);
 
+   //Install internet stack on router (Already installed on nodes)
+   stack.Install(RSURouter);
 
-   for(uint32_t i = 0; i < nodes.GetN(); i++)
-   {
-  	 NetDeviceContainer link = csma.Install(NodeContainer (nodes.Get(i), RSUSwitch));
-  	 terminalDevices.Add(link.Get(0));
-  	 switchDevices.Add(link.Get(1));
-   }
+   //Assign IP addresses to hub and spokes
+   NS_LOG_INFO ("Assign IP Addresses.");
+   star.AssignIpv6Addresses(Ipv6Address("2002::"),Ipv6Prefix(64));
 
-   //Set up bridge device for switching between RSU
-   Ptr<Node> switchNode = RSUSwitch.Get(0);
-   BridgeHelper bridge;
-   bridge.Install(switchNode,switchDevices);
-
-   //Set ip addresses on interfaces connecting to switch
-   Ipv6AddressHelper wiredIpv6;
-   wiredIpv6.SetBase(Ipv6Address("2002:2002::"), Ipv6Prefix(64));
-   wiredIpv6.Assign(terminalDevices);
 
    Vector test1(0,0,0);
    Vector test2(110,23,0);

@@ -7,7 +7,7 @@
 #     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
 
 def build(bld):
-    module = bld.create_ns3_module('mcast', ['internet', 'wifi','mobility','csma'])
+    module = bld.create_ns3_module('mcast', ['internet', 'wifi','mobility','csma','point-to-point'])
     module.source = [
  #       'model/mcast.cc',
         'model/mcast-neighbor.cc',
@@ -24,6 +24,7 @@ def build(bld):
         'helper/MobiCastAppHelper.cc',
         'model/McastRetransmit.cc',
         'database/Db.cc',
+        'helper/RSURoutingStarHelper.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('mcast')
@@ -49,6 +50,7 @@ def build(bld):
         'helper/MobiCastAppHelper.h',
         'model/McastRetransmit.h',
         'database/Db.h',
+        'helper/RSURoutingStarHelper.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:
