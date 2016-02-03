@@ -30,6 +30,9 @@ public:
 
 	void AssignIpv6Addresses(Ipv6Address network, Ipv6Prefix prefix);
 
+	Ipv6InterfaceContainer GetHubInterfaces();
+	Ipv6InterfaceContainer GetSpokeInterfaces();
+
 private:
 
 	NetDeviceContainer m_hubDevices;
