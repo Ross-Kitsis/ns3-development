@@ -586,7 +586,16 @@ RoutingProtocol::AssignStreams (int64_t stream)
 void
 RoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const
 {
-	NS_LOG_FUNCTION (this);
+	NS_LOG_FUNCTION (this << stream);
+
+	std::ostream* os = stream->GetStream ();
+
+  *os << "Node: " << m_ipv6->GetObject<Node> ()->GetId ()
+      << " Time: " << Simulator::Now ().GetSeconds () << "s "
+      << "Thesis Routing table" << std::endl;
+
+  //if(!m_)
+
 }
 
 

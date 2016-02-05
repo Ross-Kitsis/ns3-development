@@ -34,7 +34,6 @@
 #include "ThesisPacketCache.h"
 #include "tm-dpd.h"
 #include "McastRetransmit.h"
-#include "properties.h"
 
 //Routing tables
 #include "ns3/ipv6-routing-table-entry.h"

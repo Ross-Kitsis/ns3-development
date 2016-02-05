@@ -925,7 +925,34 @@ ThesisRoutingProtocol::IsMyOwnAddress (Ipv6Address src)
 void
 ThesisRoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const
 {
-	NS_LOG_FUNCTION(this);
+  NS_LOG_FUNCTION (this << stream);
+
+  std::ostream* os = stream->GetStream ();
+
+  *os << "Node: " << m_ipv6->GetObject<Node> ()->GetId ()
+      << " Time: " << Simulator::Now ().GetSeconds () << "s "
+      << "Ipv6 ThesisRouting table" << std::endl;
+
+
+  if(!m_routes.empty())
+  {
+  	*os << "Destination                    Next Hop                                    If" << std::endl;
+  	for (RoutesCI it = m_routes.begin(); it != m_routes.end(); it++)
+  	{
+  	 	ThesisRoutingTableEntry* route = it->first;
+  	 	std::ostringstream dest, gw/*, mask*/;
+
+  	 	dest << route -> GetDestNetwork() << "/" << int(route->GetDestNetworkPrefix().GetPrefixLength());
+  	 	*os << std::setiosflags (std::ios::left) << std::setw (31) << dest.str ();
+  	  gw << route->GetGateway ();
+  	  *os << std::setiosflags (std::ios::left) << std::setw (27) << gw.str ();
+
+
+
+  	 	*os << std::endl;
+  	}
+  }
+
 }
 
 /*
