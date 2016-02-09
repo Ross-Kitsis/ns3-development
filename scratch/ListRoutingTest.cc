@@ -32,6 +32,11 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("ListRoutingTest");
 
+void SetDefaultRoutes(NodeContainer Hub, NodeContainer spokes, Ipv6StaticRoutingHelper helper, RSURoutingStarHelper star)
+{
+	star.CreateStaticRoutes(Hub,spokes,helper);
+}
+
 int main (int argc, char *argv[])
 {
 	uint32_t nWifi = 2; //Number of wifi nodes
@@ -45,6 +50,7 @@ int main (int argc, char *argv[])
 	NodeContainer BackboneNodes;
 	NodeContainer BackboneAP;
 	NodeContainer WifiNodes;
+	NodeContainer AllWirelessNode;
 	NodeContainer Hub;
 
 	//Create backbone nodes
@@ -58,14 +64,14 @@ int main (int argc, char *argv[])
 
 	//Create p2p channel and set characteristics
 	PointToPointHelper pointToPoint;
-	pointToPoint.SetDeviceAttribute("DataRate",StringValue("1Gbps"));
-	pointToPoint.SetChannelAttribute("Delay",StringValue("2ms"));
+	pointToPoint.SetDeviceAttribute("DataRate",StringValue("1Mbps"));
+	pointToPoint.SetChannelAttribute("Delay",StringValue("200ms"));
 
 	//Install internet stack on nodes
 	InternetStackHelper internet;
 
 	//Create RIPng
-	RipNgHelper ripNgRouting;
+	//RipNgHelper ripNgRouting;
 
 
 	//Place RSU nodes into star topology
@@ -87,13 +93,13 @@ int main (int argc, char *argv[])
 	McastHelper2 mcast;
   mcast.Set("HelloBroadcast",BooleanValue(true));
 
-	Ipv6StaticRoutingHelper staticRoutingHelper;
 
+	Ipv6StaticRoutingHelper staticRoutingHelper;
 	//Create List routing to allow for multiple routing protocols
 	Ipv6ListRoutingHelper listRH;
 	//listRH.Add(mcast,5);
 //	listRH.Add(ripNgRouting,10);
-	listRH.Add(staticRoutingHelper,11);
+	listRH.Add(staticRoutingHelper,5);
 	//Install routing
 	internet.SetRoutingHelper(listRH);
 
@@ -112,41 +118,52 @@ int main (int argc, char *argv[])
 	NetDeviceContainer devices;
 	devices = wifi.Install (wifiPhy, wifiMac, BackboneAP);
 
+	NetDeviceContainer wifiDevices;
+	wifiDevices = wifi.Install (wifiPhy, wifiMac, WifiNodes);
+
+
 	//Install dual routing stack on AP nodes
 	internet.Install(BackboneAP);
 	internet.Install(Hub);
 
+	InternetStackHelper wifiInternet;
+	wifiInternet.SetRoutingHelper(staticRoutingHelper);
+	wifiInternet.Install(WifiNodes);
 
-		//Install single routing stack on hub
-	//internet.SetRoutingHelper(ripNgRouting);
 
-//	InternetStackHelper internethub;
-//	internethub.SetRoutingHelper(ripNgRouting);
-
-//	internethub.Install(Hub);
-
-	star.AssignIpv6Addresses(Ipv6Address("2115::1"),Ipv6Prefix(64));
+	star.AssignIpv6Addresses(Ipv6Address("3115::"),Ipv6Prefix(64));
 
 	//Add hub and AP to node container for management
 	BackboneNodes.Add(BackboneAP);
 	BackboneNodes.Add(Hub);
 
 
-	Ipv6InterfaceContainer hubInterfaces = star.GetHubInterfaces();
-	hubInterfaces.SetForwarding(0,true);
-	hubInterfaces.SetForwarding(1,true);
-
-	Ipv6InterfaceContainer spokeInterfaces = star.GetSpokeInterfaces();
-	spokeInterfaces.SetForwarding(0,true);
-	spokeInterfaces.SetForwarding(1,true);
-
-
 
 	//Print routing tables
 	Ptr<OutputStreamWrapper> routingStream = Create<OutputStreamWrapper> (&std::cout);
-	listRH.PrintRoutingTableEvery(Seconds(15),BackboneNodes.Get(0),routingStream);
-	listRH.PrintRoutingTableEvery(Seconds(15),BackboneNodes.Get(1),routingStream);
-	ripNgRouting.PrintRoutingTableEvery(Seconds(15),BackboneNodes.Get(2),routingStream);
+	listRH.PrintRoutingTableAt(Seconds(0),BackboneNodes.Get(0),routingStream);
+	listRH.PrintRoutingTableAt(Seconds(0),BackboneNodes.Get(1),routingStream);
+	listRH.PrintRoutingTableAt(Seconds(0),BackboneNodes.Get(2),routingStream);
+	staticRoutingHelper.PrintRoutingTableAt(Seconds(0),WifiNodes.Get(0),routingStream);
+	staticRoutingHelper.PrintRoutingTableAt(Seconds(0),WifiNodes.Get(1),routingStream);
+
+
+	//Print routing tables
+	//Ptr<OutputStreamWrapper> routingStream = Create<OutputStreamWrapper> (&std::cout);
+	listRH.PrintRoutingTableAt(Seconds(3),BackboneNodes.Get(0),routingStream);
+	listRH.PrintRoutingTableAt(Seconds(3),BackboneNodes.Get(1),routingStream);
+	listRH.PrintRoutingTableAt(Seconds(3),BackboneNodes.Get(2),routingStream);
+	staticRoutingHelper.PrintRoutingTableAt(Seconds(3),WifiNodes.Get(0),routingStream);
+	staticRoutingHelper.PrintRoutingTableAt(Seconds(3),WifiNodes.Get(1),routingStream);
+
+	//Print routing tables
+//	Ptr<OutputStreamWrapper> routingStream = Create<OutputStreamWrapper> (&std::cout);
+	listRH.PrintRoutingTableEvery(Seconds(10),BackboneNodes.Get(0),routingStream);
+	listRH.PrintRoutingTableEvery(Seconds(10),BackboneNodes.Get(1),routingStream);
+	listRH.PrintRoutingTableEvery(Seconds(10),BackboneNodes.Get(2),routingStream);
+	staticRoutingHelper.PrintRoutingTableEvery(Seconds(10),WifiNodes.Get(0),routingStream);
+	staticRoutingHelper.PrintRoutingTableEvery(Seconds(10),WifiNodes.Get(1),routingStream);
+
 
 
 	Ipv6AddressHelper address;
@@ -164,6 +181,8 @@ int main (int argc, char *argv[])
 	{
 		address.SetBase(Ipv6Address(baseAd), Ipv6Prefix(64));
 		interfaces = address.Assign(devices.Get(i));
+		address.Assign(wifiDevices.Get(i));
+		//Assign to wifi nodes
 
 		if(baseAd[addStart] == 255)
 		{
@@ -193,21 +212,160 @@ int main (int argc, char *argv[])
 
 
 	mobility.Install(BackboneNodes);
+	mobility.Install(WifiNodes);
 
 	Ptr<ConstantPositionMobilityModel> HubLoc = Hub.Get(0) ->GetObject<ConstantPositionMobilityModel>();
 	Vector hubPos(100,0,0);
 	HubLoc -> SetPosition(hubPos);
 
-	star.CreateStaticRoutes(Hub,BackboneAP,staticRoutingHelper);
+	Ptr<ConstantPositionMobilityModel> Wnode1 = WifiNodes.Get(0) ->GetObject<ConstantPositionMobilityModel>();
+	Vector wnodepos(-50,0,0);
+	Wnode1 -> SetPosition(wnodepos);
+
+	Ptr<ConstantPositionMobilityModel> Wnode2 = WifiNodes.Get(1) ->GetObject<ConstantPositionMobilityModel>();
+	Vector wnodepos2(0,350,0);
+	Wnode2 -> SetPosition(wnodepos2);
+
+	for(int i = 0; i < 2; i++)
+	{
+		Ptr<Ipv6StaticRouting> r = staticRoutingHelper.GetStaticRouting(WifiNodes.Get(i) -> GetObject<Ipv6>());
+
+		uint32_t gatewayint = star.GetWirelessInterface(BackboneAP.Get(i) -> GetObject<Ipv6>());
+		Ptr<Ipv6> gatewayv6 = BackboneAP.Get(i) -> GetObject<Ipv6>();
+		Ipv6Address gatewayadd = gatewayv6 -> GetAddress(gatewayint,1).GetAddress();
+		uint32_t toSendInt = star.GetWirelessInterface(WifiNodes.Get(i)->GetObject<Ipv6>());
+
+
+		r ->SetDefaultRoute(gatewayadd,toSendInt,gatewayadd.CombinePrefix(64),1);
+	}
 
 	/*
-	 * Routes between APs and hub created
+
+	Ipv6InterfaceContainer hubInterfaces = star.GetHubInterfaces();
+	hubInterfaces.SetForwarding(0,true);
+	hubInterfaces.SetForwarding(1,true);
+
+	Ipv6InterfaceContainer spokeInterfaces = star.GetSpokeInterfaces();
+	spokeInterfaces.SetForwarding(0,true);
+	spokeInterfaces.SetForwarding(1,true);
+*/
+
+
+	/*
+	 * Set forwarding on all ports on all backbone nodes to true
+	 */
+/*
+	for(uint32_t i = 0; i < BackboneAP.GetN(); i++)
+	{
+		Ptr<Node> node = BackboneAP.Get(i);
+		Ptr<Ipv6> nodev6 = node -> GetObject<Ipv6>();
+
+		for(uint32_t j = 0; j < nodev6 -> GetNInterfaces(); j++)
+		{
+			nodev6 -> SetForwarding(j,true);
+		}
+	}
+
+
+	Ptr<Node> node = Hub.Get(0);
+	Ptr<Ipv6> hubv6 = node -> GetObject<Ipv6>();
+	for(uint32_t j = 1; j < hubv6 -> GetNInterfaces(); j++)
+	{
+		hubv6 -> SetForwarding(j,true);
+	}
+*/
+
+	for(uint32_t i = 0; i < BackboneNodes.GetN();i++)
+	{
+		Ptr<Ipv6> v6 = BackboneNodes.Get(i)->GetObject<Ipv6>();
+		v6 ->SetAttribute("IpForward",BooleanValue(true));
+
+	}
+
+
+
+	std::cout << "Num backbone nodes: " << BackboneNodes.GetN() << std::endl;
+
+/*
+	 * Create applications to test routing
 	 *
-	 * Create wifi nodes and routes to the APs?
+	 *   // We want the source to be the first node created outside of the backbone
+  // Conveniently, the variable "backboneNodes" holds this node index value
+  Ptr<Node> appSource = NodeList::GetNode (backboneNodes);
+  // We want the sink to be the last node created in the topology.
+  uint32_t lastNodeIndex = backboneNodes + backboneNodes*(lanNodes - 1) + backboneNodes*(infraNodes - 1) - 1;
+  Ptr<Node> appSink = NodeList::GetNode (lastNodeIndex);
+  // Let's fetch the IP address of the last node, which is on Ipv4Interface 1
+  Ipv4Address remoteAddr = appSink->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal ();
+
+  OnOffHelper onoff ("ns3::UdpSocketFactory",
+                     Address (InetSocketAddress (remoteAddr, port)));
+
+  ApplicationContainer apps = onoff.Install (appSource);
+  apps.Start (Seconds (3));
+  apps.Stop (Seconds (stopTime - 1));
+
+  // Create a packet sink to receive these packets
+  PacketSinkHelper sink ("ns3::UdpSocketFactory",
+                         InetSocketAddress (Ipv4Address::GetAny (), port));
+  apps = sink.Install (appSink);
+  apps.Start (Seconds (3));
 	 *
 	 */
 
+	/*
+	Ptr<Node> appSource = WifiNodes.Get(0);
+	Ptr<Node> appSink = WifiNodes.Get(1);
+	Ipv6Address sinkAdd = appSink -> GetObject<Ipv6>() -> GetAddress(1,1).GetAddress();
+	//std::cout << "sink address " << sinkAdd << std::endl;
 
+	int port = 9;
+
+  OnOffHelper onoff ("ns3::UdpSocketFactory",
+                     Address (Inet6SocketAddress (sinkAdd, port)));
+
+  onoff.SetConstantRate(DataRate ("500kb/s"));
+  ApplicationContainer apps = onoff.Install(appSource);
+  apps.Start(Seconds(5));
+  apps.Stop(Seconds(90));
+
+  PacketSinkHelper sink ("ns3::UdpSocketFactory",
+                         Inet6SocketAddress (Ipv6Address::GetAny(), port));
+  apps = sink.Install (appSink);
+  apps.Start (Seconds (5));
+*/
+
+	Ptr<Node> source = WifiNodes.Get(0);
+	Ptr<Node> sink = WifiNodes.Get(1);
+	Ipv6Address sinkAdd = sink -> GetObject<Ipv6>() -> GetAddress(1,1).GetAddress();
+	Ipv6Address sourceAdd = source -> GetObject<Ipv6>() -> GetAddress(1,1).GetAddress();
+
+
+	std::cout << "Source address: " << sourceAdd << std::endl;
+	std::cout << "Sink address: " << sinkAdd << std::endl;
+
+	Time packetInterval = Seconds(3);
+	uint32_t packetSize = 1024;
+	uint32_t packetCount = 100;
+
+
+	Ping6Helper ping;
+	ping.SetLocal(sourceAdd);
+	ping.SetRemote(sinkAdd);
+
+  ping.SetAttribute ("MaxPackets", UintegerValue (packetCount));
+  ping.SetAttribute ("Interval", TimeValue (packetInterval));
+  ping.SetAttribute ("PacketSize", UintegerValue (packetSize));
+
+  ApplicationContainer apps = ping.Install (WifiNodes.Get (0));
+  apps.Start (Seconds (5.0));
+  apps.Stop (Seconds (90.0));
+
+  //Simulator::Schedule (printTime, &Ipv6RoutingHelper::Print, node, stream);
+
+  //Simulator::Schedule(Seconds(3), &ListRoutingTest::SetDefaultRoutes, Hub, BackboneAP, staticRoutingHelper, star);
+
+	star.ScheduleCreateStaticRoutes(Seconds(4),Hub,BackboneAP,staticRoutingHelper);
 
 	NS_LOG_INFO ("Run Simulation.");
 	Simulator::Run ();
@@ -216,3 +374,5 @@ int main (int argc, char *argv[])
 
 	return 0;
 }
+
+

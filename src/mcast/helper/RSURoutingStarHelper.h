@@ -10,6 +10,9 @@
 
 #include <string>
 
+#include "ns3/node.h"
+#include "ns3/node-list.h"
+#include "ns3/simulator.h"
 #include "ns3/point-to-point-helper.h"
 #include "ns3/ipv6-address-helper.h"
 #include "ns3/internet-stack-helper.h"
@@ -18,6 +21,16 @@
 #include "ns3/internet-module.h"
 #include "ns3/wifi-module.h"
 #include "ns3/point-to-point-module.h"
+
+#include "ns3/packet.h"
+#include "ns3/callback.h"
+#include "ns3/object.h"
+#include "ns3/socket.h"
+
+#include "ns3/ipv6-header.h"
+#include "ns3/ipv6-interface-address.h"
+#include "ns3/ipv6.h"
+#include "ns3/output-stream-wrapper.h"
 
 namespace ns3
 {
@@ -41,28 +54,39 @@ public:
 	 * Hub: Hub has routes to wireless networks, next hop will be the spokes wired address.
 	 *
 	 */
-	void CreateStaticRoutes(NodeContainer Hub, NodeContainer Spokes, Ipv6StaticRoutingHelper StaticRouting);
+	static void CreateStaticRoutes(NodeContainer Hub, NodeContainer Spokes, Ipv6StaticRoutingHelper StaticRouting);
+
+	/**
+	 * Create static routes from hub to wireless networks
+	 */
+	static void CreateHubStaticRoutes(NodeContainer Hub, NodeContainer Spokes, Ipv6StaticRoutingHelper StaticRouting);
 
   /**
    * \brief Used for nodes with both a wireless and wired interface
    * Returns the interface index for the wired interface
    */
   uint32_t
-  GetP2pInterface(Ptr<Ipv6> ipv6);
+  static GetP2pInterface(Ptr<Ipv6> ipv6);
 
   /**
    * \brief Used for the hub node with multiple IPv6 interfaces
    * Returns the interface index with an address on the same network
    */
   uint32_t
-  GetHubNetworkInterface(Ptr<Ipv6> ipv6, Ipv6Address network);
+  static GetHubNetworkInterface(Ptr<Ipv6> ipv6, Ipv6Address network);
 
   /**
    * \brief Used for nodes with both a wireless and wired interface
    * Returns the interface index for the wireless interface
    */
   uint32_t
-  GetWirelessInterface(Ptr<Ipv6> ipv6);
+  static GetWirelessInterface(Ptr<Ipv6> ipv6);
+
+  void
+  static ScheduleCreateStaticRoutes(Time t, NodeContainer Hub, NodeContainer Spokes, Ipv6StaticRoutingHelper StaticRouting);
+
+  void
+  static CreateRouteBetweenHubAndSpoke(Ptr<Node> Hub, Ptr<Node> Spoke);
 
 private:
 
