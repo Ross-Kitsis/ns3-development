@@ -102,7 +102,7 @@ private:
 /**
  * Database class to hold database entries
  */
-class Db
+class Db : public Object
 {
 public:
 

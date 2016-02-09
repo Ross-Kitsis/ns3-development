@@ -19,6 +19,7 @@
 #include "ns3/ipv6-routing-protocol.h"
 #include "ns3/ipv6.h"
 #include "ns3/ipv6-address.h"
+#include "ns3/ipv6-route.h"
 
 //Interfaces & Sockets
 #include "ns3/ipv6-interface.h"
