@@ -150,6 +150,19 @@ ThesisInternetRoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> strea
 	//TODO
 }
 
+void
+ThesisInternetRoutingProtocol::AddNetworkRouteTo(Ipv6Address network, Ipv6Prefix networkPrefix, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse)
+{
+	NS_LOG_FUNCTION (this << network << networkPrefix << interface);
+
+	ThesisInternetRoutingTableEntry* route = new ThesisInternetRoutingTableEntry (network, networkPrefix, interface);
+	route->SetRouteMetric (1);
+	route->SetRouteStatus (ThesisInternetRoutingTableEntry::ROUTE_VALID);
+	route->SetRouteChanged (true);
+
+	m_routes.push_back (std::make_pair (route, EventId ()));
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ThesisInternetRoutingTableEntry::ThesisInternetRoutingTableEntry ()
@@ -174,8 +187,41 @@ ThesisInternetRoutingTableEntry::~ThesisInternetRoutingTableEntry ()
 {
 }
 
+void
+ThesisInternetRoutingTableEntry::SetRouteTag (uint16_t routeTag)
+{
 
+}
 
+void
+ThesisInternetRoutingTableEntry::SetRouteStatus(Status_e status)
+{
+	m_status = status;
+}
+
+void
+ThesisInternetRoutingTableEntry::SetRouteChanged (bool changed)
+{
+	m_changed = changed;
+}
+
+bool
+ThesisInternetRoutingTableEntry::IsRouteChanged (void) const
+{
+	return m_changed;
+}
+
+void
+ThesisInternetRoutingTableEntry::SetRouteMetric (uint8_t routeMetric)
+{
+	m_metric = routeMetric;
+}
+
+uint8_t
+ThesisInternetRoutingTableEntry::GetRouteMetric (void) const
+{
+	return m_metric;
+}
 
 }
 }

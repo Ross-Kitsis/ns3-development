@@ -37,6 +37,7 @@ namespace thesis
 
 class ThesisInternetRoutingTableEntry : public Ipv6RoutingTableEntry
 {
+public:
 	/*
 	 * Route status msgs
 	 */
@@ -109,11 +110,25 @@ class ThesisInternetRoutingTableEntry : public Ipv6RoutingTableEntry
 	 * \returns true if route is changed
 	 */
 	bool IsRouteChanged (void) const;
+
+	/**
+	 * \brief Set the route status
+	 * \param status the route status
+	 */
+	void SetRouteStatus (Status_e status);
+
+	/**
+	 * \brief Get the route status
+	 * \returns the route status
+	 */
+	Status_e GetRouteStatus (void) const;
+
 private:
 	uint16_t m_tag; //!< route tag
 	uint8_t m_metric; //!< route metric
 	Status_e m_status; //!< route status
 	bool m_changed; //!< route has been updated
+
 };
 
 class ThesisInternetRoutingProtocol : public Ipv6RoutingProtocol
@@ -141,6 +156,18 @@ public:
 	void SetIpv6 (Ptr<Ipv6> ipv6);
 	void PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const;
 
+	/**
+	 * \brief Add route to network.
+	 * \param network network address
+	 * \param networkPrefix network prefix
+	 * \param nextHop next hop address to route the packet.
+	 * \param interface interface index
+	 * \param prefixToUse prefix that should be used for source address for this destination
+	 */
+	void AddNetworkRouteTo (Ipv6Address network, Ipv6Prefix networkPrefix, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse);
+
+
+
 
 
 private:
@@ -159,6 +186,11 @@ private:
 	 * \brief Boolean value indicating if the node is running the mcast protocol as well as this protocol
 	 */
 	bool m_hasMcast;
+
+	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)
+	typedef std::list<std::pair <ThesisInternetRoutingTableEntry *, EventId> > Routes;
+
+	Routes m_routes; //!<  the forwarding table for network.
 
 };
 
