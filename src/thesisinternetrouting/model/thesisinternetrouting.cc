@@ -9,6 +9,7 @@
 #include "ns3/assert.h"
 #include "ns3/trace-source-accessor.h"
 #include "ns3/boolean.h"
+#include "ns3/wifi-module.h"
 
 namespace ns3
 {
@@ -17,9 +18,11 @@ NS_LOG_COMPONENT_DEFINE("ThesisInternetRoutingProtocol");
 
 namespace thesis
 {
+NS_OBJECT_ENSURE_REGISTERED(ThesisInternetRoutingProtocol);
+
 //Constructor
 ThesisInternetRoutingProtocol::ThesisInternetRoutingProtocol() :
-		m_hasMcast(true)
+		m_hasMcast(true), m_IsRSU(false)
 {
 
 }
@@ -33,21 +36,24 @@ ThesisInternetRoutingProtocol::~ThesisInternetRoutingProtocol()
 TypeId
 ThesisInternetRoutingProtocol::GetTypeId(void)
 {
+  static TypeId tid = TypeId ("ns3::thesis::ThesisInternetRoutingProtocol")
+    .SetParent<Ipv6RoutingProtocol> ()
+    .SetGroupName ("thesis")
+    .AddConstructor<ThesisInternetRoutingProtocol> ()
+		.AddAttribute ("McastEnabled", "Determines if MCast protocol is running on the node (Default false)",
+				BooleanValue (false),
+				MakeBooleanAccessor (&ThesisInternetRoutingProtocol::m_hasMcast),
+				MakeBooleanChecker ())
+	/*
 	static TypeId tid = TypeId ("ns3::thesis::ThesisInternetRoutingProtocol")
     		.SetParent<Ipv6RoutingProtocol> ()
     		.SetGroupName ("thesis")
     		.AddConstructor<ThesisInternetRoutingProtocol> ()
-    		/*
-    		.AddAttribute ("HelloTimer", "The time between two Hello msgs",
-    				TimeValue (Seconds(3)),
-    				MakeTimeAccessor (&ThesisRoutingProtocol::m_helloInterval),
-    				MakeTimeChecker ())
-    		*/
     		.AddAttribute ("McastEnabled", "Determines if MCast protocol is running on the node (Default false)",
     				BooleanValue (false),
     				MakeBooleanAccessor (&ThesisInternetRoutingProtocol::m_hasMcast),
     				MakeBooleanChecker ())
-
+	*/
    ;
 	return tid;
 }
@@ -145,6 +151,19 @@ ThesisInternetRoutingProtocol::SetIpv6 (Ptr<Ipv6> ipv6)
 }
 
 void
+ThesisInternetRoutingProtocol::SetRsuDatabase(Ptr<Db> db)
+{
+	NS_LOG_FUNCTION(this);
+	m_Db = db;
+}
+
+void
+ThesisInternetRoutingProtocol::SetIsRSU(bool isRSU)
+{
+	m_IsRSU = isRSU;
+}
+
+void
 ThesisInternetRoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const
 {
 	//TODO
@@ -161,6 +180,79 @@ ThesisInternetRoutingProtocol::AddNetworkRouteTo(Ipv6Address network, Ipv6Prefix
 	route->SetRouteChanged (true);
 
 	m_routes.push_back (std::make_pair (route, EventId ()));
+}
+
+
+void
+ThesisInternetRoutingProtocol::DoDispose()
+{
+	//Dispose; update later?
+}
+
+void
+ThesisInternetRoutingProtocol::DoInitialize()
+{
+	if(!m_IsRSU)
+	{
+		SetIpToZone();
+	}
+	Ipv6RoutingProtocol::DoInitialize ();
+}
+
+void
+ThesisInternetRoutingProtocol::SetIpToZone()
+{
+	Ptr<Node> theNode = GetObject<Node> ();
+	Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
+	Vector position = mobility -> GetPosition();
+
+	std::cout << "Node position: " << position << std::endl;
+	DbEntry t1 = m_Db -> GetEntryForCurrentPosition(position);
+
+
+	Ipv6Address network = t1.GetRsuAddress().CombinePrefix(Ipv6Prefix(64));
+
+	std::cout << "Nearest RSU position: " << t1.GetRsuPosition() << std::endl;
+	std::cout << "Vanet node network based on position: " << network << std::endl;
+
+	for(uint32_t i = 0; i < m_ipv6 ->GetNInterfaces();i++)
+	{
+		for(uint32_t j = 0; j < m_ipv6 ->GetNAddresses(i);j++)
+		{
+			Ipv6Address currentAdd = m_ipv6 -> GetAddress(i,j).GetAddress();
+			if(!currentAdd.IsLinkLocal() && !currentAdd.IsLocalhost())
+			{
+				if(!(currentAdd.CombinePrefix(Ipv6Prefix(64)).IsEqual(network)))
+				{
+					Ptr<WifiNetDevice> wifi = DynamicCast<WifiNetDevice>(m_ipv6 ->GetNetDevice(i));
+					Mac48Address mac = wifi ->GetMac() ->GetAddress();
+
+					//std::cout << "Mac address: " << mac << std::endl;
+					//Address a = m_ipv6 ->GetNetDevice(i) ->GetAddress();
+					//m_ipv6 ->GetNetDevice(i) ->
+
+					//Ptr<thesis::ThesisInternetRoutingProtocol> thesis = DynamicCast<thesis::ThesisInternetRoutingProtocol> (proto);
+					//Mac48Address ma = dynamic_cast<Mac48Address>(a);
+					//std::cout << "Mac address: " << a << std::endl;
+					Ipv6Address newAddress;
+					newAddress = newAddress.MakeAutoconfiguredAddress(mac,network);
+					std::cout << "New Address: " << newAddress << std::endl;
+					std::cout << "" << std::endl;
+
+					/*
+					 * Set interface to new address
+					 * 1. Remove old address to interface
+					 * 2. Add new address to interface
+					 * 3. Set interface to up to ensure interface correctly initialized
+					 */
+					m_ipv6 ->RemoveAddress(i,j);
+					m_ipv6 -> AddAddress(i,newAddress);
+					m_ipv6 ->SetUp(i);
+				}
+			}
+		}
+	}
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////

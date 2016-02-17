@@ -28,6 +28,10 @@
 #include <sstream>
 #include <fstream>
 
+#include "ns3/thesisinternetrouting.h"
+#include "ns3/thesisinternetrouting-helper.h"
+
+
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("ListRoutingTest");
@@ -52,6 +56,7 @@ int main (int argc, char *argv[])
 	NodeContainer WifiNodes;
 	NodeContainer AllWirelessNode;
 	NodeContainer Hub;
+	NodeContainer AllNodes;
 
 	//Create backbone nodes
 	BackboneAP.Create(nSta);
@@ -61,6 +66,10 @@ int main (int argc, char *argv[])
 
 	//Create Hub node
 	Hub.Create(1);
+
+	AllNodes.Add(BackboneAP);
+	AllNodes.Add(WifiNodes);
+	AllNodes.Add(Hub);
 
 	//Create p2p channel and set characteristics
 	PointToPointHelper pointToPoint;
@@ -95,13 +104,20 @@ int main (int argc, char *argv[])
 
 
 	Ipv6StaticRoutingHelper staticRoutingHelper;
+	ThesisInternetRoutingHelper tihelper;
+
+	//tihelper.
+
 	//Create List routing to allow for multiple routing protocols
 	Ipv6ListRoutingHelper listRH;
 	//listRH.Add(mcast,5);
 //	listRH.Add(ripNgRouting,10);
+
 	listRH.Add(staticRoutingHelper,5);
+	listRH.Add(tihelper,10);
 	//Install routing
 	internet.SetRoutingHelper(listRH);
+
 
 	//Create Wifi interfaces on APs
 	NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
@@ -279,7 +295,6 @@ int main (int argc, char *argv[])
 	{
 		Ptr<Ipv6> v6 = BackboneNodes.Get(i)->GetObject<Ipv6>();
 		v6 ->SetAttribute("IpForward",BooleanValue(true));
-
 	}
 
 
@@ -366,6 +381,31 @@ int main (int argc, char *argv[])
   //Simulator::Schedule(Seconds(3), &ListRoutingTest::SetDefaultRoutes, Hub, BackboneAP, staticRoutingHelper, star);
 
 	star.ScheduleCreateStaticRoutes(Seconds(4),Hub,BackboneAP,staticRoutingHelper);
+
+	//Insert database into ThesisInternetRoutingProtocol
+	for(uint32_t i = 0; i < BackboneNodes.GetN(); i++)
+	{
+		Ptr<Node> node = BackboneNodes.Get(i);
+		Ptr<Ipv6> nodev6 = node -> GetObject<Ipv6>();
+		Ptr<Ipv6RoutingProtocol> routing = nodev6 -> GetRoutingProtocol();
+		Ptr<Ipv6ListRouting> listRouting = DynamicCast<Ipv6ListRouting> (routing);
+
+		if(listRouting)
+		{
+			std::cout << "Successful cast" << std::endl;
+
+			unsigned int index = 1;
+			short prio = 10;
+
+			Ptr<Ipv6RoutingProtocol> listItem = listRouting ->GetRoutingProtocol(index,prio);
+
+
+		}else
+		{
+			std::cout << "Unsuccessful cast" << std::endl;
+		}
+
+	}
 
 	NS_LOG_INFO ("Run Simulation.");
 	Simulator::Run ();

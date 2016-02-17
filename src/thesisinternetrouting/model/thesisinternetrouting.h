@@ -130,7 +130,6 @@ private:
 	bool m_changed; //!< route has been updated
 
 };
-
 class ThesisInternetRoutingProtocol : public Ipv6RoutingProtocol
 {
 public:
@@ -166,8 +165,33 @@ public:
 	 */
 	void AddNetworkRouteTo (Ipv6Address network, Ipv6Prefix networkPrefix, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse);
 
+	/**
+	 *\brief Sets the node IP based on the current zone
+	 *\brief Initial address MUST be bootstrapped with a dummy IPv6 address
+	 *\brief Address will be changed once simulation starts.
+	 */
+	void SetIpToZone();
 
+	/**
+	 * \brief Sets pointer to database
+	 */
+	void SetRsuDatabase(Ptr<Db> db);
 
+	/**
+	 * \brief Sets flag is protocol is running on RSU or on a node
+	 */
+	void SetIsRSU(bool isRSU);
+
+protected:
+	/**
+	 * \brief Dispose this object.
+	 */
+	virtual void DoDispose ();
+
+	/**
+	 * Start protocol operation
+	 */
+	void DoInitialize ();
 
 
 private:
@@ -192,6 +216,7 @@ private:
 
 	Routes m_routes; //!<  the forwarding table for network.
 
+	bool m_IsRSU;
 };
 
 }
