@@ -11,6 +11,7 @@ def build(bld):
     module.source = [
         'model/thesisinternetrouting.cc',
         'helper/thesisinternetrouting-helper.cc',
+        'model/Thesis-Internet-Routing-Queue.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('thesisinternetrouting')
@@ -23,6 +24,7 @@ def build(bld):
     headers.source = [
         'model/thesisinternetrouting.h',
         'helper/thesisinternetrouting-helper.h',
+        'model/Thesis-Internet-Routing-Queue.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

@@ -130,6 +130,7 @@ private:
 	bool m_changed; //!< route has been updated
 
 };
+
 class ThesisInternetRoutingProtocol : public Ipv6RoutingProtocol
 {
 public:
@@ -165,6 +166,15 @@ public:
 	 */
 	void AddNetworkRouteTo (Ipv6Address network, Ipv6Prefix networkPrefix, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse);
 
+  /**
+   * \brief Add route to network.
+   * \param network network address
+   * \param networkPrefix network prefix
+   * \param interface interface index
+   */
+  void AddNetworkRouteTo (Ipv6Address network, Ipv6Prefix networkPrefix, uint32_t interface);
+
+
 	/**
 	 *\brief Sets the node IP based on the current zone
 	 *\brief Initial address MUST be bootstrapped with a dummy IPv6 address
@@ -181,6 +191,23 @@ public:
 	 * \brief Sets flag is protocol is running on RSU or on a node
 	 */
 	void SetIsRSU(bool isRSU);
+
+	/**
+	 *
+	 * \brief Sets time interval between position checks to see if IP needs to change
+	 */
+	void SetCheckPositionTime(Time t);
+
+	/**
+	 * \brief Get time between 2 successive position checks
+	 */
+	Time GetCheckPositionTime();
+
+	/**
+	 * Removes the default route from the list of routes currently stored
+	 * Used when position changes
+	 */
+	void RemoveDefaultRoute();
 
 protected:
 	/**
@@ -214,9 +241,28 @@ private:
 	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)
 	typedef std::list<std::pair <ThesisInternetRoutingTableEntry *, EventId> > Routes;
 
+	//Iterator for routes
+  typedef std::list<std::pair <ThesisInternetRoutingTableEntry *, EventId> >::iterator RoutesI;
+
+
 	Routes m_routes; //!<  the forwarding table for network.
 
+	/**
+	 * Flag notifying if node is an RSU or a vehicle node
+	 */
 	bool m_IsRSU;
+
+	/**
+	 * \brief Time between checking the node position to determine if address needs to be changed
+	 */
+	Time m_CheckPosition;
+
+	/**
+	 * \brief Timer to countdown till VANET node must recheck its zone and adjust IP address if required
+	 */
+	Timer m_CheckPositionTimer;
+
+
 };
 
 }

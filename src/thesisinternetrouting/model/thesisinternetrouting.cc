@@ -22,7 +22,7 @@ NS_OBJECT_ENSURE_REGISTERED(ThesisInternetRoutingProtocol);
 
 //Constructor
 ThesisInternetRoutingProtocol::ThesisInternetRoutingProtocol() :
-		m_hasMcast(true), m_IsRSU(false)
+		m_hasMcast(true), m_IsRSU(false), m_CheckPosition(Seconds(10))
 {
 
 }
@@ -88,7 +88,7 @@ ThesisInternetRoutingProtocol::NotifyInterfaceUp (uint32_t interface)
 		Ipv6Address networkAddress = address.GetAddress ().CombinePrefix (networkMask);
 		if (address != Ipv6Address () && networkMask != Ipv6Prefix ())
 		{
-//			AddNetworkRouteTo (networkAddress, networkMask, interface);
+			AddNetworkRouteTo (networkAddress, networkMask, interface);
 		}
 	}
 }
@@ -174,6 +174,18 @@ ThesisInternetRoutingProtocol::AddNetworkRouteTo(Ipv6Address network, Ipv6Prefix
 {
 	NS_LOG_FUNCTION (this << network << networkPrefix << interface);
 
+//	ThesisInternetRoutingTableEntry* route = new ThesisInternetRoutingTableEntry (network, networkPrefix, interface);
+	ThesisInternetRoutingTableEntry* route = new ThesisInternetRoutingTableEntry(network, networkPrefix,nextHop,interface,prefixToUse);
+	route->SetRouteMetric (1);
+	route->SetRouteStatus (ThesisInternetRoutingTableEntry::ROUTE_VALID);
+	route->SetRouteChanged (true);
+
+	m_routes.push_back (std::make_pair (route, EventId ()));
+}
+
+void
+ThesisInternetRoutingProtocol::AddNetworkRouteTo(Ipv6Address network, Ipv6Prefix networkPrefix, uint32_t interface)
+{
 	ThesisInternetRoutingTableEntry* route = new ThesisInternetRoutingTableEntry (network, networkPrefix, interface);
 	route->SetRouteMetric (1);
 	route->SetRouteStatus (ThesisInternetRoutingTableEntry::ROUTE_VALID);
@@ -202,6 +214,8 @@ ThesisInternetRoutingProtocol::DoInitialize()
 void
 ThesisInternetRoutingProtocol::SetIpToZone()
 {
+	NS_LOG_FUNCTION(this);
+
 	Ptr<Node> theNode = GetObject<Node> ();
 	Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
 	Vector position = mobility -> GetPosition();
@@ -227,13 +241,6 @@ ThesisInternetRoutingProtocol::SetIpToZone()
 					Ptr<WifiNetDevice> wifi = DynamicCast<WifiNetDevice>(m_ipv6 ->GetNetDevice(i));
 					Mac48Address mac = wifi ->GetMac() ->GetAddress();
 
-					//std::cout << "Mac address: " << mac << std::endl;
-					//Address a = m_ipv6 ->GetNetDevice(i) ->GetAddress();
-					//m_ipv6 ->GetNetDevice(i) ->
-
-					//Ptr<thesis::ThesisInternetRoutingProtocol> thesis = DynamicCast<thesis::ThesisInternetRoutingProtocol> (proto);
-					//Mac48Address ma = dynamic_cast<Mac48Address>(a);
-					//std::cout << "Mac address: " << a << std::endl;
 					Ipv6Address newAddress;
 					newAddress = newAddress.MakeAutoconfiguredAddress(mac,network);
 					std::cout << "New Address: " << newAddress << std::endl;
@@ -244,13 +251,47 @@ ThesisInternetRoutingProtocol::SetIpToZone()
 					 * 1. Remove old address to interface
 					 * 2. Add new address to interface
 					 * 3. Set interface to up to ensure interface correctly initialized
+					 * 4. Remove old default route (If it exists)
+					 * 5. Set new default route.
 					 */
 					m_ipv6 ->RemoveAddress(i,j);
 					m_ipv6 -> AddAddress(i,newAddress);
 					m_ipv6 ->SetUp(i);
+
+					//Remove default route
+					RemoveDefaultRoute();
+
+					uint32_t defaultPrefix = 0;
+
+					//Add default route
+					AddNetworkRouteTo(Ipv6Address("::"),Ipv6Prefix(defaultPrefix),t1.GetRsuAddress(),i,network);
 				}
 			}
 		}
+	}
+
+	m_CheckPositionTimer.SetFunction(&ThesisInternetRoutingProtocol::SetIpToZone,this);
+	m_CheckPositionTimer.Schedule(m_CheckPosition);
+}
+
+void
+ThesisInternetRoutingProtocol::RemoveDefaultRoute()
+{
+	NS_LOG_FUNCTION(this);
+
+	for(RoutesI it = m_routes.begin(); it != m_routes.end(); it++)
+	{
+		Ipv6Address destination = it -> first -> GetDestNetwork();
+
+		Ipv6Address defaultRouteAddress("::");
+
+		if(destination.IsEqual(defaultRouteAddress))
+		{
+			std::cout << "Attempting to remove route with destination: " << destination << std::endl;
+			it = m_routes.erase(it);
+			return;
+		}
+
 	}
 
 }
