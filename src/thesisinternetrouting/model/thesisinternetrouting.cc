@@ -22,7 +22,7 @@ NS_OBJECT_ENSURE_REGISTERED(ThesisInternetRoutingProtocol);
 
 //Constructor
 ThesisInternetRoutingProtocol::ThesisInternetRoutingProtocol() :
-		m_hasMcast(true), m_IsRSU(false), m_CheckPosition(Seconds(10))
+						m_hasMcast(true), m_IsRSU(false), m_CheckPosition(Seconds(10))
 {
 
 }
@@ -36,15 +36,15 @@ ThesisInternetRoutingProtocol::~ThesisInternetRoutingProtocol()
 TypeId
 ThesisInternetRoutingProtocol::GetTypeId(void)
 {
-  static TypeId tid = TypeId ("ns3::thesis::ThesisInternetRoutingProtocol")
-    .SetParent<Ipv6RoutingProtocol> ()
-    .SetGroupName ("thesis")
-    .AddConstructor<ThesisInternetRoutingProtocol> ()
-		.AddAttribute ("McastEnabled", "Determines if MCast protocol is running on the node (Default false)",
-				BooleanValue (false),
-				MakeBooleanAccessor (&ThesisInternetRoutingProtocol::m_hasMcast),
-				MakeBooleanChecker ())
-	/*
+	static TypeId tid = TypeId ("ns3::thesis::ThesisInternetRoutingProtocol")
+    				.SetParent<Ipv6RoutingProtocol> ()
+    				.SetGroupName ("thesis")
+    				.AddConstructor<ThesisInternetRoutingProtocol> ()
+    				.AddAttribute ("McastEnabled", "Determines if MCast protocol is running on the node (Default false)",
+    						BooleanValue (false),
+    						MakeBooleanAccessor (&ThesisInternetRoutingProtocol::m_hasMcast),
+    						MakeBooleanChecker ())
+    						/*
 	static TypeId tid = TypeId ("ns3::thesis::ThesisInternetRoutingProtocol")
     		.SetParent<Ipv6RoutingProtocol> ()
     		.SetGroupName ("thesis")
@@ -53,8 +53,8 @@ ThesisInternetRoutingProtocol::GetTypeId(void)
     				BooleanValue (false),
     				MakeBooleanAccessor (&ThesisInternetRoutingProtocol::m_hasMcast),
     				MakeBooleanChecker ())
-	*/
-   ;
+    						 */
+    						;
 	return tid;
 }
 
@@ -70,10 +70,92 @@ Ptr<Ipv6Route>
 ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif,
 		Socket::SocketErrno &sockerr)
 {
+	NS_LOG_FUNCTION(this << header << oif);
+
+	Ipv6Address destination = header.GetDestinationAddress();
+	Ipv6Address source = header.GetSourceAddress();
+
 	Ptr<Ipv6Route> route;
+
+	if(m_IsRSU)
+	{
+		//Node is an RSU - Sending to VANET
+	}else
+	{
+		//Node is a VANET Node
+		//Ipv6Address VanetNetwork = source.CombinePrefix(Ipv6Prefix())
+		route = Lookup(destination, oif);
+
+
+	}
+
+
 	return route;
 }
 
+Ptr<Ipv6Route>
+ThesisInternetRoutingProtocol::Lookup(Ipv6Address destination, Ptr<NetDevice> interface)
+{
+	NS_LOG_FUNCTION (this << destination << interface);
+
+	Ptr<Ipv6Route> rtentry = 0;
+	uint16_t longestMask = 0;
+
+	for(RoutesI it = m_routes.begin(); it != m_routes.end(); it++)
+	{
+		ThesisInternetRoutingTableEntry* j = it -> first;
+
+		Ipv6Prefix mask = j->GetDestNetworkPrefix ();
+		uint16_t maskLen = mask.GetPrefixLength ();
+		Ipv6Address entry = j->GetDestNetwork ();
+
+		NS_LOG_LOGIC ("Searching for route to " << destination << ", mask length " << maskLen);
+
+		if(mask.IsMatch(destination,entry))
+		{
+			NS_LOG_LOGIC ("Found global network route " << j << ", mask length " << maskLen);
+
+			/* if interface is given, check the route will output on this interface */
+			if (!interface || interface == m_ipv6->GetNetDevice (j->GetInterface ()))
+			{
+				if (maskLen < longestMask)
+				{
+					NS_LOG_LOGIC ("Previous match longer, skipping");
+					continue;
+				}
+			}
+			longestMask = maskLen;
+
+			Ipv6RoutingTableEntry* route = j;
+			uint32_t interfaceIdx = route->GetInterface ();
+			rtentry = Create<Ipv6Route> ();
+
+			if (route->GetGateway ().IsAny ())
+			{
+				rtentry->SetSource (m_ipv6->SourceAddressSelection (interfaceIdx, route->GetDest ()));
+			}
+			else if (route->GetDest ().IsAny ()) /* default route */
+					{
+				rtentry->SetSource (m_ipv6->SourceAddressSelection (interfaceIdx, route->GetPrefixToUse ().IsAny () ? destination : route->GetPrefixToUse ()));
+					}
+			else
+			{
+				rtentry->SetSource (m_ipv6->SourceAddressSelection (interfaceIdx, route->GetDest ()));
+			}
+
+			rtentry->SetDestination (route->GetDest ());
+			rtentry->SetGateway (route->GetGateway ());
+			rtentry->SetOutputDevice (m_ipv6->GetNetDevice (interfaceIdx));
+
+		}
+	}
+
+	if (rtentry)
+	{
+		NS_LOG_LOGIC ("Matching route via " << rtentry->GetDestination () << " (through " << rtentry->GetGateway () << ") at the end");
+	}
+	return rtentry;
+}
 /*
  ************NEEDS TO BE UPDATED******************
  */
@@ -174,7 +256,7 @@ ThesisInternetRoutingProtocol::AddNetworkRouteTo(Ipv6Address network, Ipv6Prefix
 {
 	NS_LOG_FUNCTION (this << network << networkPrefix << interface);
 
-//	ThesisInternetRoutingTableEntry* route = new ThesisInternetRoutingTableEntry (network, networkPrefix, interface);
+	//	ThesisInternetRoutingTableEntry* route = new ThesisInternetRoutingTableEntry (network, networkPrefix, interface);
 	ThesisInternetRoutingTableEntry* route = new ThesisInternetRoutingTableEntry(network, networkPrefix,nextHop,interface,prefixToUse);
 	route->SetRouteMetric (1);
 	route->SetRouteStatus (ThesisInternetRoutingTableEntry::ROUTE_VALID);
@@ -299,20 +381,20 @@ ThesisInternetRoutingProtocol::RemoveDefaultRoute()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ThesisInternetRoutingTableEntry::ThesisInternetRoutingTableEntry ()
-  : m_tag (0), m_metric (16), m_status (ROUTE_INVALID), m_changed (false)
+: m_tag (0), m_metric (16), m_status (ROUTE_INVALID), m_changed (false)
 {
 
 }
 
 ThesisInternetRoutingTableEntry::ThesisInternetRoutingTableEntry (Ipv6Address network, Ipv6Prefix networkPrefix, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse)
-  : Ipv6RoutingTableEntry ( ThesisInternetRoutingTableEntry::CreateNetworkRouteTo (network, networkPrefix, nextHop, interface, prefixToUse) ),
-    m_tag (0), m_metric (16), m_status (ROUTE_INVALID), m_changed (false)
+: Ipv6RoutingTableEntry ( ThesisInternetRoutingTableEntry::CreateNetworkRouteTo (network, networkPrefix, nextHop, interface, prefixToUse) ),
+  m_tag (0), m_metric (16), m_status (ROUTE_INVALID), m_changed (false)
 {
 }
 
 ThesisInternetRoutingTableEntry::ThesisInternetRoutingTableEntry (Ipv6Address network, Ipv6Prefix networkPrefix, uint32_t interface)
-  : Ipv6RoutingTableEntry ( Ipv6RoutingTableEntry::CreateNetworkRouteTo (network, networkPrefix, interface) ),
-    m_tag (0), m_metric (16), m_status (ROUTE_INVALID), m_changed (false)
+: Ipv6RoutingTableEntry ( Ipv6RoutingTableEntry::CreateNetworkRouteTo (network, networkPrefix, interface) ),
+  m_tag (0), m_metric (16), m_status (ROUTE_INVALID), m_changed (false)
 {
 }
 

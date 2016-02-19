@@ -262,6 +262,12 @@ private:
 	 */
 	Timer m_CheckPositionTimer;
 
+	/**
+	 * Search current routes for a route to the destination.
+	 * Returns a valid route if found; returns a blank route if no route found.
+	 *
+	 */
+	Ptr<Ipv6Route> Lookup(Ipv6Address destination, Ptr<NetDevice>);
 
 };
 
