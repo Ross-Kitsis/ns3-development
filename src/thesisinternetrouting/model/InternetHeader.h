@@ -23,14 +23,35 @@ namespace thesis
 
 /*
  *
- * 32 Bit x position
- * 32 bit y position
- * 32 bit x velocity
- * 8 bit positive/negetive x velocity
- * 32 bit y velocity
- * 8 but positive/negetive y velocity
+ * 64 Bit x source position
+ * 64 bit y source position
+ * (128)
+ *
+ * 64 bit x source velocity
+ * 8 bit positive/negetive sender x velocity
+ * (72)
+ *
+ * 64 bit y source velocity
+ * 8 but positive/negetive sender y velocity
+ * (72)
+ *
  * 64 bit time
+ *
  * 8 bit DTN
+ *
+ * 64 bit x sender position
+ * 64 bit y sender position
+ * (128)
+ *
+ * 64 bit x sender velocity
+ * 8 bit positive/negetive sender x velocity
+ * (72)
+ *
+ * 64 bit y source velocity
+ * 8 but positive/negetive sender y velocity
+ * (72)
+ *
+ * 616
  *
  */
 
@@ -38,7 +59,8 @@ namespace thesis
 class InternetHeader : public Header
 {
 public:
-	InternetHeader(Vector m_position = Vector(), Vector m_velocity = Vector(), Time m_timestamp = Time(), bool m_isDtnTolerant = false);
+	InternetHeader(Vector m_position = Vector(), Vector m_velocity = Vector(), Time m_timestamp = Time(),
+								 bool m_isDtnTolerant = false, Vector m_SenderPosition = Vector(), Vector m_SenderVelocity = Vector());
 	virtual ~InternetHeader();
 
 	//Size of header
@@ -56,11 +78,11 @@ public:
 	void Print(std::ostream &os) const;
 
 	//Fields
-	void SetVelocity(Vector v) {m_velocity = v;}
-	Vector GetVelocity() {return m_velocity;}
+	void SetSourceVelocity(Vector v) {m_velocity = v;}
+	Vector GetSourceVelocity() {return m_velocity;}
 
-	void SetPosition(Vector p) {m_position = p;}
-	Vector GetPosition() {return m_position;}
+	void SetSourcePosition(Vector p) {m_position = p;}
+	Vector GetSourcePosition() {return m_position;}
 
 	void SetTimestamp(Time t) {m_timestamp = t;}
 	Time GetTimestamp() {return m_timestamp;}
@@ -68,17 +90,23 @@ public:
 	void SetDtnTolerance(bool b) {m_isDtnTolerant = b;}
 	bool GetDtnTolerance() {return m_isDtnTolerant;}
 
+	void SetSenderVelocity(Vector v) {m_SenderVelocity = v;}
+	Vector GetSenderVelocity() {return m_SenderVelocity;}
+
+	void SetSenderPosition(Vector p) {m_SenderPosition = p;}
+	Vector GetSenderPosition() {return m_SenderPosition;}
+
 	bool operator== (InternetHeader const & o) const;
 
 private:
 
 	/*
-	 * Position of sending node
+	 * Position of source node
 	 */
 	Vector m_position;
 
 	/*
-	 * Velocity of sending node
+	 * Velocity of source node
 	 */
 	Vector m_velocity;
 
@@ -91,6 +119,18 @@ private:
 	 * Boolean determining if packet can be buffered if DTN allowed
 	 */
 	bool m_isDtnTolerant;
+
+	///////////////////////////////////////////////////
+
+	/*
+	 * Position of sending node
+	 */
+	Vector m_SenderPosition;
+
+	/*
+	 * Velocity of sending node
+	 */
+	Vector m_SenderVelocity;
 
 };
 } /*namesaoce thesisinternet*/

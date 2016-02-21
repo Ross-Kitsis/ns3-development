@@ -12,8 +12,9 @@ namespace ns3
 
 namespace thesis
 {
-InternetHeader::InternetHeader(Vector position, Vector velocity, Time timestamp, bool isDtnTolerant) :
-		m_position(position), m_velocity(velocity), m_timestamp(timestamp), m_isDtnTolerant(isDtnTolerant)
+InternetHeader::InternetHeader(Vector position, Vector velocity, Time timestamp, bool isDtnTolerant, Vector senderVelocity, Vector senderPosition) :
+		m_position(position), m_velocity(velocity), m_timestamp(timestamp), m_isDtnTolerant(isDtnTolerant),
+		m_SenderPosition(senderPosition), m_SenderVelocity(senderVelocity)
 
 {
 	// TODO Auto-generated constructor stub
@@ -45,7 +46,7 @@ InternetHeader::GetInstanceTypeId() const
 uint32_t
 InternetHeader::GetSerializedSize() const
 {
-	return 216;
+	return 616;
 }
 
 void
@@ -88,6 +89,32 @@ InternetHeader::Serialize(Buffer::Iterator i) const
   {
 	  i.WriteU8 (1);
   }
+
+	//Serialize sender position
+	i.WriteHtolsbU64((uint64_t) abs (m_SenderPosition.x * 1000));
+	i.WriteHtolsbU64((uint64_t) abs (m_SenderPosition.y * 1000));
+
+	//Serialize sender velocity
+  i.WriteHtonU64  ((uint64_t)abs(m_SenderVelocity.x*1000));
+  if (m_SenderVelocity.x >=0)
+  {
+	  i.WriteU8 (0);
+  }
+  else
+  {
+	  i.WriteU8 (1);
+  }
+
+  i.WriteHtonU64  ((uint64_t)abs(m_SenderVelocity.y*1000));
+  if (m_SenderVelocity.y >=0)
+  {
+	  i.WriteU8 (0);
+  }
+  else
+  {
+	  i.WriteU8 (1);
+  }
+
 }
 
 uint32_t
@@ -118,6 +145,19 @@ InternetHeader::Deserialize(Buffer::Iterator start)
   {
   	m_isDtnTolerant = true;
   }
+
+	m_SenderPosition.x =(double) (i.ReadNtohU64 ()/1000.0);
+	m_SenderPosition.y =(double) (i.ReadNtohU64 ()/1000.0);
+
+	m_SenderVelocity.x =(double) (i.ReadNtohU64 ()/1000.0);
+  tmpsign = i.ReadU8 ();
+  if (tmpsign != 0)
+  	  m_SenderVelocity.x = - m_velocity.x;
+
+	m_SenderVelocity.y =(double) (i.ReadNtohU64 ()/1000.0);
+  tmpsign = i.ReadU8 ();
+  if (tmpsign != 0)
+  	  m_SenderVelocity.y = - m_velocity.y;
 
 	uint32_t dist = i.GetDistanceFrom (start);
 	NS_ASSERT (dist == GetSerializedSize ());
