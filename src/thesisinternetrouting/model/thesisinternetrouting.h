@@ -30,6 +30,10 @@
 //Mcast files
 #include "ns3/Db.h"
 
+//ThesisFiles
+#include "InternetHeader.h"
+#include "Thesis-Internet-Routing-Queue.h"
+
 namespace ns3
 {
 namespace thesis
@@ -282,6 +286,12 @@ private:
 	 */
 	Ptr<Ipv6Route> Lookup(Ipv6Address destination, Ptr<NetDevice>);
 
+	/**
+	 * Flag controlling if messages are delay tolerant
+	 * Not actively used in current implementation but it is sent in internet header to allow for future expansion
+	 * Set to false by default.
+	 */
+	bool m_IsDtnTolerant;
 };
 
 }

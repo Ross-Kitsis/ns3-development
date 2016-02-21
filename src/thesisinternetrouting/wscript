@@ -26,7 +26,7 @@ def build(bld):
         'model/thesisinternetrouting.h',
         'helper/thesisinternetrouting-helper.h',
         'model/Thesis-Internet-Routing-Queue.h',
-        'model/InternetHeader.cc',
+        'model/InternetHeader.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

@@ -21,6 +21,7 @@ InternetHeader::InternetHeader(Vector position, Vector velocity, Time timestamp,
 
 }
 
+
 InternetHeader::~InternetHeader()
 {
 	// TODO Auto-generated destructor stub

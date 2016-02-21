@@ -11,6 +11,7 @@
 #include "ns3/boolean.h"
 #include "ns3/wifi-module.h"
 
+
 namespace ns3
 {
 
@@ -22,7 +23,8 @@ NS_OBJECT_ENSURE_REGISTERED(ThesisInternetRoutingProtocol);
 
 //Constructor
 ThesisInternetRoutingProtocol::ThesisInternetRoutingProtocol() :
-						m_hasMcast(true), m_IsRSU(false), m_CheckPosition(Seconds(10))
+						m_hasMcast(true), m_IsRSU(false),
+						m_CheckPosition(Seconds(10)), m_IsDtnTolerant(false)
 {
 
 }
@@ -98,8 +100,13 @@ ThesisInternetRoutingProtocol::RouteInputVanet (Ptr<const Packet> p, const Ipv6H
   		Ipv6InterfaceAddress iaddr = m_ipv6->GetAddress (j, i);
   		Ipv6Address addr = iaddr.GetAddress ();
 
+  		InternetHeader Iheader;
 
+  		//p -> RemoveHeader(Iheader);
 
+  		p -> PeekHeader(Iheader);
+/////// MAY NEED TO CHANGE THIS
+  		Iheader.SetSenderPosition(Vector(1,2,3));
   	}
   }
 
@@ -137,6 +144,19 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 		if (route)
 		{
 			sockerr = Socket::ERROR_NOTERROR;
+
+
+			//Create thesis internet routing header and attatch to the packet
+
+			Ptr<MobilityModel> mobility = m_ipv6 -> GetObject<MobilityModel>();
+
+			Vector position = mobility -> GetPosition();
+			Vector velocity = mobility -> GetVelocity();
+			Time CurrentTime = Simulator::Now();
+			InternetHeader Ih(position,velocity,CurrentTime,m_IsDtnTolerant,position,velocity);
+
+			p ->AddHeader(Ih);
+
 		}
 		else
 		{

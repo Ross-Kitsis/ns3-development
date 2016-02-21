@@ -61,6 +61,7 @@ class InternetHeader : public Header
 public:
 	InternetHeader(Vector m_position = Vector(), Vector m_velocity = Vector(), Time m_timestamp = Time(),
 								 bool m_isDtnTolerant = false, Vector m_SenderPosition = Vector(), Vector m_SenderVelocity = Vector());
+
 	virtual ~InternetHeader();
 
 	//Size of header
