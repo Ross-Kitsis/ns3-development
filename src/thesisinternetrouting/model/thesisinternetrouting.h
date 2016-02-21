@@ -220,6 +220,19 @@ protected:
 	 */
 	void DoInitialize ();
 
+	/*
+	 * RouteInput for VANET nodes
+	 */
+	bool RouteInputVanet (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const NetDevice> idev,
+			UnicastForwardCallback ucb, MulticastForwardCallback mcb,
+			LocalDeliverCallback lcb, ErrorCallback ecb);
+
+	/**
+	 * RouteInput for RSU
+	 */
+	bool RouteInputRsu (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const NetDevice> idev,
+			UnicastForwardCallback ucb, MulticastForwardCallback mcb,
+			LocalDeliverCallback lcb, ErrorCallback ecb);
 
 private:
 

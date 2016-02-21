@@ -63,8 +63,49 @@ ThesisInternetRoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header
 		UnicastForwardCallback ucb, MulticastForwardCallback mcb,
 		LocalDeliverCallback lcb, ErrorCallback ecb)
 {
-	return true;
+  NS_LOG_FUNCTION (this << p << header << header.GetSourceAddress () << header.GetDestinationAddress () << idev);
+
+  if(m_IsRSU)
+  {
+  	//RouteInput via RouteInputRsu
+  	return RouteInputRsu(p,header,idev,ucb,mcb,lcb,ecb);
+  }else
+  {
+  	return RouteInputVanet(p,header,idev,ucb,mcb,lcb,ecb);
+  }
 }
+
+bool
+ThesisInternetRoutingProtocol::RouteInputRsu (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const NetDevice> idev,
+		UnicastForwardCallback ucb, MulticastForwardCallback mcb,
+		LocalDeliverCallback lcb, ErrorCallback ecb)
+{
+	return false;
+}
+
+bool
+ThesisInternetRoutingProtocol::RouteInputVanet (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const NetDevice> idev,
+		UnicastForwardCallback ucb, MulticastForwardCallback mcb,
+		LocalDeliverCallback lcb, ErrorCallback ecb)
+{
+
+  Ipv6Address destination = header.GetDestinationAddress();
+
+  for(uint32_t j = 0; j < m_ipv6->GetNInterfaces(); j++)
+  {
+  	for (uint32_t i = 0; i < m_ipv6->GetNAddresses (j); i++)
+  	{
+  		Ipv6InterfaceAddress iaddr = m_ipv6->GetAddress (j, i);
+  		Ipv6Address addr = iaddr.GetAddress ();
+
+
+
+  	}
+  }
+
+	return false;
+}
+
 
 Ptr<Ipv6Route>
 ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif,
@@ -86,10 +127,22 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 		//Ipv6Address VanetNetwork = source.CombinePrefix(Ipv6Prefix())
 		route = Lookup(destination, oif);
 
-
+		/*
+		 * Set socket error type
+		 *
+		 * If route found - No error
+		 * No route found - No route to host
+		 *
+		 */
+		if (route)
+		{
+			sockerr = Socket::ERROR_NOTERROR;
+		}
+		else
+		{
+			sockerr = Socket::ERROR_NOROUTETOHOST;
+		}
 	}
-
-
 	return route;
 }
 
