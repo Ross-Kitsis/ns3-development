@@ -10,6 +10,8 @@
 namespace ns3
 {
 
+NS_LOG_COMPONENT_DEFINE("InternetHeader");
+
 namespace thesis
 {
 InternetHeader::InternetHeader(Vector position, Vector velocity, Time timestamp, bool isDtnTolerant, Vector senderVelocity, Vector senderPosition) :
@@ -78,8 +80,9 @@ InternetHeader::Serialize(Buffer::Iterator i) const
 	  i.WriteU8 (1);
   }
 
-  //Serialize timestamp (Milliseconds)
-  m_timestamp.ToInteger(Time::MS);
+  //Serialize timestamp (Milliseconds) and write to buffer
+  i.WriteU64(m_timestamp.ToInteger(Time::MS));
+
 
   //Serialize DTN tolerance
   if (m_isDtnTolerant == false)
@@ -161,6 +164,9 @@ InternetHeader::Deserialize(Buffer::Iterator start)
   	  m_SenderVelocity.y = - m_velocity.y;
 
 	uint32_t dist = i.GetDistanceFrom (start);
+
+	std::cout << "Distance from start: " << dist << std:: endl;
+
 	NS_ASSERT (dist == GetSerializedSize ());
 	return dist;
 }

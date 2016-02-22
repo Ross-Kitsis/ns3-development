@@ -82,6 +82,8 @@ ThesisInternetRoutingProtocol::RouteInputRsu (Ptr<const Packet> p, const Ipv6Hea
 		UnicastForwardCallback ucb, MulticastForwardCallback mcb,
 		LocalDeliverCallback lcb, ErrorCallback ecb)
 {
+	NS_LOG_FUNCTION(this << header);
+
 	return false;
 }
 
@@ -90,6 +92,7 @@ ThesisInternetRoutingProtocol::RouteInputVanet (Ptr<const Packet> p, const Ipv6H
 		UnicastForwardCallback ucb, MulticastForwardCallback mcb,
 		LocalDeliverCallback lcb, ErrorCallback ecb)
 {
+	NS_LOG_FUNCTION(this << header);
 
   Ipv6Address destination = header.GetDestinationAddress();
 
@@ -100,13 +103,13 @@ ThesisInternetRoutingProtocol::RouteInputVanet (Ptr<const Packet> p, const Ipv6H
   		Ipv6InterfaceAddress iaddr = m_ipv6->GetAddress (j, i);
   		Ipv6Address addr = iaddr.GetAddress ();
 
-  		InternetHeader Iheader;
+ // 		InternetHeader Iheader;
 
   		//p -> RemoveHeader(Iheader);
 
-  		p -> PeekHeader(Iheader);
+//  		p -> PeekHeader(Iheader);
 /////// MAY NEED TO CHANGE THIS
-  		Iheader.SetSenderPosition(Vector(1,2,3));
+//  		Iheader.SetSenderPosition(Vector(1,2,3));
   	}
   }
 
@@ -146,7 +149,7 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 			sockerr = Socket::ERROR_NOTERROR;
 
 
-			//Create thesis internet routing header and attatch to the packet
+			//Create thesis internet routing header and atatch to the packet
 
 			Ptr<MobilityModel> mobility = m_ipv6 -> GetObject<MobilityModel>();
 
@@ -155,7 +158,7 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 			Time CurrentTime = Simulator::Now();
 			InternetHeader Ih(position,velocity,CurrentTime,m_IsDtnTolerant,position,velocity);
 
-			p ->AddHeader(Ih);
+//			p ->AddHeader(Ih);
 
 		}
 		else
@@ -341,6 +344,7 @@ ThesisInternetRoutingProtocol::AddNetworkRouteTo(Ipv6Address network, Ipv6Prefix
 void
 ThesisInternetRoutingProtocol::AddNetworkRouteTo(Ipv6Address network, Ipv6Prefix networkPrefix, uint32_t interface)
 {
+	NS_LOG_FUNCTION (this << network << networkPrefix << interface);
 	ThesisInternetRoutingTableEntry* route = new ThesisInternetRoutingTableEntry (network, networkPrefix, interface);
 	route->SetRouteMetric (1);
 	route->SetRouteStatus (ThesisInternetRoutingTableEntry::ROUTE_VALID);
@@ -359,11 +363,15 @@ ThesisInternetRoutingProtocol::DoDispose()
 void
 ThesisInternetRoutingProtocol::DoInitialize()
 {
+
+
 	if(!m_IsRSU)
 	{
 		SetIpToZone();
 	}
+
 	Ipv6RoutingProtocol::DoInitialize ();
+
 }
 
 void
@@ -411,15 +419,22 @@ ThesisInternetRoutingProtocol::SetIpToZone()
 					 */
 					m_ipv6 ->RemoveAddress(i,j);
 					m_ipv6 -> AddAddress(i,newAddress);
-					m_ipv6 ->SetUp(i);
+//					m_ipv6 ->SetUp(i); (CAUSES SIMULATION TO CRASH)
 
 					//Remove default route
 					RemoveDefaultRoute();
 
 					uint32_t defaultPrefix = 0;
+					Ipv6Address nextHop = t1.GetRsuAddress();
 
+
+
+//					std::cout << "Attempting to add a default route " << " Is RSU? " << m_IsRSU << std::endl;
 					//Add default route
-					AddNetworkRouteTo(Ipv6Address("::"),Ipv6Prefix(defaultPrefix),t1.GetRsuAddress(),i,network);
+					AddNetworkRouteTo(Ipv6Address("::"),Ipv6Prefix(defaultPrefix),nextHop,i,network);
+
+//					std::cout << "ROUTE ADDED " << std::endl;
+					break;
 				}
 			}
 		}
@@ -440,9 +455,10 @@ ThesisInternetRoutingProtocol::RemoveDefaultRoute()
 
 		Ipv6Address defaultRouteAddress("::");
 
+//		std::cout << " >>>>>>>>>>>>>>>> Attempting to remove route with destination: <<<<<<<<<<<<<" << destination << std::endl;
+
 		if(destination.IsEqual(defaultRouteAddress))
 		{
-			std::cout << "Attempting to remove route with destination: " << destination << std::endl;
 			it = m_routes.erase(it);
 			return;
 		}
@@ -478,7 +494,7 @@ ThesisInternetRoutingTableEntry::~ThesisInternetRoutingTableEntry ()
 void
 ThesisInternetRoutingTableEntry::SetRouteTag (uint16_t routeTag)
 {
-
+	m_tag = routeTag;
 }
 
 void
