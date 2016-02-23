@@ -94,25 +94,38 @@ ThesisInternetRoutingProtocol::RouteInputVanet (Ptr<const Packet> p, const Ipv6H
 {
 	NS_LOG_FUNCTION(this << header);
 
-  Ipv6Address destination = header.GetDestinationAddress();
+	Ipv6Address destination = header.GetDestinationAddress();
 
-  for(uint32_t j = 0; j < m_ipv6->GetNInterfaces(); j++)
-  {
-  	for (uint32_t i = 0; i < m_ipv6->GetNAddresses (j); i++)
-  	{
-  		Ipv6InterfaceAddress iaddr = m_ipv6->GetAddress (j, i);
-  		Ipv6Address addr = iaddr.GetAddress ();
+	//std::cout << "Destination: " << destination << std::endl;
 
- // 		InternetHeader Iheader;
+	if(destination.IsMulticast())
+	{
+		//Handle multicast packets
+		return false;
+	}else
+	{
+		for(uint32_t j = 0; j < m_ipv6->GetNInterfaces(); j++)
+		{
+			for (uint32_t i = 0; i < m_ipv6->GetNAddresses (j); i++)
+			{
+				Ipv6InterfaceAddress iaddr = m_ipv6->GetAddress (j, i);
+				Ipv6Address addr = iaddr.GetAddress ();
 
-  		//p -> RemoveHeader(Iheader);
+				Ptr<Packet> packet = p -> Copy();
 
-//  		p -> PeekHeader(Iheader);
-/////// MAY NEED TO CHANGE THIS
-//  		Iheader.SetSenderPosition(Vector(1,2,3));
-  	}
-  }
+				std::cout << "Original Size: " << p -> GetSize() << std::endl;
+				std::cout << "Copy Size: " << packet -> GetSize() << std::endl;
 
+
+				InternetHeader Iheader;
+				packet -> RemoveHeader(Iheader);
+
+				//  		p -> PeekHeader(Iheader);
+				/////// MAY NEED TO CHANGE THIS
+				Iheader.SetSenderPosition(Vector(1,2,3));
+			}
+		}
+	}
 	return false;
 }
 
@@ -158,8 +171,10 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 			Time CurrentTime = Simulator::Now();
 			InternetHeader Ih(position,velocity,CurrentTime,m_IsDtnTolerant,position,velocity);
 
-//			p ->AddHeader(Ih);
+			p ->AddHeader(Ih);
 
+//			InternetHeader Ih2;
+//			p ->RemoveHeader(Ih2);
 		}
 		else
 		{

@@ -13,6 +13,8 @@ def build(bld):
         'helper/thesisinternetrouting-helper.cc',
         'model/Thesis-Internet-Routing-Queue.cc',
         'model/InternetHeader.cc',
+        'Application/ThesisPing6.cc',
+        'helper/ThesisPing6Helper.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('thesisinternetrouting')
@@ -27,6 +29,8 @@ def build(bld):
         'helper/thesisinternetrouting-helper.h',
         'model/Thesis-Internet-Routing-Queue.h',
         'model/InternetHeader.h',
+        'Application/ThesisPing6.h',
+        'helper/ThesisPing6Helper.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

@@ -49,7 +49,8 @@ InternetHeader::GetInstanceTypeId() const
 uint32_t
 InternetHeader::GetSerializedSize() const
 {
-	return 616;
+	//Size of header in BYTES!!!!!
+	return 77;
 }
 
 void
