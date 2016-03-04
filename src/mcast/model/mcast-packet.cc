@@ -99,8 +99,14 @@ TypeHeader::Deserialize (Buffer::Iterator start)
 		m_type = (MessageType) type;
 		break;
 	}
+	case INTERNET:
+	{
+		m_type = (MessageType) type;
+		break;
+	}
 	default:
 		m_valid = false;
+		m_type = UNKNOWN;
 	}
 	uint32_t dist = i.GetDistanceFrom (start);
 	NS_ASSERT (dist == GetSerializedSize ());
@@ -122,8 +128,14 @@ TypeHeader::Print (std::ostream &os) const
 		os << "MCAST_CONTROL";
 		break;
 	}
+	case INTERNET:
+	{
+		os << "INTERNET";
+		break;
+	}
 	default:
 		os << "UNKNOWN_TYPE";
+		break;
 	}
 }
 

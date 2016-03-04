@@ -537,6 +537,14 @@ ThesisRoutingProtocol::Receive (Ptr<Socket> socket)
 		ProcessMcastControl(cHeader, packet);
 		break;
 	}
+	case INTERNET:
+	{
+		//Shouldn't be here
+		break;
+	}
+	case UNKNOWN:
+		//Shouldn't be here
+		break;
 	}
 
 }

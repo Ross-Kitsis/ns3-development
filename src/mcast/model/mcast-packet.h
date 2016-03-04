@@ -43,7 +43,10 @@ namespace mcast {
 enum MessageType
 {
   HELLO  = 1,   //!< MCAST Hello type
-  MCAST_CONTROL = 2
+  MCAST_CONTROL = 2, //!< MCAST Control type
+  INTERNET = 3, //!< ThesisInternetRouting type
+
+  UNKNOWN = 128
 };
 
 /**

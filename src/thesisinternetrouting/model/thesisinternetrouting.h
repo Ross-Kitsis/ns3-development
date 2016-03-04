@@ -30,6 +30,8 @@
 
 //Mcast files
 #include "ns3/Db.h"
+#include "ns3/mcast-packet.h"
+
 
 //ThesisFiles
 #include "InternetHeader.h"

@@ -67,6 +67,11 @@ ThesisInternetRoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header
 {
   NS_LOG_FUNCTION (this << p << header << header.GetSourceAddress () << header.GetDestinationAddress () << idev);
 
+  mcast::TypeHeader tHeader(mcast::INTERNET);
+  p->PeekHeader(tHeader);
+
+  std::cout << "Header type: " << tHeader.Get() << std::endl;
+
   if(m_IsRSU)
   {
   	//RouteInput via RouteInputRsu
@@ -141,6 +146,7 @@ ThesisInternetRoutingProtocol::RouteInputVanet (Ptr<const Packet> p, const Ipv6H
 			return false;
 		}else
 		{
+			//Check if packet for current node
 			for(uint32_t j = 0; j < m_ipv6->GetNInterfaces(); j++)
 			{
 				for (uint32_t i = 0; i < m_ipv6->GetNAddresses (j); i++)
@@ -153,19 +159,22 @@ ThesisInternetRoutingProtocol::RouteInputVanet (Ptr<const Packet> p, const Ipv6H
 						//For this node (Possibly)
 						if(j == iif)
 						{
-							lcb(p,header,iif);
+							Ptr<Packet> packet = p -> Copy();
+
+							InternetHeader Iheader;
+							packet -> RemoveHeader(Iheader);
+
+							lcb(packet,header,iif);
 							return true;
 						}
 					}
 
-					//				Ptr<Packet> packet = p -> Copy();
+					//Destination address did not match any of this nodes addresses; queue to packet for retransmission
+
+
 
 					//				std::cout << "Original Size: " << p -> GetSize() << std::endl;
 					//				std::cout << "Copy Size: " << packet -> GetSize() << std::endl;
-
-
-					InternetHeader Iheader;
-					//				packet -> RemoveHeader(Iheader);
 					//				p ->PeekHeader(Iheader);
 
 					//  		p -> PeekHeader(Iheader);
@@ -197,10 +206,6 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 	Ipv6Address destination = header.GetDestinationAddress();
 	Ipv6Address source = header.GetSourceAddress();
 
-//	Ptr<Ipv6L3Protocol> pro =
-
-	//m_ipv6 ->GetNetDevice(0) ->GetA
-
 	std::cout << "Route output: Destination: " << destination << " Source: " << source << " Is RSU? " << m_IsRSU << std::endl;
 
 	Ptr<Ipv6Route> route;
@@ -213,8 +218,6 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 	}else
 	{
 		//Node is a VANET Node
-		//Ipv6Address VanetNetwork = source.CombinePrefix(Ipv6Prefix())
-
 
 		if(destination.IsMulticast() || destination.IsLinkLocalMulticast() || destination.IsLinkLocal())
 		{
@@ -250,9 +253,7 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 			std::cout << "Destination              Gateway                Interface" << std::endl;
 			std::cout << route ->GetDestination() << "     " << route -> GetGateway() << "   Interface Index: " << route->GetOutputDevice()->GetInstanceTypeId().GetName() << std::endl;
 */
-			return route;
-
-//			p ->AddHeader(Ih);
+			p ->AddHeader(Ih);
 
 //			InternetHeader Ih2;
 //			p ->RemoveHeader(Ih2);
@@ -670,13 +671,6 @@ ThesisInternetRoutingProtocol::SetIpToZone()
 
 	m_CheckPositionTimer.SetFunction(&ThesisInternetRoutingProtocol::SetIpToZone,this);
 	m_CheckPositionTimer.Schedule(m_CheckPosition);
-
-	Ptr<Node> node = GetObject<Node>();
-	Ptr<Ipv6Interface> i6 = node -> GetObject<Ipv6Interface>();
-
-	//i6 -> AddAddress();
-
-
 }
 
 void
