@@ -10,6 +10,8 @@
 namespace ns3
 {
 
+NS_LOG_COMPONENT_DEFINE("RSURoutingStarHelper");
+
 RSURoutingStarHelper::RSURoutingStarHelper(NodeContainer hub, NodeContainer spokes, PointToPointHelper p2p)
 {
 	for(uint32_t i = 0; i < spokes.GetN(); i++)
@@ -109,6 +111,8 @@ RSURoutingStarHelper::CreateRouteBetweenHubAndSpoke(Ptr<Node> Hub, Ptr<Node> Spo
 	std::cout << "Adding hub route to: " << spokeWirelessAddress.CombinePrefix(64) << " via: " << spokeAddress << std::endl;
 
 	hubRouting -> AddNetworkRouteTo(spokeWirelessAddress.CombinePrefix(Ipv6Prefix(64)),Ipv6Prefix(64), spokeAddress, hubInterface, 1);
+
+	std::cout << "Adding hub route to: " << spokeWirelessAddress.CombinePrefix(64) << " via: " << spokeAddress << "DONE---" << std::endl;
 
 
 }

@@ -13,6 +13,7 @@
 #include "ns3/node-container.h"
 #include "ns3/mobility-model.h"
 #include "ns3/ipv6.h"
+#include "ns3/network-module.h"
 #include <iostream>
 #include <cmath>
 
@@ -26,7 +27,7 @@ class DbEntry
 {
 public:
 
-	DbEntry(Vector bottomCorner, Vector topCorner, Ipv6Address RsuAddress, Vector RsuPosition, uint32_t ZoneId);
+	DbEntry(Vector bottomCorner, Vector topCorner, Ipv6Address RsuAddress, Vector RsuPosition, uint32_t ZoneId, Mac48Address RsuMacAddress);
 
 	virtual ~DbEntry();
 
@@ -80,6 +81,16 @@ public:
 	 */
 	void SetZoneId(uint32_t id);
 
+	/**
+	 * Set RSU mac address
+	 */
+	void SetRsuMacAddress(Mac48Address mac);
+
+	/**
+	 * Get MAC address for RSU entry
+	 */
+	Mac48Address GetRsuMacAddress();
+
 private:
 
 	//Position of left corner of zone
@@ -96,6 +107,9 @@ private:
 
 	//Zone Id, used to generate IPv6 Addresses for nodes as well as RSU
 	uint32_t m_ZoneId;
+
+	//Mac address of the RSU
+	Mac48Address m_RsuMacAddress;
 
 };
 

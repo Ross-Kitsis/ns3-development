@@ -11,9 +11,9 @@
 namespace ns3
 {
 //DB ENTRY ///////////////////////////////
-DbEntry::DbEntry(Vector bottomCorner, Vector topCorner, Ipv6Address RsuAddress, Vector RsuPosition, uint32_t ZoneId) :
+DbEntry::DbEntry(Vector bottomCorner, Vector topCorner, Ipv6Address RsuAddress, Vector RsuPosition, uint32_t ZoneId, Mac48Address RsuMacAddress) :
 		m_bottomLeftCorner(bottomCorner), m_topRightCorner(topCorner),
-		m_RsuAddress(RsuAddress),m_RsuPosition(RsuPosition),m_ZoneId(ZoneId)
+		m_RsuAddress(RsuAddress),m_RsuPosition(RsuPosition),m_ZoneId(ZoneId), m_RsuMacAddress(RsuMacAddress)
 {
 
 }
@@ -83,6 +83,18 @@ DbEntry::GetZoneId()
 	return m_ZoneId;
 }
 
+void
+DbEntry::SetRsuMacAddress(Mac48Address mac)
+{
+	m_RsuMacAddress = mac;
+}
+
+Mac48Address
+DbEntry::GetRsuMacAddress()
+{
+	return m_RsuMacAddress;
+}
+
 Db::Db()
 {
 
@@ -109,12 +121,10 @@ Db::CreateDatabase(NodeContainer c, uint32_t length, uint32_t width)
 		Vector bottomCorner(position.x - length/2,position.y - width/2,0);
 		Vector topCorner(position.x + length/2,position.y + width/2,0);
 
-		//Ipv6Address RsuAddress = ipv6 ->GetAddress(1,1).GetAddress();
-
 		Ipv6Address RsuAddress;
+		Mac48Address RsuMacAddress;
 
 		WifiNetDevice wi;
-		//wi.GetTypeId();
 
 		for(uint32_t j = 0; j < ipv6 -> GetNInterfaces(); j++)
 		{
@@ -122,21 +132,14 @@ Db::CreateDatabase(NodeContainer c, uint32_t length, uint32_t width)
 			{
 				//Found wifiNetDevice
 				RsuAddress = ipv6 ->GetAddress(j,1).GetAddress();
+				Ptr<WifiNetDevice> wifi = DynamicCast<WifiNetDevice>(ipv6 ->GetNetDevice(j));
+				RsuMacAddress = wifi -> GetMac() -> GetAddress();
 			}
-			//std::cout << ipv6->GetNetDevice(j)->GetInstanceTypeId().GetName()/*wi.GetInstanceTypeId()*/ << std::endl;
-			//std::cout << wi.GetTypeId().GetName() << std::endl;
 		}
 
-		std::cout << RsuAddress << std::endl;
-
-//DbEntry(Vector bottomCorner, Vector topCorner, Ipv6Address RsuAddress, Vector RsuPosition, uint32_t ZoneId);
-
-		DbEntry * entry = new DbEntry(bottomCorner, topCorner, RsuAddress, position,zone);
-
-		entry->GetBottomCorner();
+		DbEntry * entry = new DbEntry(bottomCorner, topCorner, RsuAddress, position,zone, RsuMacAddress);
 
 		zone++;
-
 		m_db.push_back(*entry);
 	}
 }
@@ -165,9 +168,11 @@ Db::GetEntryForCurrentPosition(Vector position)
 		//Calculate area of the rectangle as a whole
 		double rectangleArea = std::abs((bottomLeft.x - topRight.x) * (bottomLeft.y - topRight.y));
 
-	  std::cout << "Total area: " << totalArea << std::endl;
-	  std::cout << "Rectangle area: " << rectangleArea << std::endl;
+//	  std::cout << "Total area: " << totalArea << std::endl;
+//	  std::cout << "Rectangle area: " << rectangleArea << std::endl;
 
+		rectangleArea = round(rectangleArea);
+		totalArea = round(totalArea);
 
 		if(totalArea == rectangleArea)
 		{
@@ -187,8 +192,7 @@ Db::GetAreaOfTriangle(Vector A, Vector B, Vector C)
 
 	area = std::abs((A.x *(B.y - C.y) + B.x *(C.y-A.y) + C.x * (A.y - B.y))/2);
 
-  std::cout << "Triangle area: " << area << std::endl;
-
+//  std::cout << "Triangle area: " << area << std::endl;
 
 	return area;
 }

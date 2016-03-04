@@ -12,6 +12,7 @@
 #include "ns3/ipv6-routing-protocol.h"
 #include "ns3/ipv6.h"
 #include "ns3/ipv6-address.h"
+#include "ns3/internet-module.h"
 
 //Interfaces & Sockets
 #include "ns3/ipv6-interface.h"
@@ -238,6 +239,13 @@ protected:
 			UnicastForwardCallback ucb, MulticastForwardCallback mcb,
 			LocalDeliverCallback lcb, ErrorCallback ecb);
 
+	/**
+	 * Delete Route
+	 * Schedule deletion of routes when an IP address is changed
+	 *
+	 */
+	void DeleteRoute(ThesisInternetRoutingTableEntry *route);
+
 private:
 
 	/**
@@ -260,6 +268,9 @@ private:
 
 	//Iterator for routes
   typedef std::list<std::pair <ThesisInternetRoutingTableEntry *, EventId> >::iterator RoutesI;
+
+	//Const Iterator for routes
+  typedef std::list<std::pair <ThesisInternetRoutingTableEntry *, EventId> >::const_iterator RoutesIC;
 
 
 	Routes m_routes; //!<  the forwarding table for network.

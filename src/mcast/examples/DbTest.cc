@@ -17,6 +17,9 @@
 
 #include "ns3/Db.h"
 
+#include "ns3/thesisinternetrouting.h"
+//#include "ns3/thesisinternetrouting-helper.h"
+
 using namespace ns3;
 
 
@@ -123,6 +126,10 @@ main (int argc, char *argv[])
    ///////////////////////// NETWORK AND MCAST ////////////////////////////
 
    InternetStackHelper stack;
+
+//   ThesisInternetRoutingHelper tihelper;
+ //  stack.SetRoutingHelper(tihelper);
+
    stack.Install (nodes);
 
    Ipv6AddressHelper address;
@@ -201,7 +208,6 @@ main (int argc, char *argv[])
    std::cout << "Rsu address of t1: " << t1.GetRsuAddress() <<std::endl;
    std::cout << "Rsu address of t2: " << t2.GetRsuAddress() <<std::endl;
    std::cout << "Rsu address of t2: " << t3.GetRsuAddress() <<std::endl;
-
 
   std::cout << "Starting simulation for " << totalTime << " s ...\n";
 

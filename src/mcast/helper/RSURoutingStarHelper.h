@@ -12,6 +12,9 @@
 
 #include "ns3/node.h"
 #include "ns3/node-list.h"
+#include "ns3/log.h"
+#include "ns3/abort.h"
+#include "ns3/assert.h"
 #include "ns3/simulator.h"
 #include "ns3/point-to-point-helper.h"
 #include "ns3/ipv6-address-helper.h"

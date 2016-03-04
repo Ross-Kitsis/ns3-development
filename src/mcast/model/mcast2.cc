@@ -1023,9 +1023,6 @@ ThesisRoutingTableEntry::~ThesisRoutingTableEntry ()
 {
 }
 
-
-
-
 void
 ThesisRoutingProtocol::DoDispose ()
 {

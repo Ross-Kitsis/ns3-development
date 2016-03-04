@@ -83,7 +83,36 @@ ThesisInternetRoutingProtocol::RouteInputRsu (Ptr<const Packet> p, const Ipv6Hea
 		LocalDeliverCallback lcb, ErrorCallback ecb)
 {
 	NS_LOG_FUNCTION(this << header);
+	Ipv6Address destination = header.GetDestinationAddress();
+	uint32_t iif = m_ipv6 -> GetInterfaceForDevice(idev);
 
+	if (destination.IsMulticast ())
+	{
+		NS_LOG_LOGIC ("Multicast routing not supported");
+
+		for (uint32_t j = 0; j < m_ipv6->GetNInterfaces (); j++)
+		{
+			for (uint32_t i = 0; i < m_ipv6->GetNAddresses (j); i++)
+			{
+				Ipv6InterfaceAddress iaddr = m_ipv6->GetAddress (j, i);
+				Ipv6Address addr = iaddr.GetAddress ();
+				if (addr.IsEqual (header.GetDestinationAddress ()))
+				{
+					if (j == iif)
+					{
+						NS_LOG_LOGIC ("For me (destination " << addr << " match)");
+					}
+					else
+					{
+						NS_LOG_LOGIC ("For me (destination " << addr << " match) on another interface " << header.GetDestinationAddress ());
+					}
+					lcb (p, header, iif);
+					return true;
+				}
+				NS_LOG_LOGIC ("Address " << addr << " not a match");
+			}
+		}
+	}
 	return false;
 }
 
@@ -95,34 +124,62 @@ ThesisInternetRoutingProtocol::RouteInputVanet (Ptr<const Packet> p, const Ipv6H
 	NS_LOG_FUNCTION(this << header);
 
 	Ipv6Address destination = header.GetDestinationAddress();
+	uint32_t iif = m_ipv6 -> GetInterfaceForDevice(idev);
 
-	//std::cout << "Destination: " << destination << std::endl;
+//	std::cout << "Route input: Destination: " << destination << std::endl;
 
-	if(destination.IsMulticast())
+	if(m_IsRSU)
 	{
-		//Handle multicast packets
 		return false;
 	}else
 	{
-		for(uint32_t j = 0; j < m_ipv6->GetNInterfaces(); j++)
+
+		if(destination.IsMulticast() || destination.IsLinkLocalMulticast() || destination.IsLinkLocal())
 		{
-			for (uint32_t i = 0; i < m_ipv6->GetNAddresses (j); i++)
+			//Handle multicast and link local packets
+      NS_LOG_LOGIC ("Multicast route not supported by ThesisInternet");
+			return false;
+		}else
+		{
+			for(uint32_t j = 0; j < m_ipv6->GetNInterfaces(); j++)
 			{
-				Ipv6InterfaceAddress iaddr = m_ipv6->GetAddress (j, i);
-				Ipv6Address addr = iaddr.GetAddress ();
+				for (uint32_t i = 0; i < m_ipv6->GetNAddresses (j); i++)
+				{
+					Ipv6InterfaceAddress iaddr = m_ipv6->GetAddress (j, i);
+					Ipv6Address addr = iaddr.GetAddress ();
 
-				Ptr<Packet> packet = p -> Copy();
+					if(addr.IsEqual(header.GetDestinationAddress()))
+					{
+						//For this node (Possibly)
+						if(j == iif)
+						{
+							lcb(p,header,iif);
+							return true;
+						}
+					}
 
-				std::cout << "Original Size: " << p -> GetSize() << std::endl;
-				std::cout << "Copy Size: " << packet -> GetSize() << std::endl;
+					//				Ptr<Packet> packet = p -> Copy();
+
+					//				std::cout << "Original Size: " << p -> GetSize() << std::endl;
+					//				std::cout << "Copy Size: " << packet -> GetSize() << std::endl;
 
 
-				InternetHeader Iheader;
-				packet -> RemoveHeader(Iheader);
+					InternetHeader Iheader;
+					//				packet -> RemoveHeader(Iheader);
+					//				p ->PeekHeader(Iheader);
 
-				//  		p -> PeekHeader(Iheader);
-				/////// MAY NEED TO CHANGE THIS
-				Iheader.SetSenderPosition(Vector(1,2,3));
+					//  		p -> PeekHeader(Iheader);
+					/////// MAY NEED TO CHANGE THIS
+
+
+					//				Iheader.SetSenderPosition(Vector(1,2,3));
+
+					//				const Ptr<const Packet> newPacket = packet ->Copy();
+
+					//ucb()
+					//NS_ASSERT(0 == 1);
+		      //ecb (p, header, Socket::ERROR_NOROUTETOHOST);
+				}
 			}
 		}
 	}
@@ -134,22 +191,40 @@ Ptr<Ipv6Route>
 ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif,
 		Socket::SocketErrno &sockerr)
 {
-	NS_LOG_FUNCTION(this << header << oif);
+
+	NS_LOG_FUNCTION("   " << this << header << oif);
 
 	Ipv6Address destination = header.GetDestinationAddress();
 	Ipv6Address source = header.GetSourceAddress();
+
+//	Ptr<Ipv6L3Protocol> pro =
+
+	//m_ipv6 ->GetNetDevice(0) ->GetA
+
+	std::cout << "Route output: Destination: " << destination << " Source: " << source << " Is RSU? " << m_IsRSU << std::endl;
 
 	Ptr<Ipv6Route> route;
 
 	if(m_IsRSU)
 	{
 		//Node is an RSU - Sending to VANET
+		std::cout << "RSU RECIEVED PACKET" << std::endl;
+		sockerr = Socket::ERROR_NOROUTETOHOST;
 	}else
 	{
 		//Node is a VANET Node
 		//Ipv6Address VanetNetwork = source.CombinePrefix(Ipv6Prefix())
-		route = Lookup(destination, oif);
 
+
+		if(destination.IsMulticast() || destination.IsLinkLocalMulticast() || destination.IsLinkLocal())
+		{
+			//Do nothing - do not route these protocols
+			//sockerr = Socket::ERROR_NOROUTETOHOST;
+			return route;
+		}else
+		{
+			route = Lookup(destination, oif);
+		}
 		/*
 		 * Set socket error type
 		 *
@@ -159,8 +234,8 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 		 */
 		if (route)
 		{
-			sockerr = Socket::ERROR_NOTERROR;
 
+			sockerr = Socket::ERROR_NOTERROR;
 
 			//Create thesis internet routing header and atatch to the packet
 
@@ -170,8 +245,14 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 			Vector velocity = mobility -> GetVelocity();
 			Time CurrentTime = Simulator::Now();
 			InternetHeader Ih(position,velocity,CurrentTime,m_IsDtnTolerant,position,velocity);
+/*
+			std::cout << "Route to destination: " << destination << " found" << std::endl;
+			std::cout << "Destination              Gateway                Interface" << std::endl;
+			std::cout << route ->GetDestination() << "     " << route -> GetGateway() << "   Interface Index: " << route->GetOutputDevice()->GetInstanceTypeId().GetName() << std::endl;
+*/
+			return route;
 
-			p ->AddHeader(Ih);
+//			p ->AddHeader(Ih);
 
 //			InternetHeader Ih2;
 //			p ->RemoveHeader(Ih2);
@@ -221,11 +302,13 @@ ThesisInternetRoutingProtocol::Lookup(Ipv6Address destination, Ptr<NetDevice> in
 			uint32_t interfaceIdx = route->GetInterface ();
 			rtentry = Create<Ipv6Route> ();
 
+
+			/*
 			if (route->GetGateway ().IsAny ())
 			{
 				rtentry->SetSource (m_ipv6->SourceAddressSelection (interfaceIdx, route->GetDest ()));
 			}
-			else if (route->GetDest ().IsAny ()) /* default route */
+			else if (route->GetDest ().IsAny ())
 					{
 				rtentry->SetSource (m_ipv6->SourceAddressSelection (interfaceIdx, route->GetPrefixToUse ().IsAny () ? destination : route->GetPrefixToUse ()));
 					}
@@ -233,17 +316,24 @@ ThesisInternetRoutingProtocol::Lookup(Ipv6Address destination, Ptr<NetDevice> in
 			{
 				rtentry->SetSource (m_ipv6->SourceAddressSelection (interfaceIdx, route->GetDest ()));
 			}
+			*/
 
-			rtentry->SetDestination (route->GetDest ());
+			rtentry -> SetSource(m_ipv6->SourceAddressSelection (interfaceIdx, route->GetDest ()));
+			rtentry->SetDestination (destination);
 			rtentry->SetGateway (route->GetGateway ());
 			rtentry->SetOutputDevice (m_ipv6->GetNetDevice (interfaceIdx));
-
 		}
 	}
 
 	if (rtentry)
 	{
-		NS_LOG_LOGIC ("Matching route via " << rtentry->GetDestination () << " (through " << rtentry->GetGateway () << ") at the end");
+		//NS_LOG_LOGIC ("Matching route to " << rtentry->GetDestination () << " (through " << rtentry->GetGateway () << ") at the end");
+		std::cout << "Route found, printing route properties: " << std::endl;
+		std::cout << "Destination:  " << rtentry ->GetDestination() << std::endl;
+		std::cout << "Gateway       " << rtentry-> GetGateway() << std::endl;
+		std::cout << "Source        " << rtentry -> GetSource() << std::endl;
+		std::cout << "Reference     " << rtentry ->GetReferenceCount() << std::endl;
+		std::cout << "Output Device " << rtentry -> GetOutputDevice() -> GetIfIndex() << std::endl;
 	}
 	return rtentry;
 }
@@ -270,6 +360,26 @@ void
 ThesisInternetRoutingProtocol::NotifyInterfaceDown (uint32_t interface)
 {
 	NS_LOG_FUNCTION(this << interface << "Int Down");
+
+
+	RoutesI it = m_routes.begin ();
+	while (it != m_routes.end ())
+	{
+		if(it -> first ->GetInterface() == interface)
+		{
+			it = m_routes.erase(it);
+		}else
+		{
+			it++;
+		}
+	}
+
+}
+
+void
+ThesisInternetRoutingProtocol::DeleteRoute(ThesisInternetRoutingTableEntry *route)
+{
+	NS_LOG_FUNCTION(this);
 }
 
 void
@@ -339,7 +449,39 @@ ThesisInternetRoutingProtocol::SetIsRSU(bool isRSU)
 void
 ThesisInternetRoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const
 {
-	//TODO
+	NS_LOG_FUNCTION (this << stream);
+	std::ostream* os = stream->GetStream ();
+
+	*os << "Node: " << m_ipv6->GetObject<Node> ()->GetId ()
+	      		<< " Time: " << Simulator::Now ().GetSeconds () << "s "
+	      		<< "Ipv6 RIPng table" << std::endl;
+
+	if (!m_routes.empty ())
+	{
+		*os << "Destination                    Next Hop                   Flag Met Ref Use If" << std::endl;
+		for (RoutesIC it = m_routes.begin (); it != m_routes.end (); it++)
+		{
+			ThesisInternetRoutingTableEntry* route = it->first;
+			//RipNgRoutingTableEntry::Status_e status = route->GetRouteStatus();
+
+			if (true)
+			{
+				std::ostringstream dest, gw, mask;
+
+				dest << route->GetDest () << "/" << int(route->GetDestNetworkPrefix ().GetPrefixLength ());
+				*os << std::setiosflags (std::ios::left) << std::setw (31) << dest.str ();
+				gw << route->GetGateway ();
+				*os << std::setiosflags (std::ios::left) << std::setw (27) << gw.str ();
+				*os << std::setiosflags (std::ios::left) << std::setw (4) << int(route->GetRouteMetric ());
+				// Ref ct not implemented
+				*os << "-" << "   ";
+				// Use not implemented
+				*os << "-" << "   ";
+				*os << route->GetInterface ();
+				*os << std::endl;
+			}
+		}
+	}
 }
 
 void
@@ -407,6 +549,11 @@ ThesisInternetRoutingProtocol::SetIpToZone()
 	std::cout << "Nearest RSU position: " << t1.GetRsuPosition() << std::endl;
 	std::cout << "Vanet node network based on position: " << network << std::endl;
 
+
+	Ptr<Ipv6L3Protocol> l3 = theNode ->GetObject<Ipv6L3Protocol>();
+
+	//Try to use Ipv6L3Protocol instead of ipv6 to reset interface addresses
+
 	for(uint32_t i = 0; i < m_ipv6 ->GetNInterfaces();i++)
 	{
 		for(uint32_t j = 0; j < m_ipv6 ->GetNAddresses(i);j++)
@@ -432,23 +579,89 @@ ThesisInternetRoutingProtocol::SetIpToZone()
 					 * 4. Remove old default route (If it exists)
 					 * 5. Set new default route.
 					 */
+/*
+					std::cout << "Set Down" << std::endl;
+					m_ipv6-> SetDown(i);
+					std::cout << "Remove Address" << " interface = " << i << " index= " << j << std::endl;
 					m_ipv6 ->RemoveAddress(i,j);
+					std::cout << "Add new address" << std::endl;
 					m_ipv6 -> AddAddress(i,newAddress);
-//					m_ipv6 ->SetUp(i); (CAUSES SIMULATION TO CRASH)
+					std::cout << "Set Up" << std::endl;
+					m_ipv6 -> SetUp(i); //(CAUSES SIMULATION TO CRASH)
 
 					//Remove default route
-					RemoveDefaultRoute();
+//					RemoveDefaultRoute();
 
-					uint32_t defaultPrefix = 0;
+					//NotifyInterfaceDown(i);
+					//NotifyInterfaceUp(i);
+
+					//uint32_t defaultPrefix = 0;
 					Ipv6Address nextHop = t1.GetRsuAddress();
-
-
 
 //					std::cout << "Attempting to add a default route " << " Is RSU? " << m_IsRSU << std::endl;
 					//Add default route
-					AddNetworkRouteTo(Ipv6Address("::"),Ipv6Prefix(defaultPrefix),nextHop,i,network);
-
+					//  AddNetworkRouteTo (Ipv6Address ("::"), Ipv6Prefix::GetZero (), nextHop, interface, Ipv6Address ("::"));
+		//			AddNetworkRouteTo(Ipv6Address("::"),Ipv6Prefix::GetZero(),nextHop,i,network);
+					AddNetworkRouteTo(Ipv6Address("::"),Ipv6Prefix::GetZero(),nextHop,i,Ipv6Address ("::"));
 //					std::cout << "ROUTE ADDED " << std::endl;
+ *
+ */
+					/*
+					 * 0. Remove all routes to this interface
+					 * 1. Get interface index for device
+					 * 2. Remove old address
+					 * 3. Add new address to interface
+					 * 4. Set interface to up
+					 * 5. Add default route
+					 * 6. Set loopback to up
+					 * 7. Add internet routes to this interface
+					 */
+
+					NotifyInterfaceDown(i);
+
+					std::cout << "Remove Address" << " interface = " << i << " index= " << j << std::endl;
+					m_ipv6 ->RemoveAddress(i,j);
+
+					std::cout << "Adding new address: " << newAddress << std::endl;
+					m_ipv6 -> AddAddress(i,newAddress);
+
+					std::cout << "Setting interface " << i << " to up" << std::endl;
+					m_ipv6 -> SetUp(i);
+
+					Ipv6Address nextHop = t1.GetRsuAddress();
+					std::cout << "Adding default route, next hop:  " << nextHop << std::endl;
+					AddNetworkRouteTo(Ipv6Address("::"),Ipv6Prefix::GetZero(),nextHop,i,Ipv6Address ("::"));
+
+					std::cout << "Setting loopback to up "<< std::endl;
+					m_ipv6 -> SetUp(0);
+
+					NotifyInterfaceUp(i);
+
+					//m_ipv6 -> GetNetDevice(i) ->Get
+		      //Ptr<Icmpv6L4Protocol> icmpv6 = ipv6->GetIcmpv6 ();
+		      Ptr<Icmpv6L4Protocol> icmpv6 = l3 ->GetIcmpv6();
+		      Ptr<NdiscCache> nCache = icmpv6 -> FindCache(m_ipv6->GetNetDevice(i));
+
+		      NdiscCache::Entry* nEntry = nCache -> Lookup(nextHop);
+
+		      if(nEntry)
+		      {
+		      	std::cout << "Neighbor Entry FOUND!!!!" << std::endl;
+		      }else
+		      {
+		      	//gateway neighbor not in cache; manually add to cache
+		      	std::cout << "Neighbor Entry NOT FOUND!!!!" << std::endl;
+
+		      	nEntry = nCache -> Add(nextHop);
+
+		      	nEntry -> SetRouter(true);
+		      	nEntry -> SetMacAddress(t1.GetRsuMacAddress());
+		      	nEntry -> MarkReachable();
+
+		      }
+
+					std::cout << "Address refreshed to current zone" << std::endl;
+
 					break;
 				}
 			}
@@ -457,6 +670,13 @@ ThesisInternetRoutingProtocol::SetIpToZone()
 
 	m_CheckPositionTimer.SetFunction(&ThesisInternetRoutingProtocol::SetIpToZone,this);
 	m_CheckPositionTimer.Schedule(m_CheckPosition);
+
+	Ptr<Node> node = GetObject<Node>();
+	Ptr<Ipv6Interface> i6 = node -> GetObject<Ipv6Interface>();
+
+	//i6 -> AddAddress();
+
+
 }
 
 void
@@ -474,6 +694,7 @@ ThesisInternetRoutingProtocol::RemoveDefaultRoute()
 
 		if(destination.IsEqual(defaultRouteAddress))
 		{
+			std::cout << " >>>>>>>>>>>>>>>> Attempting to remove route with destination: <<<<<<<<<<<<<" << destination << std::endl;
 			it = m_routes.erase(it);
 			return;
 		}

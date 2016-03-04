@@ -10,7 +10,8 @@
 namespace ns3
 {
 
-NS_LOG_COMPONENT_DEFINE("InternetHeader");
+NS_LOG_COMPONENT_DEFINE("ThesisInternetHeader");
+//NS_OBJECT_ENSURE_REGISTERED(InternetHeader);
 
 namespace thesis
 {
@@ -166,7 +167,7 @@ InternetHeader::Deserialize(Buffer::Iterator start)
 
 	uint32_t dist = i.GetDistanceFrom (start);
 
-	std::cout << "Distance from start: " << dist << std:: endl;
+	//std::cout << "Distance from start: " << dist << std:: endl;
 
 	NS_ASSERT (dist == GetSerializedSize ());
 	return dist;

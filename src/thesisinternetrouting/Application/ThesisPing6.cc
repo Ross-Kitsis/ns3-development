@@ -25,7 +25,7 @@
 namespace ns3
 {
 
-NS_LOG_COMPONENT_DEFINE ("ThesisPing6Application");
+NS_LOG_COMPONENT_DEFINE ("ThesisPing6");
 
 NS_OBJECT_ENSURE_REGISTERED (ThesisPing6);
 
@@ -95,14 +95,17 @@ ThesisPing6::StartApplication ()
 
   if (!m_socket)
     {
-      TypeId tid = TypeId::LookupByName ("ns3::Ipv6RawSocketFactory");
-      m_socket = Socket::CreateSocket (GetNode (), tid);
+      //TypeId tid = TypeId::LookupByName ("ns3::Ipv6RawSocketFactory");
+
+  		TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+  		m_socket = Socket::CreateSocket (GetNode (), tid);
 
       NS_ASSERT (m_socket);
 
       m_socket->Bind (Inet6SocketAddress (m_localAddress, 0));
-      m_socket->SetAttribute ("Protocol", UintegerValue (Ipv6Header::IPV6_ICMPV6));
+      //m_socket->SetAttribute ("Protocol", UintegerValue (Ipv6Header::IPV6_ICMPV6));
       m_socket->SetRecvCallback (MakeCallback (&ThesisPing6::HandleRead, this));
+
     }
 
   ScheduleTransmit (Seconds (0.));
@@ -185,6 +188,7 @@ ThesisPing6::Send ()
     }
 	*/
 
+  /*
   if(m_ifIndex > 0)
   {
   	Ptr<Ipv6> ipv6 = GetNode() ->GetObject<Ipv6>();
@@ -196,9 +200,24 @@ ThesisPing6::Send ()
   			src = srcAdd;
   		}
   	}
+  }*/
+
+
+  for(uint32_t i = 0; i < ipv6 ->GetNInterfaces();i++)
+  {
+  	for(uint32_t j = 0; j < ipv6 ->GetNAddresses(i); j++)
+  	{
+  		Ipv6Address srcAdd = ipv6 ->GetAddress(i,j).GetAddress();
+  		if(!srcAdd.IsLinkLocal())
+  		{
+  			src = srcAdd;
+  			break;
+  		}
+  	}
   }
 
-  std::cout << "Source address used to send: " << src << std::endl;
+  std::cout << "PING >>>>>>>>>>>>>>>>> Source address used to send: " << src << std::endl;
+  std::cout << "PING >>>>>>>>>>>>>>>>> Destination address sending to: " << m_peerAddress << std::endl;
 
   NS_ASSERT_MSG (m_size >= 4, "ICMPv6 echo request payload size must be >= 4");
   data[0] = 0xDE;
@@ -208,20 +227,28 @@ ThesisPing6::Send ()
 
   p = Create<Packet> (data, 4);
   p->AddAtEnd (Create<Packet> (m_size - 4));
+
+  /*
+
   Icmpv6Echo req (1);
 
   req.SetId (0xBEEF);
   req.SetSeq (m_seq);
   m_seq++;
 
-  /* we do not calculate pseudo header checksum here, because we are not sure about
-   * source IPv6 address. Checksum is calculated in Ipv6RawSocketImpl.
-   */
+// we do not calculate pseudo header checksum here, because we are not sure about
+// source IPv6 address. Checksum is calculated in Ipv6RawSocketImpl.
 
   p->AddHeader (req);
-  m_socket->Bind (Inet6SocketAddress (src, 0));
+  */
 
-  /* use Loose Routing (routing type 0) */
+  //m_socket->BindToNetDevice()
+
+  int bindResult = m_socket->Bind (Inet6SocketAddress (src, 0));
+
+  std::cout << " >>>>>>>>>>>>>>>>>>> BIND RESULT : " << bindResult << std::endl;
+
+  /* use Loose Routing (routing type 0)
   if (m_routers.size ())
     {
       Ipv6ExtensionLooseRoutingHeader routingHeader;
@@ -232,6 +259,7 @@ ThesisPing6::Send ()
       p->AddHeader (routingHeader);
       m_socket->SetAttribute ("Protocol", UintegerValue (Ipv6Header::IPV6_EXT_ROUTING));
     }
+    */
 
   m_socket->SendTo (p, 0, Inet6SocketAddress (m_peerAddress, 0));
   ++m_sent;
