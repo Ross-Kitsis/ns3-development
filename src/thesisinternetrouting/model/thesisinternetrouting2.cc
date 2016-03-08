@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
-#include "thesisinternetrouting.h"
+#include "thesisinternetrouting2.h"
 #include "ns3/ipv6-route.h"
 
 #include <iomanip>
@@ -15,71 +15,11 @@
 namespace ns3
 {
 
-NS_LOG_COMPONENT_DEFINE("ThesisInternetRoutingProtocol");
+NS_LOG_COMPONENT_DEFINE("ThesisInternetRoutingProtocol2");
 
 namespace thesis
 {
 NS_OBJECT_ENSURE_REGISTERED(ThesisInternetRoutingProtocol);
-
-//------------------------------------------------------------------
-
-class DeferredRouteOutputTag : public Tag
-{
-public:
-  DeferredRouteOutputTag (int32_t o = -1) : Tag (), m_oif (o) {}
-
-  static TypeId GetTypeId ()
-  {
-    static TypeId tid = TypeId ("ns3::thesis::DeferredRouteOutputTag")
-      .SetParent<Tag> ()
-      .SetGroupName("thesis")
-      .AddConstructor<DeferredRouteOutputTag> ()
-    ;
-    return tid;
-  }
-
-  TypeId  GetInstanceTypeId () const
-    {
-      return GetTypeId ();
-    }
-
-    int32_t GetInterface() const
-    {
-      return m_oif;
-    }
-
-    void SetInterface(int32_t oif)
-    {
-      m_oif = oif;
-    }
-
-    uint32_t GetSerializedSize () const
-    {
-      return sizeof(int32_t);
-    }
-
-    void  Serialize (TagBuffer i) const
-    {
-      i.WriteU32 (m_oif);
-    }
-
-    void  Deserialize (TagBuffer i)
-    {
-      m_oif = i.ReadU32 ();
-    }
-
-    void  Print (std::ostream &os) const
-    {
-      os << "DeferredRouteOutputTag: output interface = " << m_oif;
-    }
-
-  private:
-    /// Positive if output device is fixed in RouteOutput
-    int32_t m_oif;
-};
-
-NS_OBJECT_ENSURE_REGISTERED (DeferredRouteOutputTag);
-
 
 //Constructor
 ThesisInternetRoutingProtocol::ThesisInternetRoutingProtocol() :
@@ -127,51 +67,13 @@ ThesisInternetRoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header
 {
   NS_LOG_FUNCTION (this << p << header << header.GetSourceAddress () << header.GetDestinationAddress () << idev);
 
-	std::cout << "ROUTE INPUT" << std::endl;
-
-	//Copy passed packet to a new packet
-	Ptr<Packet> packet = p -> Copy();
-
-	std::cout << ">>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
-
-  uint32_t iif = (idev ? m_ipv6->GetInterfaceForDevice (idev) : -1);
-	DeferredRouteOutputTag tag(iif);
-	if(!packet->PeekPacketTag(tag))
-	{
-		std::cout << "Peek finished in route input - No tag" << std::endl;
-		//p -> AddPacketTag(tag);
-	}else if(packet->PeekPacketTag(tag))
-	{
-		std::cout << "Peek finished in route input - tag found" << std::endl;
-	}
-
-
-/* OLD CODE
-
-  std::cout << "ROUTE INPUT---------------------------------" << std::endl;
-  p -> Print(std::cout);
-  std::cout << "--------------------------------------------" << std::endl;
-
-
-
-//	std::cout << "ROUTE INPUT - receieved packet with size: " << p->GetSerializedSize()  << std::endl;
-
-
-  //Copy packet to remove const
-	Ptr<Packet> packet = p -> Copy();
-
-//	std::cout << "ROUTE INPUT - copy size: " << packet->GetSerializedSize()  << std::endl;
-
   mcast::TypeHeader tHeader(mcast::HELLO);
-//  packet->PeekHeader(tHeader);
+  p->PeekHeader(tHeader);
 
-//	std::cout << "ROUTE INPUT - copy size after peek: " << packet->GetSerializedSize()  << std::endl;
-
-//  std::cout << "-- ROUTE INPUT: Header type: " << tHeader.Get() << std::endl;
+  std::cout << "-- ROUTE INPUT: Header type: " << tHeader.Get() << std::endl;
 
   if(tHeader.Get() == 3)
   {
-  	std::cout << "TYPE HEADER 3 FOUND IN ROUTE INPUT" << std::endl;
   	//Internet packet (Based on type header)
   	if(m_IsRSU)
   	{
@@ -186,8 +88,6 @@ ThesisInternetRoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header
   	//Non-internet routing protocol - Possibly mcast or query
   	return false;
   }
-  */
-  return true;
 }
 
 bool
@@ -314,59 +214,6 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 	Ipv6Address destination = header.GetDestinationAddress();
 	Ipv6Address source = header.GetSourceAddress();
 
-  sockerr = Socket::ERROR_NOTERROR;
-  Ptr<Ipv6Route> route;
-
-  route = Lookup(destination,oif);
-
-  //Found a route, don't send yet though
-  //Send to loopback interface to allow packet to correctly form
-  //Recieve packet from loopback interface in RouteInput and then add headers or
-  //make routing decisions
-
-  if(route)
-  {
-  	//Found a valid route (Send to loopback for further processing)
-    uint32_t iif = (oif ? m_ipv6->GetInterfaceForDevice (oif) : -1);
-  	DeferredRouteOutputTag tag(iif);
-  	NS_LOG_LOGIC("Route found - adding deferred tag to allow processing at input");
-  	if(!p->PeekPacketTag(tag))
-  	{
-  		std::cout << "Peek finished - No tag" << std::endl;
-  		p -> AddPacketTag(tag);
-  	}
-
-  	std::cout << "Added packet tag" << std::endl;
-
-  	//return Lookup(Ipv6Address::GetLoopback(),oif);
-
-  	std::cout << ">>>>>>>>>> ROUTE OUTPUT RETURNING LOOPBACK ROUTE WITH FOLLOWING PROPERTIES <<<<<<<<<<<<<<<<<<" << std::endl;
-
-  	std::cout << "Original destination: " << destination << std::endl;
-  	std::cout << "Original source     : " << source << std::endl;
-
-  	Ptr<Ipv6Route> rtentry = Create<Ipv6Route> ();
-  	rtentry -> SetDestination(destination);
-  	rtentry -> SetGateway(Ipv6Address::GetLoopback());
-  	rtentry -> SetOutputDevice(m_lo);
-  	rtentry -> SetSource(m_ipv6 -> GetAddress(1,1).GetAddress());
-
-		std::cout << "Destination:  " << rtentry ->GetDestination() << std::endl;
-		std::cout << "Gateway       " << rtentry-> GetGateway() << std::endl;
-		std::cout << "Source        " << rtentry -> GetSource() << std::endl;
-		std::cout << "Output Device " << rtentry -> GetOutputDevice() -> GetIfIndex() << std::endl;
-
-  	std::cout << ">>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
-
-  	return rtentry;
-  }else
-  {
-  	//No valid route route - drop
-  	sockerr = Socket::ERROR_NOROUTETOHOST;
-  	return route;
-  }
-
-	/*
 	std::cout << "Route output: Destination: " << destination << " Source: " << source << " Is RSU? " << m_IsRSU << std::endl;
 
 	Ptr<Ipv6Route> route;
@@ -388,7 +235,7 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 		}else
 		{
 			route = Lookup(destination, oif);
-		}*/
+		}
 		/*
 		 * Set socket error type
 		 *
@@ -396,10 +243,9 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 		 * No route found - No route to host
 		 *
 		 */
-	/*
 		if (route)
 		{
-
+			/*
 			 * Check if packet has been tagged with internet header previously
 			 *
 			 * Yes - Packet has already been sent by an thesisinternet router and header has already been attached
@@ -411,7 +257,7 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 
 
 
-/*
+
 			sockerr = Socket::ERROR_NOTERROR;
 
 			//Create thesis internet routing header and atatch to the packet
@@ -422,34 +268,29 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 			Vector velocity = mobility -> GetVelocity();
 			Time CurrentTime = Simulator::Now();
 
+			std::cout << "Packet size in bytes: " << std::endl;
+
 	  		//No type header - assume no internet header
 				InternetHeader Ih(position,velocity,CurrentTime,m_IsDtnTolerant,position,velocity);
 
 				//Add InternetHeader containing information needed to route to the nearest RSU
 //				p ->AddHeader(Ih);
 
-
-				std::cout << "Packet size in bytes during route output BEFORE adding type header: " << p->GetSerializedSize()  << std::endl;
 		  	//Add type header notifying all other recipients of the packet type
 		  	mcast::TypeHeader theader (mcast::INTERNET);
 		  	p->AddHeader(theader);
 
 
-				std::cout << "Packet size in bytes during route output AFTER adding type header: " << p->GetSerializedSize()  << std::endl;
-
+			/*
+			std::cout << "Route to destination: " << destination << " found" << std::endl;
+			std::cout << "Destination              Gateway                Interface" << std::endl;
+			std::cout << route ->GetDestination() << "     " << route -> GetGateway() << "   Interface Index: " << route->GetOutputDevice()->GetInstanceTypeId().GetName() << std::endl;
+			 */
 
 	  //	mcast::TypeHeader test (mcast::HELLO);
 	  //	p -> PeekHeader(test);
 
 	  //	std::cout << "Route output completed with finished route, adding type header " << test.Get() << std::endl;
-
-
-
-				std::cout << "ROUTE OUTPUT<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
-				p -> Print(std::cout);
-				std::cout << std::endl;
-				std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
-
 		}
 		else
 		{
@@ -457,10 +298,6 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 		}
 	}
 	return route;
-	*/
-
-	return route;
-
 }
 
 Ptr<Ipv6Route>
@@ -533,75 +370,6 @@ ThesisInternetRoutingProtocol::Lookup(Ipv6Address destination, Ptr<NetDevice> in
 		std::cout << "Reference     " << rtentry ->GetReferenceCount() << std::endl;
 		std::cout << "Output Device " << rtentry -> GetOutputDevice() -> GetIfIndex() << std::endl;
 	}
-	return rtentry;
-}
-
-Ptr<Ipv6Route>
-ThesisInternetRoutingProtocol::LookupLoopback(Ipv6Address destination, Ptr<NetDevice> interface)
-{
-	NS_LOG_FUNCTION (this << destination << interface);
-
-	Ptr<Ipv6Route> rtentry = 0;
-	uint16_t longestMask = 0;
-
-	for(RoutesI it = m_routes.begin(); it != m_routes.end(); it++)
-	{
-		ThesisInternetRoutingTableEntry* j = it -> first;
-
-		Ipv6Prefix mask = j->GetDestNetworkPrefix ();
-		uint16_t maskLen = mask.GetPrefixLength ();
-		Ipv6Address entry = j->GetDestNetwork ();
-
-		NS_LOG_LOGIC ("Searching for route to " << destination << ", mask length " << maskLen);
-
-		if(mask.IsMatch(destination,entry))
-		{
-			NS_LOG_LOGIC ("Found global network route " << j << ", mask length " << maskLen);
-
-			/* if interface is given, check the route will output on this interface */
-			if (!interface || interface == m_ipv6->GetNetDevice (j->GetInterface ()))
-			{
-				if (maskLen < longestMask)
-				{
-					NS_LOG_LOGIC ("Previous match longer, skipping");
-					continue;
-				}
-			}
-			longestMask = maskLen;
-
-			//Ipv6RoutingTableEntry* route = j;
-			//uint32_t interfaceIdx = route->GetInterface ();
-			rtentry = Create<Ipv6Route> ();
-
-			for(uint32_t i = 0; i < m_ipv6 ->GetNInterfaces();i++)
-			{
-				for(uint32_t j = 0; j < m_ipv6 ->GetNAddresses(i);j++)
-				{
-					Ipv6Address currentAdd = m_ipv6 -> GetAddress(i,j).GetAddress();
-					if(!currentAdd.IsMulticast() || !currentAdd.IsLinkLocal())
-					{
-						rtentry -> SetSource(currentAdd);
-					}
-				}
-			}
-
-			rtentry->SetDestination (destination);
-			rtentry->SetGateway (Ipv6Address::GetLoopback());
-			rtentry->SetOutputDevice (m_lo);
-		}
-	}
-
-	if (rtentry)
-	{
-		//NS_LOG_LOGIC ("Matching route to " << rtentry->GetDestination () << " (through " << rtentry->GetGateway () << ") at the end");
-		std::cout << "Route found, printing route properties: " << std::endl;
-		std::cout << "Destination:  " << rtentry ->GetDestination() << std::endl;
-		std::cout << "Gateway       " << rtentry-> GetGateway() << std::endl;
-		std::cout << "Source        " << rtentry -> GetSource() << std::endl;
-		std::cout << "Reference     " << rtentry ->GetReferenceCount() << std::endl;
-		std::cout << "Output Device " << rtentry -> GetOutputDevice() -> GetIfIndex() << std::endl;
-	}
-
 	return rtentry;
 }
 /*
@@ -698,13 +466,6 @@ ThesisInternetRoutingProtocol::SetIpv6 (Ptr<Ipv6> ipv6)
 			NotifyInterfaceDown (i);
 		}
 	}
-
-	//Set pointer to loopback netdevice
-	m_lo = m_ipv6 ->GetNetDevice(0);
-
-	//Create loopback route
-	AddNetworkRouteTo (Ipv6Address::GetLoopback(), Ipv6Prefix::GetOnes(), 1);
-
 }
 
 void

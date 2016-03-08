@@ -42,7 +42,7 @@ namespace ns3
 namespace thesis
 {
 
-class ThesisInternetRoutingTableEntry : public Ipv6RoutingTableEntry
+class ThesisInternetRoutingTableEntry2 : public Ipv6RoutingTableEntry
 {
 public:
 	/*
@@ -54,7 +54,7 @@ public:
 		ROUTE_INVALID,
 	};
 
-	ThesisInternetRoutingTableEntry (void);
+	ThesisInternetRoutingTableEntry2 (void);
 
 	/**
 	 * \brief Constructor
@@ -64,7 +64,7 @@ public:
 	 * \param interface interface index
 	 * \param prefixToUse prefix that should be used for source address for this destination
 	 */
-	ThesisInternetRoutingTableEntry (Ipv6Address network, Ipv6Prefix networkPrefix, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse);
+	ThesisInternetRoutingTableEntry2 (Ipv6Address network, Ipv6Prefix networkPrefix, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse);
 
 	/**
 	 * \brief Constructor
@@ -72,9 +72,9 @@ public:
 	 * \param networkPrefix network prefix
 	 * \param interface interface index
 	 */
-	ThesisInternetRoutingTableEntry (Ipv6Address network, Ipv6Prefix networkPrefix, uint32_t interface);
+	ThesisInternetRoutingTableEntry2 (Ipv6Address network, Ipv6Prefix networkPrefix, uint32_t interface);
 
-	virtual ~ThesisInternetRoutingTableEntry ();
+	virtual ~ThesisInternetRoutingTableEntry2 ();
 
 	/**
 	 * \brief Set the route tag
@@ -138,11 +138,11 @@ private:
 
 };
 
-class ThesisInternetRoutingProtocol : public Ipv6RoutingProtocol
+class ThesisInternetRoutingProtocol2 : public Ipv6RoutingProtocol
 {
 public:
-	ThesisInternetRoutingProtocol();
-	virtual ~ThesisInternetRoutingProtocol();
+	ThesisInternetRoutingProtocol2();
+	virtual ~ThesisInternetRoutingProtocol2();
 
 	static TypeId GetTypeId(void);
 
@@ -246,7 +246,7 @@ protected:
 	 * Schedule deletion of routes when an IP address is changed
 	 *
 	 */
-	void DeleteRoute(ThesisInternetRoutingTableEntry *route);
+	void DeleteRoute(ThesisInternetRoutingTableEntry2 *route);
 
 private:
 
@@ -265,19 +265,14 @@ private:
 	 */
 	bool m_hasMcast;
 
-	/**
-	 * Pointer to the loopback netdevice
-	 */
-	Ptr<NetDevice> m_lo;
-
 	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)
-	typedef std::list<std::pair <ThesisInternetRoutingTableEntry *, EventId> > Routes;
+	typedef std::list<std::pair <ThesisInternetRoutingTableEntry2 *, EventId> > Routes;
 
 	//Iterator for routes
-  typedef std::list<std::pair <ThesisInternetRoutingTableEntry *, EventId> >::iterator RoutesI;
+  typedef std::list<std::pair <ThesisInternetRoutingTableEntry2 *, EventId> >::iterator RoutesI;
 
 	//Const Iterator for routes
-  typedef std::list<std::pair <ThesisInternetRoutingTableEntry *, EventId> >::const_iterator RoutesIC;
+  typedef std::list<std::pair <ThesisInternetRoutingTableEntry2 *, EventId> >::const_iterator RoutesIC;
 
 
 	Routes m_routes; //!<  the forwarding table for network.
@@ -303,13 +298,6 @@ private:
 	 *
 	 */
 	Ptr<Ipv6Route> Lookup(Ipv6Address destination, Ptr<NetDevice>);
-
-	/**
-	 * used to form routes to destination through the loopback interface
-	 * Required to add the additional headers
-	 *
-	 */
-	Ptr<Ipv6Route> LookupLoopback(Ipv6Address destination, Ptr<NetDevice>);
 
 	/**
 	 * Flag controlling if messages are delay tolerant

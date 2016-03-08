@@ -279,6 +279,8 @@ ThesisPing6::HandleRead (Ptr<Socket> socket)
 {
   NS_LOG_FUNCTION (this << socket);
 
+  /*
+
   Ptr<Packet> packet=0;
   Address from;
   while ((packet = socket->RecvFrom (from)))
@@ -322,6 +324,7 @@ ThesisPing6::HandleRead (Ptr<Socket> socket)
             }
         }
     }
+    */
 }
 
 
