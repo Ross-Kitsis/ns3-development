@@ -132,19 +132,115 @@ ThesisInternetRoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header
 	//Copy passed packet to a new packet
 	Ptr<Packet> packet = p -> Copy();
 
-	std::cout << ">>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
-  uint32_t iif = (idev ? m_ipv6->GetInterfaceForDevice (idev) : -1);
-	DeferredRouteOutputTag tag(iif);
-	if(!packet->PeekPacketTag(tag))
+	//Input device was loopback; only packets coming through loopback should be deferred
+	if(idev == m_lo)
 	{
-		std::cout << "Peek finished in route input - No tag" << std::endl;
-		//p -> AddPacketTag(tag);
-	}else if(packet->PeekPacketTag(tag))
+
+		if(m_IsRSU)
+		{
+			std::cout << "RSU REV ON LOOPBACK <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+		}else
+		{
+			std::cout << "VANET RECV ON LOOPBACK <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+		}
+
+		std::cout << ">>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+
+		uint32_t iif = (idev ? m_ipv6->GetInterfaceForDevice (idev) : -1);
+		DeferredRouteOutputTag tag(iif);
+		if(packet->PeekPacketTag(tag))
+		{
+			std::cout << "Peek finished; deferred tag found, remove and start IR" << std::endl;
+		}
+
+		//Remove DR tag
+		packet -> RemovePacketTag(tag);
+
+		int32_t forCurrentNode = m_ipv6 -> GetInterfaceForAddress(header.GetDestinationAddress());
+		if(!(forCurrentNode == -1))
+		{
+			//For current Node
+      lcb (packet, header, iif);
+      return true;
+		}
+
+		//Create new typeHeader
+  	mcast::TypeHeader theader (mcast::INTERNET);
+
+  	//Get mobility model properties and extract values needed for header
+		Ptr<MobilityModel> mobility = m_ipv6 -> GetObject<MobilityModel>();
+
+		Vector position = mobility -> GetPosition();
+		Vector velocity = mobility -> GetVelocity();
+		Time CurrentTime = Simulator::Now();
+
+		//Instantiate new ThesisInternetRouting header.
+		InternetHeader Ih(position,velocity,CurrentTime,m_IsDtnTolerant,position,velocity);
+
+		//Add headers; IH first than type, read in reverse order on receving end
+		packet -> AddHeader(Ih);
+
+		packet -> AddHeader(theader);
+
+		//Find actual route to send packet, send using UCB callback
+	  Ptr<Ipv6Route> route;
+	  Ipv6Address destination = header.GetDestinationAddress();
+	  Ipv6Address source = header.GetSourceAddress();
+
+	  std::cout << "Interface " << tag.GetInterface() << " Source" << source << std::endl;
+
+	  Ptr<NetDevice> ndev = m_ipv6->GetNetDevice(m_ipv6 -> GetInterfaceForAddress(source));
+	  route = Lookup(destination,ndev);
+
+	  //Found route; forward along
+	  if(route)
+	  {
+  		std::cout << ">>>>>>>>>>CALLBACK SET - ROUTE INPUT FINISHED<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+      std::cout << "Sending on interface " << m_ipv6 -> GetInterfaceForAddress(source) << std::endl;
+
+  		ucb (ndev,route, packet, header);
+	  	return true;
+	  }else
+	  {
+	  	ecb(packet,header,Socket::ERROR_NOROUTETOHOST);
+	  	return false;
+	  }
+		std::cout << ">>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+	}else
 	{
-		std::cout << "Peek finished in route input - tag found" << std::endl;
+		//Input device was not loopback; packet must have been received on another interface
+		//Handle using regular routing logic
+
+		if(m_IsRSU)
+		{
+			std::cout << "RSU REV ON NONLOOPBACK <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+		}else
+		{
+			std::cout << "VANET RECV ON NONLOOPBACK <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+		}
+
+		std::cout << "Input device not loopback" << std::endl;
+		int32_t forCurrentNode = m_ipv6 -> GetInterfaceForAddress(header.GetDestinationAddress());
+		if(!(forCurrentNode == -1))
+		{
+			//For current Node
+      lcb (packet, header, forCurrentNode);
+  		std::cout << "DELIVERING PACKET TO LOCAL NODE" << std::endl;
+      return true;
+		}
+
+		//Check if this node sent the packet
+		int32_t FromCurrentNode = m_ipv6 -> GetInterfaceForAddress(header.GetSourceAddress());
+		if(!(FromCurrentNode == -1))
+		{
+			//Duplicate packet; already sent by this node
+			std::cout << "Packet sent by this node not on loopback; drop" << std::endl;
+			return false;
+		}
+
+		std::cout << "PACKET NOT FOR CURRENT NODE; CONTINUE PROCESSING" << std::endl;
 	}
-
 
 /* OLD CODE
 
@@ -309,6 +405,8 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 		Socket::SocketErrno &sockerr)
 {
 
+	std::cout << " ------- Running route output ------------" << std::endl;
+
 	NS_LOG_FUNCTION("   " << this << header << oif);
 
 	Ipv6Address destination = header.GetDestinationAddress();
@@ -327,7 +425,7 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
   if(route)
   {
   	//Found a valid route (Send to loopback for further processing)
-    uint32_t iif = (oif ? m_ipv6->GetInterfaceForDevice (oif) : -1);
+    uint32_t iif = m_ipv6->GetInterfaceForDevice (oif);
   	DeferredRouteOutputTag tag(iif);
   	NS_LOG_LOGIC("Route found - adding deferred tag to allow processing at input");
   	if(!p->PeekPacketTag(tag))
@@ -342,6 +440,7 @@ ThesisInternetRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &hea
 
   	std::cout << ">>>>>>>>>> ROUTE OUTPUT RETURNING LOOPBACK ROUTE WITH FOLLOWING PROPERTIES <<<<<<<<<<<<<<<<<<" << std::endl;
 
+  	std::cout << "Output Interface (OIF): " << m_ipv6->GetInterfaceForDevice(oif) << std::endl;
   	std::cout << "Original destination: " << destination << std::endl;
   	std::cout << "Original source     : " << source << std::endl;
 
@@ -700,10 +799,10 @@ ThesisInternetRoutingProtocol::SetIpv6 (Ptr<Ipv6> ipv6)
 	}
 
 	//Set pointer to loopback netdevice
-	m_lo = m_ipv6 ->GetNetDevice(0);
+	m_lo = m_ipv6 -> GetNetDevice(m_ipv6 -> GetInterfaceForAddress(Ipv6Address::GetLoopback()));
 
 	//Create loopback route
-	AddNetworkRouteTo (Ipv6Address::GetLoopback(), Ipv6Prefix::GetOnes(), 1);
+	AddNetworkRouteTo (Ipv6Address::GetLoopback(), Ipv6Prefix::GetOnes(), m_ipv6 -> GetInterfaceForAddress(Ipv6Address::GetLoopback()));
 
 }
 
@@ -904,10 +1003,14 @@ ThesisInternetRoutingProtocol::SetIpToZone()
 
 					Ipv6Address nextHop = t1.GetRsuAddress();
 					std::cout << "Adding default route, next hop:  " << nextHop << std::endl;
-					AddNetworkRouteTo(Ipv6Address("::"),Ipv6Prefix::GetZero(),nextHop,i,Ipv6Address ("::"));
+
+					uint32_t interface = m_ipv6 -> GetInterfaceForAddress(newAddress);
+
+					AddNetworkRouteTo(Ipv6Address("::"),Ipv6Prefix::GetZero(),nextHop,interface,Ipv6Address ("::"));
 
 					std::cout << "Setting loopback to up "<< std::endl;
 					m_ipv6 -> SetUp(0);
+					m_ipv6 -> SetUp(1);
 
 					NotifyInterfaceUp(i);
 

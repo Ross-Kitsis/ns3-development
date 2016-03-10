@@ -74,6 +74,18 @@ public:
 	 */
 	ThesisInternetRoutingTableEntry2 (Ipv6Address network, Ipv6Prefix networkPrefix, uint32_t interface);
 
+	/**
+	 * \brief Constructor
+	 * \param network network address
+	 * \param networkPrefix network prefix
+	 * \param nextHop next hop address to route the packet
+	 * \param interface interface index
+	 * \param prefixToUse prefix that should be used for source address for this destination
+	 * \param RSU address where to stop routing
+	 */
+	ThesisInternetRoutingTableEntry2 (Ipv6Address network, Ipv6Prefix networkPrefix, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse, Ipv6Address RsuAddress);
+
+
 	virtual ~ThesisInternetRoutingTableEntry2 ();
 
 	/**
@@ -130,11 +142,22 @@ public:
 	 */
 	Status_e GetRouteStatus (void) const;
 
+	/**
+	 * \brief Set the RSU address
+	 */
+	void SetRsuAddress(Ipv6Address RsuAddress);
+
+	/**
+	 * \brief Get RSU address
+	 */
+	Ipv6Address GetRsuAddress(void) const;
+
 private:
 	uint16_t m_tag; //!< route tag
 	uint8_t m_metric; //!< route metric
 	Status_e m_status; //!< route status
 	bool m_changed; //!< route has been updated
+	Ipv6Address m_RsuAddress;
 
 };
 
@@ -181,8 +204,18 @@ public:
    */
   void AddNetworkRouteTo (Ipv6Address network, Ipv6Prefix networkPrefix, uint32_t interface);
 
+  /**
+   * \brief Add route to network.
+   * \param network network address
+   * \param networkPrefix network prefix
+   * \param nextHop next hop address to route the packet.
+   * \param interface interface index
+   * \param prefixToUse prefix that should be used for source address for this destination
+   * \param RSU address where routing is being directed towards
+   */
+  void AddNetworkRouteTo (Ipv6Address network, Ipv6Prefix networkPrefix, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse, Ipv6Address RsuAddress);
 
-	/**
+  /**
 	 *\brief Sets the node IP based on the current zone
 	 *\brief Initial address MUST be bootstrapped with a dummy IPv6 address
 	 *\brief Address will be changed once simulation starts.
@@ -265,6 +298,11 @@ private:
 	 */
 	bool m_hasMcast;
 
+	/**
+	 * Pointer to the loopback netdevice
+	 */
+	Ptr<NetDevice> m_lo;
+
 	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)
 	typedef std::list<std::pair <ThesisInternetRoutingTableEntry2 *, EventId> > Routes;
 
@@ -305,6 +343,12 @@ private:
 	 * Set to false by default.
 	 */
 	bool m_IsDtnTolerant;
+
+	/**
+	 * Current RSU address; set by the lookuo method
+	 * Used to determine where the packet is being routed towards
+	 */
+	Ipv6Address m_RsuDestination;
 };
 
 }
