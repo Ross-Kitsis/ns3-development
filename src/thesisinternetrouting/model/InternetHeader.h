@@ -8,6 +8,7 @@
 #ifndef SRC_THESISINTERNETROUTING_MODEL_INTERNETHEADER_H_
 #define SRC_THESISINTERNETROUTING_MODEL_INTERNETHEADER_H_
 
+#include <iostream>
 #include "ns3/vector.h"
 #include "ns3/nstime.h"
 #include "ns3/header.h"
@@ -60,8 +61,9 @@ namespace thesis
 class InternetHeader : public Header
 {
 public:
-	InternetHeader(Vector m_position = Vector(), Vector m_velocity = Vector(), Time m_timestamp = Time(),
-								 bool m_isDtnTolerant = false, Vector m_SenderPosition = Vector(), Vector m_SenderVelocity = Vector());
+	InternetHeader(Vector m_OriginPosition = Vector(), Vector m_OriginVelocity = Vector(), Time m_timestamp = Time(),
+								 bool m_isDtnTolerant = false, Vector m_SenderPosition = Vector(), Vector m_SenderVelocity = Vector(),
+								 Ipv6Address m_RsuAddress = Ipv6Address());
 
 	virtual ~InternetHeader();
 
@@ -80,11 +82,11 @@ public:
 	void Print(std::ostream &os) const;
 
 	//Fields
-	void SetSourceVelocity(Vector v) {m_velocity = v;}
-	Vector GetSourceVelocity() {return m_velocity;}
+	void SetSourceVelocity(Vector v) {m_OriginVelocity = v;}
+	Vector GetSourceVelocity() {return m_OriginVelocity;}
 
-	void SetSourcePosition(Vector p) {m_position = p;}
-	Vector GetSourcePosition() {return m_position;}
+	void SetSourcePosition(Vector p) {m_OriginPosition = p;}
+	Vector GetSourcePosition() {return m_OriginPosition;}
 
 	void SetTimestamp(Time t) {m_timestamp = t;}
 	Time GetTimestamp() {return m_timestamp;}
@@ -105,12 +107,12 @@ private:
 	/*
 	 * Position of source node
 	 */
-	Vector m_position;
+	Vector m_OriginPosition;
 
 	/*
 	 * Velocity of source node
 	 */
-	Vector m_velocity;
+	Vector m_OriginVelocity;
 
 	/*
 	 * Timestamp of when the initial message was sent
@@ -134,6 +136,10 @@ private:
 	 */
 	Vector m_SenderVelocity;
 
+	/**
+	 * Ipv6Address of RSU destination
+	 */
+	Ipv6Address m_RsuAddress;
 };
 } /*namesaoce thesisinternet*/
 } /* namespace ns3 */

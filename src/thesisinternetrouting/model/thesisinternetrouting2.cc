@@ -130,7 +130,6 @@ ThesisInternetRoutingProtocol2::RouteInput (Ptr<const Packet> p, const Ipv6Heade
 	//Input device was loopback; only packets coming through loopback should be deferred
 	if(idev == m_lo)
 	{
-
 		if(m_IsRSU)
 		{
 			std::cout << "RSU REV ON LOOPBACK <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
@@ -169,8 +168,21 @@ ThesisInternetRoutingProtocol2::RouteInput (Ptr<const Packet> p, const Ipv6Heade
 		Vector velocity = mobility -> GetVelocity();
 		Time CurrentTime = Simulator::Now();
 
+		/*
+
+		 	InternetHeader(Vector m_OriginPosition = Vector(), Vector m_OriginVelocity = Vector(), Time m_timestamp = Time(),
+								 bool m_isDtnTolerant = false, Vector m_SenderPosition = Vector(), Vector m_SenderVelocity = Vector(),
+								 Ipv6Address m_RsuAddress = Ipv6Address());
+
+		 */
+
+
 		//Instantiate new ThesisInternetRouting header.
 		InternetHeader Ih(position,velocity,CurrentTime,m_IsDtnTolerant,position,velocity);
+
+		std::cout << "Sending IH position:  " << position << std::endl;
+		std::cout << "Sending IH velocity " << velocity  << std::endl;
+		std::cout << "Sending IH currentTime" << CurrentTime  << std::endl;
 
 		//Add headers; IH first than type, read in reverse order on receving end
 		packet -> AddHeader(Ih);
@@ -199,7 +211,25 @@ ThesisInternetRoutingProtocol2::RouteInput (Ptr<const Packet> p, const Ipv6Heade
 
 	}else
 	{
-		std::cout << ">>>>> REC packet on a non-loopback interface, Type of node: " << m_IsRSU << std::endl;
+		//std::cout << ">>>>> REC packet on a non-loopback interface, Type of node: " << m_IsRSU << std::endl;
+
+		std::cout << "Removing type header" << std::endl;
+		//Create new typeHeader and peek
+		mcast::TypeHeader theader (mcast::HELLO);
+		packet -> PeekHeader(theader);
+		if(theader.Get() == 3)
+		{
+			//Received type header of type internet
+			packet -> RemoveHeader(theader);
+			std::cout << "Type header with type: " << theader.Get() << std::cout;
+
+			InternetHeader Ih;
+			packet -> RemoveHeader(Ih);
+
+			std::cout << "  Internet Header: " << Ih << std::endl;
+
+		}
+
 	}
 	return true;
 }
