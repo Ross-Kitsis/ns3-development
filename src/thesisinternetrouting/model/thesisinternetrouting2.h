@@ -13,6 +13,8 @@
 #include "ns3/ipv6.h"
 #include "ns3/ipv6-address.h"
 #include "ns3/internet-module.h"
+#include "ns3/wifi-module.h"
+#include "ns3/point-to-point-module.h"
 
 //Interfaces & Sockets
 #include "ns3/ipv6-interface.h"
@@ -281,7 +283,31 @@ protected:
 	 */
 	void DeleteRoute(ThesisInternetRoutingTableEntry2 *route);
 
+
+
 private:
+
+	/**
+	 * Removes the default route from the list of routes currently stored
+	 * Used when position changes
+	 */
+	void SetInterfacePointers();
+
+	/**
+	 * Assumes list routing protocol is installed on RSU
+	 * Sets the pointer to the static route helper containing routes to the hub
+	 */
+	void SetStaticRoutePointer();
+
+	/**
+	 * Returns the first interface number on w wifi interface; else -1
+	 */
+	int32_t GetWirelessInterface();
+
+	/**
+	 * Returns the first interface number on w p2p interface; else -1
+	 */
+	int32_t GetP2pInterface();
 
 	/**
 	 * \brief Pointer to IPv6 protocol on node
@@ -302,6 +328,22 @@ private:
 	 * Pointer to the loopback netdevice
 	 */
 	Ptr<NetDevice> m_lo;
+
+	/**
+	 * Pointer to the wifi netdevice
+	 */
+	Ptr<NetDevice> m_wi;
+
+	/**
+	 * Pointer to the point2point netdevice
+	 */
+	Ptr<NetDevice> m_pp;
+
+	/**
+	 * Pointer to Ipv6StaticRouting (Used by RSU)
+	 */#include "ns3/wifi-module.h"
+#include "ns3/point-to-point-module.h"
+	Ptr<Ipv6StaticRouting> m_sr6;
 
 	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)
 	typedef std::list<std::pair <ThesisInternetRoutingTableEntry2 *, EventId> > Routes;
