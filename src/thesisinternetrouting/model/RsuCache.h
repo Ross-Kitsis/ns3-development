@@ -8,6 +8,12 @@
 #ifndef SRC_THESISINTERNETROUTING_MODEL_RSUCACHE_H_
 #define SRC_THESISINTERNETROUTING_MODEL_RSUCACHE_H_
 
+#include "ns3/vector.h"
+#include "ns3/nstime.h"
+#include "ns3/ipv6-address.h"
+#include "ns3/log.h"
+#include "ns3/simulator.h"
+
 namespace ns3
 {
 namespace thesis
@@ -18,6 +24,7 @@ class RsuCacheEntry
 public:
 
 	RsuCacheEntry(Ipv6Address m_Source = Ipv6Address(), Ipv6Address m_Destination = Ipv6Address(),
+								Vector m_SendingNodePosition = Vector(), Vector m_SendingNodeVelocity = Vector(),
 								Time m_SendTime = Simulator::Now(), Time m_ReceiveTime = Simulator::Now());
 
 	~RsuCacheEntry();
@@ -28,12 +35,19 @@ public:
 	Ipv6Address GetDestination();
 	void SetDestination(Ipv6Address Destination);
 
+	Vector GetSendingNodePosition();
+	void SetSendingNodePosition(Vector Position);
+
+	Vector GetSendingNodeVelocity();
+	void SetSendingNodeVelocity(Vector Velocity);
+
 	Time GetSendTime();
 	void SetSendTime(Time SendTime);
 
-
 	Time GetReceiveTime();
-	void SetReceieveTime();
+	void SetReceiveTime(Time ReceiveTime);
+
+	bool operator== (RsuCacheEntry const & o) const;
 
 private:
 	/*
@@ -45,13 +59,21 @@ private:
 	 */
 	Ipv6Address m_Destination;
 	/*
+	 * Position of the sending node
+	 */
+	Vector m_SendingNodePosition;
+	/*
+	 * Velocity (Speed + direction) of sending node
+	 */
+	Vector m_SendingNodeVelocity;
+	/*
 	 * Timestamp of when message was sent
 	 */
 	Time m_SendTime;
 	/*
 	 * Timestamp of when message was received
 	 */
-	Time ReceiveTime;
+	Time m_ReceiveTime;
 
 };
 
@@ -60,6 +82,44 @@ class RsuCache
 public:
 	RsuCache();
 	virtual ~RsuCache();
+
+	/*
+	 * Add entry to the cache
+	 */
+	void AddEntry(RsuCacheEntry * entry);
+
+	/*
+	 * Remove entry from the cache
+	 */
+	void RemoveEntry(Ipv6Address toRemove);
+
+	/*
+	 * Lookup entry in cache
+	 * Set entry to the entry
+	 * Return true if entry found; false otherwise
+	 */
+	bool Lookup(Ipv6Address toFind, RsuCacheEntry * entry);
+
+private:
+
+	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)
+	typedef std::list<std::pair <RsuCacheEntry *, EventId> > RSUCache;
+
+  typedef std::list<std::pair <RsuCacheEntry *, EventId> >::iterator RSUCacheIC;
+
+
+	RSUCache m_cache;
+
+	/*
+	 * Iterates through cache, removing any stale entries
+	 */
+	void CleanCache();
+
+	/*
+	 * Maximum time an entry can be in the cache
+	 */
+	Time m_MaxCacheTime;
+
 };
 
 } /* namespace thesis*/

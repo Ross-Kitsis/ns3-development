@@ -17,6 +17,7 @@ def build(bld):
         'helper/ThesisPing6Helper.cc',
         'model/thesisinternetrouting2.cc',
         'helper/thesisinternetrouting-helper2.cc',
+        'model/RsuCache.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('thesisinternetrouting')
@@ -35,6 +36,7 @@ def build(bld):
         'helper/ThesisPing6Helper.h',
         'model/thesisinternetrouting2.h',
         'helper/thesisinternetrouting-helper2.h',
+        'model/RsuCache.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:
