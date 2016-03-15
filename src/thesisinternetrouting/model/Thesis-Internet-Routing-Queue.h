@@ -27,8 +27,8 @@ public:
 
 	ThesisInternetQueueEntry (Ptr<const Packet> pa = 0, Ipv6Header const & h = Ipv6Header (),
 			UnicastForwardCallback ucb = UnicastForwardCallback (),
-			ErrorCallback ecb = ErrorCallback ()) :
-				m_packet (pa), m_header (h), m_ucb (ucb), m_ecb (ecb)
+			ErrorCallback ecb = ErrorCallback (), Time SendTime = Time()) :
+				m_packet (pa), m_header (h), m_ucb (ucb), m_ecb (ecb), m_SendTime(SendTime)
 	{}
 
 	/**
@@ -53,21 +53,31 @@ public:
 	Ipv6Header GetIpv6Header () const { return m_header; }
 	void SetIpv6Header (Ipv6Header h) { m_header = h; }
 
+	Time GetPacketSendTime() const { return m_SendTime;}
+	void SetPacketSendTime(Time SendTime) { m_SendTime = SendTime;}
+
 	Timer GetTimer() const {return m_RetransmitTimer;}
+
 
 private:
 
 	/// Data packet
 	Ptr<const Packet> m_packet;
+
 	/// IP header
 	Ipv6Header m_header;
+
 	/// Unicast forward callback
 	UnicastForwardCallback m_ucb;
+
 	/// Error callback
 	ErrorCallback m_ecb;
+
+	/// Timestamp of when pacekt was sent
+	Time m_SendTime;
+
 	/// Timer to retransmit
 	Timer m_RetransmitTimer;
-
 };
 
 
@@ -90,7 +100,7 @@ public:
 	 * Generally used if a lookup is true on a packet that was retransmitted
 	 * OR used if a timer expires and the packet is retransmitted
 	 */
-	void RemoveRoutingQueueEntry();
+	void RemoveRoutingQueueEntry(Ipv6Address source, Ipv6Address destination, Time sendTime);
 
 	/**
 	 * Lookup cache based on the source, destination and sendtime
@@ -103,6 +113,8 @@ private:
 	typedef std::list<std::pair <ThesisInternetQueueEntry *, EventId> > RoutingQueue;
 
   typedef std::list<std::pair <ThesisInternetQueueEntry *, EventId> >::iterator RoutingQueueI;
+
+  RoutingQueue m_queue;
 
 };
 
