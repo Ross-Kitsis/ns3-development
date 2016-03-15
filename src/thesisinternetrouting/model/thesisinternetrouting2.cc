@@ -178,6 +178,12 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 
 			ucb (route -> GetOutputDevice(),route, packet, header);
 
+			//Add VANET information to the RSU cache
+			RsuCacheEntry *entry = new RsuCacheEntry(header.GetSourceAddress(),header.GetDestinationAddress(),
+																							 Ih.GetSourcePosition(), Ih.GetSourceVelocity(),
+																							 Ih.GetTimestamp(), Simulator::Now());
+			m_RsuCache.AddEntry(entry);
+			/////////////////////////////
 			std::cout << " RSU Header Properties " << header.GetDestinationAddress() << std::endl;
 
 			std::cout << " Header Destination " << header.GetDestinationAddress() << std::endl;
@@ -211,16 +217,28 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			//Internet redirect from 1 RSU to another (Handle later)
 		}else
 		{
-			//Packet from a normal internet source
-			Ipv6Address destination = header.GetDestinationAddress();
-
-			Ptr<Ipv6Route> route = Lookup(destination,m_pp);
-			if(route)
+			RsuCacheEntry * entry = NULL;
+			if(m_RsuCache.Lookup(header.GetDestinationAddress(), entry))
 			{
-				ucb (route -> GetOutputDevice(),route, packet, header);
-				return true;
-			}
+				std::cout << "<<<<<<<<<<<< Found an entry in RSU cache >>>>>>>>>>>>>>>>" << std::endl;
 
+				//Check estimated position NEEDS TO BE UPDATED!!
+
+
+
+				//Packet from a normal internet source
+				Ipv6Address destination = header.GetDestinationAddress();
+
+				Ptr<Ipv6Route> route = Lookup(destination,m_pp);
+				if(route)
+				{
+					ucb (route -> GetOutputDevice(),route, packet, header);
+					return true;
+				}
+			}else
+			{
+				std::cout << "<<<<<<<<<<<<<< Should not have happened yet >>>>>>>>>>>>>>>>>" << std::endl;
+			}
 		}
 
 

@@ -36,6 +36,7 @@
 //ThesisFiles
 #include "InternetHeader.h"
 #include "Thesis-Internet-Routing-Queue.h"
+#include "RsuCache.h"
 
 namespace ns3
 {
@@ -317,6 +318,13 @@ private:
 	 * Set to false by default.
 	 */
 	bool m_IsDtnTolerant;
+
+	/**
+	 * Pointer to the RSU cache
+	 * Used to manage database of entries coming through the RSU
+	 * Not used on VANET nodes
+	 */
+	RsuCache m_RsuCache;
 };
 
 }

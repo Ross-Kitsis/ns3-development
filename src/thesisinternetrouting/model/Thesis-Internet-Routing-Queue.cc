@@ -23,5 +23,23 @@ ThesisInternetRoutingQueue::~ThesisInternetRoutingQueue()
 	// TODO Auto-generated destructor stub
 }
 
+void
+ThesisInternetRoutingQueue::AddRoutingEntry(ThesisInternetQueueEntry * entry)
+{
+
+}
+
+void
+ThesisInternetRoutingQueue::RemoveRoutingQueueEntry()
+{
+
+}
+
+bool
+ThesisInternetRoutingQueue::Lookup(Ipv6Address source, Ipv6Address destination, Time sendTime)
+{
+
+}
+
 } /* namespace ns3 */
 }

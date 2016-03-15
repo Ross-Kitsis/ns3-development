@@ -38,6 +38,7 @@
 //ThesisFiles
 #include "InternetHeader.h"
 #include "Thesis-Internet-Routing-Queue.h"
+#include "RsuCache.h"
 
 namespace ns3
 {
@@ -391,6 +392,14 @@ private:
 	 * Used to determine where the packet is being routed towards
 	 */
 	Ipv6Address m_RsuDestination;
+
+	/**
+	 * Pointer to the RSU cache
+	 * Used to manage database of entries coming through the RSU
+	 * Not used on VANET nodes
+	 */
+	RsuCache m_RsuCache;
+
 };
 
 }
