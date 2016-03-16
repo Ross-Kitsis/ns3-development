@@ -176,8 +176,19 @@ ThesisRoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header &header
 		return false;
 	}
 
-  lcb(p,header,iif);
-
+	//Peek header but do not actually remove
+	TypeHeader tHeader(HELLO);
+	p->PeekHeader(tHeader);
+	if(tHeader.Get() == 1 || tHeader.Get() == 2)
+	{
+		//Type of packet is hello or control
+		lcb(p,header,iif);
+		toReturn = true;
+	}else
+	{
+		//Type of packet is something else (Either internet, query or unknown)
+		toReturn = false;
+	}
 	return toReturn;
 
 }
@@ -545,7 +556,13 @@ ThesisRoutingProtocol::Receive (Ptr<Socket> socket)
 	case UNKNOWN:
 		//Shouldn't be here
 		break;
+
+	default:
+		//Shouldn't be here
+		break;
+
 	}
+
 
 }
 

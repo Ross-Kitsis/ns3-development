@@ -11,6 +11,12 @@
 namespace ns3
 {
 //DB ENTRY ///////////////////////////////
+
+DbEntry::DbEntry()
+{
+
+}
+
 DbEntry::DbEntry(Vector bottomCorner, Vector topCorner, Ipv6Address RsuAddress, Vector RsuPosition, uint32_t ZoneId, Mac48Address RsuMacAddress) :
 		m_bottomLeftCorner(bottomCorner), m_topRightCorner(topCorner),
 		m_RsuAddress(RsuAddress),m_RsuPosition(RsuPosition),m_ZoneId(ZoneId), m_RsuMacAddress(RsuMacAddress)

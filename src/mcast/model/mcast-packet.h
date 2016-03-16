@@ -44,7 +44,9 @@ enum MessageType
 {
   HELLO  = 1,   //!< MCAST Hello type
   MCAST_CONTROL = 2, //!< MCAST Control type
-  INTERNET = 3, //!< ThesisInternetRouting type
+  INTERNET = 3, //!< ThesisInternetRouting type (VANET TO RSU)
+  INTERNET_RSU_TO_VANET = 4, //!< ThesisInternetRouting type (RSU TO VANET)
+
 
   UNKNOWN = 128
 };

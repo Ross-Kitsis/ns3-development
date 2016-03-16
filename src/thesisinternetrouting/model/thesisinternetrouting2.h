@@ -29,10 +29,12 @@
 //Standard files
 #include <map>
 #include <list>
+#include <math.h>
 
 //Mcast files
 #include "ns3/Db.h"
 #include "ns3/mcast-packet.h"
+#include "ns3/mcast-utils.h"
 
 
 //ThesisFiles
@@ -284,7 +286,11 @@ protected:
 	 */
 	void DeleteRoute(ThesisInternetRoutingTableEntry2 *route);
 
-
+	/*
+	 * Strictly effective nodes will not retransmit if they are further from the RSU than the last sending node
+	 * Non-strictly effective nodes MAY retransmit but do not have to
+	 */
+	bool m_isStrictEffective;
 
 private:
 
@@ -342,8 +348,7 @@ private:
 
 	/**
 	 * Pointer to Ipv6StaticRouting (Used by RSU)
-	 */#include "ns3/wifi-module.h"
-#include "ns3/point-to-point-module.h"
+	 */
 	Ptr<Ipv6StaticRouting> m_sr6;
 
 	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)
@@ -388,7 +393,7 @@ private:
 	bool m_IsDtnTolerant;
 
 	/**
-	 * Current RSU address; set by the lookuo method
+	 * Current RSU address; set by the lookup method
 	 * Used to determine where the packet is being routed towards
 	 */
 	Ipv6Address m_RsuDestination;
@@ -400,6 +405,35 @@ private:
 	 */
 	RsuCache m_RsuCache;
 
+	/**
+	 * Calculate the backoff duration before retransmitting a packet
+	 * Return the backoff time in microseconds
+	 */
+	uint32_t GetBackoffDuration(Vector SenderPosition);
+
+	/**
+	 * Pointer to the internet routing queue
+	 * Used by VANET nodes to manage retransmissions
+	 *
+	 */
+	ThesisInternetRoutingQueue m_RoutingCache;
+
+	/*
+	 * Utilities created in mcast routing protocol
+	 * Primarily used to find distances between points
+	 */
+	mcast::McastUtils utils;
+
+	/**
+	 * Check if sender position is effective
+	 */
+	bool IsEffective(Vector SenderPosition);
+
+	/**
+	 * DbEntry pointer to the current RSU
+	 * Used to avoid additional processing
+	 */
+	DbEntry m_currentRsu;
 };
 
 }

@@ -78,6 +78,9 @@ TypeHeader::GetSerializedSize () const
 void
 TypeHeader::Serialize (Buffer::Iterator i) const
 {
+	//std::cout << "Serializing packet with type: " << m_type << std::endl;
+
+
 	i.WriteU8 ((uint8_t) m_type);
 }
 
@@ -87,6 +90,7 @@ TypeHeader::Deserialize (Buffer::Iterator start)
 	Buffer::Iterator i = start;
 	uint8_t type = i.ReadU8 ();
 	m_valid = true;
+
 	switch (type)
 	{
 	case HELLO:
@@ -103,11 +107,20 @@ TypeHeader::Deserialize (Buffer::Iterator start)
 	{
 		m_type = (MessageType) type;
 		break;
+	}case INTERNET_RSU_TO_VANET:
+	{
+		m_type = (MessageType) type;
+		break;
 	}
+
 	default:
 		m_valid = false;
 		m_type = UNKNOWN;
 	}
+
+	std::cout << "Deserialized type header with type: " << m_type << std::endl;
+
+
 	uint32_t dist = i.GetDistanceFrom (start);
 	NS_ASSERT (dist == GetSerializedSize ());
 	return dist;
@@ -130,7 +143,12 @@ TypeHeader::Print (std::ostream &os) const
 	}
 	case INTERNET:
 	{
-		os << "INTERNET";
+		os << "INTERNET - TEST";
+		break;
+	}
+	case INTERNET_RSU_TO_VANET:
+	{
+		os << "INTERNET_RSU_TO_VANET";
 		break;
 	}
 	default:

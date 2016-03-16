@@ -34,6 +34,7 @@ public:
       .SetParent<Tag> ()
       .SetGroupName("thesis")
       .AddConstructor<DeferredRouteOutputTag> ()
+
     ;
     return tid;
   }
@@ -110,7 +111,11 @@ ThesisInternetRoutingProtocol2::GetTypeId(void)
     						BooleanValue (false),
     						MakeBooleanAccessor (&ThesisInternetRoutingProtocol2::m_hasMcast),
     						MakeBooleanChecker ())
-    						;
+    				.AddAttribute ("StrictlyEffective", "Determines if VANET nodes follow a strictly effective forwarding pattern",
+    						BooleanValue (true),
+    						MakeBooleanAccessor (&ThesisInternetRoutingProtocol2::m_isStrictEffective),
+    						MakeTimeChecker ())
+    				;
 	return tid;
 }
 
@@ -335,13 +340,42 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		if(theader.Get() == 3)
 		{
 			//Received type header of type internet
-			packet -> RemoveHeader(theader);
+			//packet -> PeekHeader(theader);
 			std::cout << "Type header with type: " << theader.Get() << std::cout;
 
 			InternetHeader Ih;
-			packet -> RemoveHeader(Ih);
+			packet -> PeekHeader(Ih);
 
-			std::cout << "  Internet Header: " << Ih << std::endl;
+			Ptr<Node> theNode = GetObject<Node>();
+			Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
+
+			//Check strictly effective and if the position satisfies effectivity parameters
+			if(m_isStrictEffective)
+			{
+
+			}
+
+			bool CacheContains = m_RoutingCache.Lookup(header.GetSourceAddress(), header.GetDestinationAddress(), Ih.GetTimestamp());
+
+			if(CacheContains)
+			{
+				//Cache contains entry with the source,destination,timestamp tuple already (Stop timer on retransmit and remove)
+			}else
+			{
+				//Cache does not contain and entry with the tuple (Add to cache and start timer on retransmit
+				ThesisInternetQueueEntry * entry = new ThesisInternetQueueEntry(packet, header, ucb, ecb, Ih.GetTimestamp());
+
+
+				m_RoutingCache.AddRoutingEntry(entry);
+			}
+
+			/*
+			ThesisInternetQueueEntry (Ptr<const Packet> pa = 0, Ipv6Header const & h = Ipv6Header (),
+					UnicastForwardCallback ucb = UnicastForwardCallback (),
+					ErrorCallback ecb = ErrorCallback (), Time SendTime = Time()) :
+						m_packet (pa), m_header (h), m_ucb (ucb), m_ecb (ecb), m_SendTime(SendTime)
+			*/
+
 		}else if(theader.Get() == 4)
 		{
 			//Type 4 is RSU to VANET (Handle later)
@@ -711,6 +745,8 @@ ThesisInternetRoutingProtocol2::SetIpToZone()
 	std::cout << "Node position: " << position << std::endl;
 	DbEntry t1 = m_Db -> GetEntryForCurrentPosition(position);
 
+	//Set pointer to current RSU DB entry (For convenience)
+	m_currentRsu = t1;
 
 	Ipv6Address network = t1.GetRsuAddress().CombinePrefix(Ipv6Prefix(64));
 
@@ -902,6 +938,50 @@ ThesisInternetRoutingProtocol2::RemoveDefaultRoute()
 
 	}
 
+}
+
+uint32_t
+ThesisInternetRoutingProtocol2::GetBackoffDuration(Vector SenderPosition)
+{
+	uint32_t toWait = 10000;
+
+	Ptr<Node> theNode = GetObject<Node>();
+	Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
+
+	Vector currentPos = mobility -> GetPosition();
+
+	double currentDistanceToRsu = utils.GetDistanceBetweenPoints(currentPos.x, currentPos.y, m_currentRsu.GetRsuPosition().x, m_currentRsu.GetRsuPosition().y);
+	double senderDistanceToRsu = utils.GetDistanceBetweenPoints(SenderPosition.x, SenderPosition.y, m_currentRsu.GetRsuPosition().x, m_currentRsu.GetRsuPosition().y);
+
+
+	double ratio = currentDistanceToRsu/senderDistanceToRsu;
+	ratio = ceil(ratio * 100);
+
+	//Backoff in microseconds
+	toWait = ratio;
+
+	return toWait;
+}
+
+bool
+ThesisInternetRoutingProtocol2::IsEffective(Vector SenderPosition)
+{
+	bool isEffective = false;
+
+	Ptr<Node> theNode = GetObject<Node>();
+	Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
+
+	Vector currentPos = mobility -> GetPosition();
+
+	double currentDistanceToRsu = utils.GetDistanceBetweenPoints(currentPos.x, currentPos.y, m_currentRsu.GetRsuPosition().x, m_currentRsu.GetRsuPosition().y);
+	double senderDistanceToRsu = utils.GetDistanceBetweenPoints(SenderPosition.x, SenderPosition.y, m_currentRsu.GetRsuPosition().x, m_currentRsu.GetRsuPosition().y);
+
+	if(currentDistanceToRsu < senderDistanceToRsu)
+	{
+		isEffective = true;
+	}
+
+	return isEffective;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////

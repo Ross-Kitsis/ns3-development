@@ -27,6 +27,8 @@ class DbEntry
 {
 public:
 
+	DbEntry();
+
 	DbEntry(Vector bottomCorner, Vector topCorner, Ipv6Address RsuAddress, Vector RsuPosition, uint32_t ZoneId, Mac48Address RsuMacAddress);
 
 	virtual ~DbEntry();
