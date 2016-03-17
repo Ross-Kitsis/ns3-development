@@ -69,5 +69,28 @@ ThesisInternetRoutingQueue::Lookup(Ipv6Address source, Ipv6Address destination, 
 	return toReturn;
 }
 
+ThesisInternetQueueEntry*
+ThesisInternetRoutingQueue::GetRoutingEntry(Ipv6Address source, Ipv6Address destination, Time sendTime)
+{
+
+	ThesisInternetQueueEntry * toReturn;
+
+	for(RoutingQueueI it = m_queue.begin(); it != m_queue.end(); it++)
+	{
+		ThesisInternetQueueEntry * entry = it -> first;
+		Ipv6Address entrySource = entry -> GetIpv6Header().GetSourceAddress();
+		Ipv6Address entryDestination = entry -> GetIpv6Header().GetDestinationAddress();
+		Time entrySendTime = entry -> GetPacketSendTime();
+
+		//Source, destination and sendtime must be equal to be a duplicate packet
+		if(entrySource.IsEqual(source) && entryDestination.IsEqual(destination) && entrySendTime == sendTime)
+		{
+			toReturn = entry;
+		}
+	}
+	return toReturn;
+}
+
+
 } /* namespace ns3 */
 }

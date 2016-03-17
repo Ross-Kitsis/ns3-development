@@ -25,7 +25,7 @@ public:
 	typedef Ipv6RoutingProtocol::UnicastForwardCallback UnicastForwardCallback;
 	typedef Ipv6RoutingProtocol::ErrorCallback ErrorCallback;
 
-	ThesisInternetQueueEntry (Ptr<const Packet> pa = 0, Ipv6Header const & h = Ipv6Header (),
+	ThesisInternetQueueEntry (Ptr<Packet> pa = 0, Ipv6Header const & h = Ipv6Header (),
 			UnicastForwardCallback ucb = UnicastForwardCallback (),
 			ErrorCallback ecb = ErrorCallback (), Time SendTime = Time()) :
 				m_packet (pa), m_header (h), m_ucb (ucb), m_ecb (ecb), m_SendTime(SendTime)
@@ -47,8 +47,8 @@ public:
 	ErrorCallback GetErrorCallback () const { return m_ecb; }
 	void SetErrorCallback (ErrorCallback ecb) { m_ecb = ecb; }
 
-	Ptr<const Packet> GetPacket () const { return m_packet; }
-	void SetPacket (Ptr<const Packet> p) { m_packet = p; }
+	Ptr<Packet> GetPacket () const { return m_packet; }
+	void SetPacket (Ptr<Packet> p) { m_packet = p; }
 
 	Ipv6Header GetIpv6Header () const { return m_header; }
 	void SetIpv6Header (Ipv6Header h) { m_header = h; }
@@ -58,11 +58,13 @@ public:
 
 	Timer GetTimer() const {return m_RetransmitTimer;}
 
+	/// Timer to retransmit
+	Timer m_RetransmitTimer;
 
 private:
 
 	/// Data packet
-	Ptr<const Packet> m_packet;
+	Ptr<Packet> m_packet;
 
 	/// IP header
 	Ipv6Header m_header;
@@ -73,11 +75,8 @@ private:
 	/// Error callback
 	ErrorCallback m_ecb;
 
-	/// Timestamp of when pacekt was sent
+	/// Timestamp of when packet was sent
 	Time m_SendTime;
-
-	/// Timer to retransmit
-	Timer m_RetransmitTimer;
 };
 
 
@@ -107,6 +106,13 @@ public:
 	 * Tuple should be unique
 	 */
 	bool Lookup(Ipv6Address source, Ipv6Address destination, Time sendTime);
+
+	/**
+	 * Lookup cache based on the source, destination and sendtime
+	 * Tuple should be unique
+	 * Return routing entry
+	 */
+	ThesisInternetQueueEntry* GetRoutingEntry(Ipv6Address source, Ipv6Address destination, Time sendTime);
 
 private:
 	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)

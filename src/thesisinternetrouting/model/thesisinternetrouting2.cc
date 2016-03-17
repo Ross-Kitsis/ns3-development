@@ -89,7 +89,8 @@ NS_OBJECT_ENSURE_REGISTERED(ThesisInternetRoutingProtocol2);
 //Constructor
 ThesisInternetRoutingProtocol2::ThesisInternetRoutingProtocol2() :
 						m_hasMcast(true), m_IsRSU(false),
-						m_CheckPosition(Seconds(10)), m_IsDtnTolerant(false)
+						m_CheckPosition(Seconds(10)), m_IsDtnTolerant(false),
+						m_isStrictEffective(true),m_rWait(5)
 {
 
 }
@@ -115,6 +116,10 @@ ThesisInternetRoutingProtocol2::GetTypeId(void)
     						BooleanValue (true),
     						MakeBooleanAccessor (&ThesisInternetRoutingProtocol2::m_isStrictEffective),
     						MakeTimeChecker ())
+        		.AddAttribute ("rWait", "Multiplier to wait time",
+        				IntegerValue (5),
+        				MakeIntegerAccessor (&ThesisInternetRoutingProtocol2::m_rWait),
+        				MakeUintegerChecker<uint64_t>())
     				;
 	return tid;
 }
@@ -333,7 +338,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 	{
 		//Received packet on another interface; must have been wifi since only 2 interfaces
 
-		std::cout << "Removing type header" << std::endl;
+		std::cout << "Peeking at type header" << std::endl;
 		//Create new typeHeader and peek
 		mcast::TypeHeader theader (mcast::HELLO);
 		packet -> PeekHeader(theader);
@@ -341,10 +346,16 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		{
 			//Received type header of type internet
 			//packet -> PeekHeader(theader);
-			std::cout << "Type header with type: " << theader.Get() << std::cout;
+			std::cout << " BREAKING? Type header with type: " << theader.Get() << std::endl;
+
+			/////////////////////////Remove headers; add again before placing into queue
+
+			mcast::TypeHeader typeHeader (mcast::HELLO);
+			packet -> RemoveHeader(typeHeader);
 
 			InternetHeader Ih;
-			packet -> PeekHeader(Ih);
+			packet -> RemoveHeader(Ih);
+			//////////////////////////////////////////
 
 			Ptr<Node> theNode = GetObject<Node>();
 			Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
@@ -352,30 +363,49 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 			//Check strictly effective and if the position satisfies effectivity parameters
 			if(m_isStrictEffective)
 			{
-
+				if(!IsEffective(Ih.GetSenderPosition()))
+				{
+					return true;
+				}
 			}
 
-			bool CacheContains = m_RoutingCache.Lookup(header.GetSourceAddress(), header.GetDestinationAddress(), Ih.GetTimestamp());
+			Time backoff = GetBackoffDuration(Ih.GetSenderPosition());
+			Ipv6Address source = header.GetSourceAddress();
+			Ipv6Address destination = header.GetDestinationAddress();
+			Time timeStamp = Ih.GetTimestamp();
+
+			bool CacheContains = m_RoutingCache.Lookup(source, destination, timeStamp);
 
 			if(CacheContains)
 			{
 				//Cache contains entry with the source,destination,timestamp tuple already (Stop timer on retransmit and remove)
+				ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,timeStamp);
+
+				//Stop timer before removing
+				entry -> m_RetransmitTimer.Cancel();
+
+				//Remove queue entry to stop retransmit
+				m_RoutingCache.RemoveRoutingQueueEntry(source,destination,timeStamp);
+
 			}else
 			{
-				//Cache does not contain and entry with the tuple (Add to cache and start timer on retransmit
-				ThesisInternetQueueEntry * entry = new ThesisInternetQueueEntry(packet, header, ucb, ecb, Ih.GetTimestamp());
+				//Re-Add headers before placing into queue
+				packet ->AddHeader(Ih);
+				packet ->AddHeader(typeHeader);
 
+				//Cache does not contain and entry with the tuple (Add to cache and start timer on retransmit
+				ThesisInternetQueueEntry * entry = new ThesisInternetQueueEntry(packet, header, ucb, ecb, timeStamp);
+
+				//Timer * toRetransmit = entry -> GetTimer();
+
+				entry->m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::SendInternetRetransmit, this);
+				entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
+				entry->m_RetransmitTimer.Schedule(backoff);
 
 				m_RoutingCache.AddRoutingEntry(entry);
+
+
 			}
-
-			/*
-			ThesisInternetQueueEntry (Ptr<const Packet> pa = 0, Ipv6Header const & h = Ipv6Header (),
-					UnicastForwardCallback ucb = UnicastForwardCallback (),
-					ErrorCallback ecb = ErrorCallback (), Time SendTime = Time()) :
-						m_packet (pa), m_header (h), m_ucb (ucb), m_ecb (ecb), m_SendTime(SendTime)
-			*/
-
 		}else if(theader.Get() == 4)
 		{
 			//Type 4 is RSU to VANET (Handle later)
@@ -384,6 +414,48 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 	}
 
 	return true;
+}
+
+void
+ThesisInternetRoutingProtocol2::SendInternetRetransmit(Ipv6Address source, Ipv6Address destination, Time sendTime)
+{
+	NS_LOG_FUNCTION(this);
+
+	std::cout << "**************** Sending Internet Retransmit ******************" << std::endl;
+
+	ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,sendTime);
+	UnicastForwardCallback ucb = entry -> GetUnicastForwardCallback();
+
+	//Get mobility model properties and extract values needed for header
+	Ptr<MobilityModel> mobility = m_ipv6 -> GetObject<MobilityModel>();
+	Vector position = mobility -> GetPosition();
+	Vector velocity = mobility -> GetVelocity();
+
+
+	Ptr<Packet> packet = entry -> GetPacket();
+
+	//Remove headers to modify Internet header - need to change sender parameters
+	mcast::TypeHeader theader (mcast::HELLO);
+	packet -> RemoveHeader(theader);
+
+	InternetHeader Ih;
+	packet -> RemoveHeader(Ih);
+
+	//Update sender position and velocity
+	Ih.SetSenderPosition(position);
+	Ih.SetSenderVelocity(velocity);
+
+	//Re-add headers
+	packet -> AddHeader(Ih);
+	packet -> AddHeader(theader);
+
+	//Lookup route to send forward packet
+	Ptr<Ipv6Route> route = Lookup(destination,m_wi);
+
+	//Remove entry from cache
+	m_RoutingCache.RemoveRoutingQueueEntry(source,destination,sendTime);
+
+	ucb (route -> GetOutputDevice(),route, entry->GetPacket(), entry -> GetIpv6Header());
 }
 
 
@@ -940,10 +1012,10 @@ ThesisInternetRoutingProtocol2::RemoveDefaultRoute()
 
 }
 
-uint32_t
+Time
 ThesisInternetRoutingProtocol2::GetBackoffDuration(Vector SenderPosition)
 {
-	uint32_t toWait = 10000;
+	Time toWait;
 
 	Ptr<Node> theNode = GetObject<Node>();
 	Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
@@ -958,7 +1030,9 @@ ThesisInternetRoutingProtocol2::GetBackoffDuration(Vector SenderPosition)
 	ratio = ceil(ratio * 100);
 
 	//Backoff in microseconds
-	toWait = ratio;
+	toWait = MicroSeconds(ratio * m_rWait);
+
+	std::cout << "Waiting time in microseconds: " << toWait.GetMicroSeconds() << std::endl;
 
 	return toWait;
 }
@@ -979,6 +1053,9 @@ ThesisInternetRoutingProtocol2::IsEffective(Vector SenderPosition)
 	if(currentDistanceToRsu < senderDistanceToRsu)
 	{
 		isEffective = true;
+	}else
+	{
+		std::cout << "Ineffective transmission detected; current distance further from RSU than sending node" << std::endl;
 	}
 
 	return isEffective;

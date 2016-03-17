@@ -286,11 +286,7 @@ protected:
 	 */
 	void DeleteRoute(ThesisInternetRoutingTableEntry2 *route);
 
-	/*
-	 * Strictly effective nodes will not retransmit if they are further from the RSU than the last sending node
-	 * Non-strictly effective nodes MAY retransmit but do not have to
-	 */
-	bool m_isStrictEffective;
+
 
 private:
 
@@ -409,7 +405,7 @@ private:
 	 * Calculate the backoff duration before retransmitting a packet
 	 * Return the backoff time in microseconds
 	 */
-	uint32_t GetBackoffDuration(Vector SenderPosition);
+	Time GetBackoffDuration(Vector SenderPosition);
 
 	/**
 	 * Pointer to the internet routing queue
@@ -434,6 +430,25 @@ private:
 	 * Used to avoid additional processing
 	 */
 	DbEntry m_currentRsu;
+
+	/*
+	 * Strictly effective nodes will not retransmit if they are further from the RSU than the last sending node
+	 * Non-strictly effective nodes MAY retransmit but do not have to
+	 */
+	bool m_isStrictEffective;
+
+	/*
+	 * wait time multiplier
+	 */
+	uint64_t m_rWait;
+
+	/**
+	 * Retransmits a packet from the routing queue once timer has expired
+	 * Arguments define a unique routing queue entry
+	 * Before retransmitting the entry is removed from the queue
+	 */
+	void SendInternetRetransmit(Ipv6Address source, Ipv6Address destination, Time sendTime);
+
 };
 
 }
