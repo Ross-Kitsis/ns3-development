@@ -449,6 +449,11 @@ private:
 	 */
 	void SendInternetRetransmit(Ipv6Address source, Ipv6Address destination, Time sendTime);
 
+	/**
+	 * Send Ack message after RSU receives msg on wifi
+	 */
+	void SendAckMessage(Ptr<Packet> ack, UnicastForwardCallback ucb);
+
 };
 
 }

@@ -186,6 +186,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			route -> SetOutputDevice(m_ipv6 -> GetNetDevice(toHub.GetInterface()));
 			route -> SetSource(m_ipv6 -> GetAddress(1,1).GetAddress());
 
+
 			ucb (route -> GetOutputDevice(),route, packet, header);
 
 			//Add VANET information to the RSU cache
@@ -193,7 +194,9 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 																							 Ih.GetSourcePosition(), Ih.GetSourceVelocity(),
 																							 Ih.GetTimestamp(), Simulator::Now());
 			m_RsuCache.AddEntry(entry);
-			/////////////////////////////
+
+
+			/*
 			std::cout << " RSU Header Properties " << header.GetDestinationAddress() << std::endl;
 
 			std::cout << " Header Destination " << header.GetDestinationAddress() << std::endl;
@@ -204,8 +207,64 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			std::cout << " Destination " << toHub.GetDestNetwork() << std::endl;
 			std::cout << " Gateway " << toHub.GetGateway() << std::endl;
 			std::cout << " Interface " << toHub.GetInterface() << std::endl;
+			*/
 
+		  Ptr<Packet> ack = Create<Packet> ();
 
+		  ack -> AddHeader(Ih);
+
+			mcast::TypeHeader ackheader (mcast::INTERNET_RSU_ACK);
+			ack -> AddHeader(ackheader);
+
+			Ptr<Ipv6Route> ackRoute= Create<Ipv6Route> ();
+				//ackRoute = Lookup(Ipv6Address(VANET_TO_RSU),m_wi);
+
+				std::cout << std::endl;
+				std::cout << std::endl;
+				std::cout << std::endl;
+				std::cout << std::endl;
+				std::cout << " >>>>>>> OUTPUT ADDRESS FOR ACK: " << m_ipv6 -> GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1).GetAddress() << std::endl;
+
+				Ptr<Ipv6L3Protocol> l3 = GetObject<Ipv6L3Protocol>();
+
+				Ipv6Header ackHdr;
+				ackHdr.SetSourceAddress(m_ipv6 -> GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1).GetAddress());
+				ackHdr.SetDestinationAddress(Ipv6Address(RSU_TO_VANET));
+				ackHdr.SetNextHeader(1);
+				ackHdr.SetHopLimit(2);
+				ackHdr.SetPayloadLength(ack -> GetSize());
+				ackHdr.SetTrafficClass(1);
+
+				/*
+						 Ipv6Header hdr;
+						 1445
+						 1446   hdr.SetSourceAddress (src);
+						 1447   hdr.SetDestinationAddress (dst);
+						 1448   hdr.SetNextHeader (protocol);
+						 1449   hdr.SetPayloadLength (payloadSize);
+						 1450   hdr.SetHopLimit (ttl);
+						 1451   hdr.SetTrafficClass (tclass);
+						 1452   return hdr;
+				 */
+
+				ackRoute -> SetDestination(Ipv6Address(VANET_TO_RSU));
+				//ackRoute -> SetGateway(Ipv6Address(""));
+				ackRoute -> SetOutputDevice(m_wi);
+				ackRoute -> SetSource(m_ipv6 -> GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1).GetAddress());
+
+			//	l3 ->Send(ack,ackHdr.GetSourceAddress(), ackHdr.GetDestinationAddress(),1,ackRoute);
+
+				ucb(m_wi,ackRoute,ack,ackHdr);
+
+			/*
+			Timer toAck;
+
+			toAck.SetFunction(&ThesisInternetRoutingProtocol2::SendAckMessage,this);
+			toAck.SetArguments(ack,ucb);
+			toAck.SetDelay(MicroSeconds(3));
+			*/
+
+			//return true;
 		}else if(theader.Get() == 4)
 		{
 			//Type 4 is RSU to VANET (Handle later)
@@ -224,7 +283,11 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 		packet -> PeekHeader(theader);
 		if(theader.Get() == 5)
 		{
-			//Internet redirect from 1 RSU to another (Handle later)
+			//Need to double check this
+		}else if(theader.Get() ==1)
+		{
+			//Shouldn't happen but if it does kill the transmission here before it goes into the VANET
+			return true;
 		}else
 		{
 			RsuCacheEntry * entry = NULL;
@@ -234,14 +297,15 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 
 				//Check estimated position NEEDS TO BE UPDATED!!
 
-
-
 				//Packet from a normal internet source
 				Ipv6Address destination = header.GetDestinationAddress();
 
 				Ptr<Ipv6Route> route = Lookup(destination,m_pp);
 				if(route)
 				{
+					mcast::TypeHeader RToVheader (mcast::INTERNET_RSU_TO_VANET);
+					packet -> AddHeader(RToVheader);
+
 					ucb (route -> GetOutputDevice(),route, packet, header);
 					return true;
 				}
@@ -338,7 +402,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 	{
 		//Received packet on another interface; must have been wifi since only 2 interfaces
 
-		std::cout << "Peeking at type header" << std::endl;
+		std::cout << "Peeking at type header - Input VANET" << std::endl;
 		//Create new typeHeader and peek
 		mcast::TypeHeader theader (mcast::HELLO);
 		packet -> PeekHeader(theader);
@@ -404,16 +468,81 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 				m_RoutingCache.AddRoutingEntry(entry);
 
-
+				return true;
 			}
 		}else if(theader.Get() == 4)
 		{
 			//Type 4 is RSU to VANET (Handle later)
+			std::cout << ">>>>>> GOT PACKET WITH TYPE 4 - RSU forwarding back into VANET <<<<<<<"<< std::endl;
+		}else if(theader.Get() == 5)
+		{
+
+			std::cout << ">>>>>> GOT PACKET WITH TYPE 5 - RSU ACK <<<<<<<"<< std::endl;
+
+			/////////////////////////Remove headers; packet will be discarded after this anyway
+			mcast::TypeHeader typeHeader (mcast::HELLO);
+			packet -> RemoveHeader(typeHeader);
+
+			InternetHeader Ih;
+			packet -> RemoveHeader(Ih);
+			//////////////////////////////////////////
+
+			//Remove entry for queue (If it exists)
+			m_RoutingCache.RemoveRoutingQueueEntry(header.GetSourceAddress(), header.GetDestinationAddress(), Ih.GetTimestamp());
+
+			return true;
 		}
 
 	}
 
 	return true;
+}
+
+void
+ThesisInternetRoutingProtocol2::SendAckMessage(Ptr<Packet> ack, UnicastForwardCallback ucb)
+{
+	NS_LOG_FUNCTION(this);
+	//Send out a short ACK msg
+
+	Ptr<Ipv6Route> ackRoute= Create<Ipv6Route> ();
+	//ackRoute = Lookup(Ipv6Address(VANET_TO_RSU),m_wi);
+
+	std::cout << std::endl;
+	std::cout << std::endl;
+	std::cout << std::endl;
+	std::cout << std::endl;
+	std::cout << " >>>>>>> OUTPUT ADDRESS FOR ACK: " << m_ipv6 -> GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1).GetAddress() << std::endl;
+
+	Ptr<Ipv6L3Protocol> l3 = GetObject<Ipv6L3Protocol>();
+
+	Ipv6Header ackHdr;
+	ackHdr.SetSourceAddress(m_ipv6 -> GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1).GetAddress());
+	ackHdr.SetDestinationAddress(Ipv6Address(RSU_TO_VANET));
+	ackHdr.SetNextHeader(1);
+	ackHdr.SetHopLimit(1);
+	ackHdr.SetPayloadLength(ack -> GetSize());
+	ackHdr.SetTrafficClass(1);
+
+	/*
+			 Ipv6Header hdr;
+			 1445
+			 1446   hdr.SetSourceAddress (src);
+			 1447   hdr.SetDestinationAddress (dst);
+			 1448   hdr.SetNextHeader (protocol);
+			 1449   hdr.SetPayloadLength (payloadSize);
+			 1450   hdr.SetHopLimit (ttl);
+			 1451   hdr.SetTrafficClass (tclass);
+			 1452   return hdr;
+	 */
+
+	ackRoute -> SetDestination(Ipv6Address(VANET_TO_RSU));
+	//ackRoute -> SetGateway(Ipv6Address(""));
+	ackRoute -> SetOutputDevice(m_wi);
+	ackRoute -> SetSource(m_ipv6 -> GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1).GetAddress());
+
+//	l3 ->Send(ack,ackHdr.GetSourceAddress(), ackHdr.GetDestinationAddress(),1,ackRoute);
+
+	ucb(m_wi,ackRoute,ack,ackHdr);
 }
 
 void
@@ -801,6 +930,10 @@ ThesisInternetRoutingProtocol2::DoInitialize()
 	if(m_IsRSU)
 	{
 		SetStaticRoutePointer();
+
+		//Create a route to RSU_TO_VANET address
+		AddNetworkRouteTo(Ipv6Address(RSU_TO_VANET),Ipv6Prefix::GetOnes(),Ipv6Address(RSU_TO_VANET),m_ipv6->GetInterfaceForDevice(m_wi),Ipv6Address ("::"));
+
 	}
 
 }
