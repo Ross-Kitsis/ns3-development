@@ -279,7 +279,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 		//Forward to other RSU if required or send out of wifi interface node is in the current area. (To be done later)
 
 		//Create new typeHeader and peek
-		mcast::TypeHeader theader (mcast::HELLO);
+		mcast::TypeHeader theader (mcast::UNKNOWN);
 		packet -> PeekHeader(theader);
 		if(theader.Get() == 5)
 		{
