@@ -132,6 +132,7 @@ ThesisUdpEchoClient::StartApplication (void)
 {
 	NS_LOG_FUNCTION (this);
 
+
 	if (m_socket == 0)
 	{
 		TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
@@ -143,12 +144,40 @@ ThesisUdpEchoClient::StartApplication (void)
 		}
 		else if (Ipv6Address::IsMatchingType(m_peerAddress) == true)
 		{
-			m_socket->Bind6();
+			//m_socket->Bind6();
 			m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
 		}
 	}
 
+/*
+	Ptr<Ipv6> ipv6 = GetNode ()->GetObject<Ipv6> ();
+	//Perform address checking here, re-bind to the correct address
+	for(uint32_t i = 0; i < ipv6 ->GetNInterfaces();i++)
+	{
+		for(uint32_t j = 0; j < ipv6 ->GetNAddresses(i); j++)
+		{
+			Ipv6Address srcAdd = ipv6 ->GetAddress(i,j).GetAddress();
+			if(!srcAdd.IsLinkLocal())
+			{
+				src = srcAdd;
+				break;
+			}
+		}
+	}
+
+	 if (m_socket == 0)
+	    {
+
+	  		TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+	  		m_socket = Socket::CreateSocket (GetNode (), tid);
+
+	      NS_ASSERT (m_socket);
+
+	      m_socket->Bind (Inet6SocketAddress (src, 0));
+	    }
+*/
 	m_socket->SetRecvCallback (MakeCallback (&ThesisUdpEchoClient::HandleRead, this));
+
 
 	ScheduleTransmit (Seconds (0.));
 }
@@ -284,7 +313,7 @@ ThesisUdpEchoClient::ScheduleTransmit (Time dt)
 		for(uint32_t j = 0; j < ipv6 ->GetNAddresses(i); j++)
 		{
 			Ipv6Address srcAdd = ipv6 ->GetAddress(i,j).GetAddress();
-			if(!srcAdd.IsLinkLocal() && !src.IsLocalhost())
+			if(!srcAdd.IsLinkLocal())
 			{
 				src = srcAdd;
 				break;
@@ -293,7 +322,8 @@ ThesisUdpEchoClient::ScheduleTransmit (Time dt)
 	}
 
 	//Bind to socket
-	m_socket->Bind (Inet6SocketAddress (src, 0));
+	m_socket->Bind (Inet6SocketAddress (src, m_peerPort));
+	//m_socket->
 
 	//Set Recv callback again in case re-binding caused problems
 	m_socket->SetRecvCallback (MakeCallback (&ThesisUdpEchoClient::HandleRead, this));
@@ -364,6 +394,12 @@ void
 ThesisUdpEchoClient::HandleRead (Ptr<Socket> socket)
 {
 	NS_LOG_FUNCTION (this << socket);
+
+	std::cout << std::endl;
+	std::cout << std::endl;
+	std::cout << "UDP ECHO CLIENT RECEIEVED PACKET BACK" << std:: endl;
+
+
 	Ptr<Packet> packet;
 	Address from;
 	while ((packet = socket->RecvFrom (from)))
@@ -381,6 +417,8 @@ ThesisUdpEchoClient::HandleRead (Ptr<Socket> socket)
 					Inet6SocketAddress::ConvertFrom (from).GetPort ());
 		}
 	}
+	std::cout << std::endl;
+	std::cout << std::endl;
 }
 
 } // Namespace ns3

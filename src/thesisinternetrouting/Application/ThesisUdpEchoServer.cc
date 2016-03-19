@@ -138,14 +138,16 @@ ThesisUdpEchoServer::HandleRead (Ptr<Socket> socket)
   std::cout << "" << std::endl;
   std::cout << "" << std::endl;
   std::cout << "UDP SERVER RECEIVED PACKET" << std::endl;
-  std::cout << "" << std::endl;
-  std::cout << "" << std::endl;
+
 
   Ptr<Packet> packet;
   Address from;
+
+
   while ((packet = socket->RecvFrom (from)))
     {
-      if (InetSocketAddress::IsMatchingType (from))
+  		Ipv6Address toSend = Inet6SocketAddress::ConvertFrom(from).GetIpv6();
+  	if (InetSocketAddress::IsMatchingType (from))
         {
           NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server received " << packet->GetSize () << " bytes from " <<
                        InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " <<
@@ -162,7 +164,7 @@ ThesisUdpEchoServer::HandleRead (Ptr<Socket> socket)
       packet->RemoveAllByteTags ();
 
       NS_LOG_LOGIC ("Echoing packet");
-      socket->SendTo (packet, 0, from);
+      int sendResult = socket->SendTo (packet, 0, from);
 
       if (InetSocketAddress::IsMatchingType (from))
         {
@@ -176,6 +178,10 @@ ThesisUdpEchoServer::HandleRead (Ptr<Socket> socket)
                        Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " <<
                        Inet6SocketAddress::ConvertFrom (from).GetPort ());
         }
+
+      std::cout << "Server attempted to send reply to " << from  << " ToSend: " << toSend << std::endl;
+      std::cout << "Socket send result: " << sendResult << std::endl;
+      std::cout << "" << std::endl;
     }
 }
 

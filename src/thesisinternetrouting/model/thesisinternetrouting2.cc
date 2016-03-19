@@ -254,7 +254,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 
 			//	l3 ->Send(ack,ackHdr.GetSourceAddress(), ackHdr.GetDestinationAddress(),1,ackRoute);
 
-				ucb(m_wi,ackRoute,ack,ackHdr);
+//				ucb(m_wi,ackRoute,ack,ackHdr);
 
 			/*
 			Timer toAck;
@@ -474,6 +474,19 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		{
 			//Type 4 is RSU to VANET (Handle later)
 			std::cout << ">>>>>> GOT PACKET WITH TYPE 4 - RSU forwarding back into VANET <<<<<<<"<< std::endl;
+
+			Ipv6Address destination = header.GetDestinationAddress();
+
+			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1)
+			{
+				int32_t iif = m_ipv6->GetInterfaceForDevice (idev);
+				lcb (p, header, iif);
+			}else
+			{
+				//Transmission not for me, may need to retransmit, put this in later
+			}
+
+
 		}else if(theader.Get() == 5)
 		{
 
