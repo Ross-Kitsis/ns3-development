@@ -54,7 +54,7 @@ uint32_t
 InternetHeader::GetSerializedSize() const
 {
 	//Size of header in BYTES!!!!!
-	return 93;
+	return 75;
 }
 
 void

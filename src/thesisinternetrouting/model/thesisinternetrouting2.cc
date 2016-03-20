@@ -305,14 +305,15 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			{
 				std::cout << "<<<<<<<<<<<< Found an entry in RSU cache >>>>>>>>>>>>>>>>" << std::endl;
 
-				//Check estimated position NEEDS TO BE UPDATED!!
-
 				//Packet from a normal internet source
 				Ipv6Address destination = header.GetDestinationAddress();
 
 				Ptr<Ipv6Route> route = Lookup(destination,m_pp);
 				if(route)
 				{
+
+					Ptr<Node> theNode = GetObject<Node>();
+					Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
 
 					/*
 					Ptr<Ipv6Route> rtentry = Create<Ipv6Route> ();
@@ -322,9 +323,22 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 					rtentry -> SetSource(m_ipv6 -> GetAddress(1,1).GetAddress());
 					*/
 
+
+
 					//Set gateway to RSU TO VANET multicast address to avoid ARP
 					route -> SetGateway(Ipv6Address(RSU_TO_VANET));
 
+					//Create ITV header and attach to packed
+					//ITVHeader itvh(mobility -> GetPosition(), entry -> GetSendTime(), false, mobility -> GetPosition(),mobility -> GetVelocity());
+
+					/*
+					Vector m_OriginPosition = Vector(), Time m_OriginalTimestamp = Simulator::Now(),
+											bool m_isDtnTolerant = false, Vector m_SenderPosition = Vector(),
+											Vector m_SenderVelocity = Vector(), Vector m_PredictedPosition = Vector()
+					*/
+
+
+					//Create type header add to packet
 					mcast::TypeHeader RToVheader (mcast::INTERNET_RSU_TO_VANET);
 					packet -> AddHeader(RToVheader);
 
@@ -343,6 +357,40 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 
 	return false;
 }
+
+Vector
+ThesisInternetRoutingProtocol2::GetPredictedNodePosition(Ipv6Address nodeAddress,Vector oldPosition, Vector reportedVelocity ,Time originalSendTime)
+{
+	Vector newPosition;
+	Time diff = Simulator::Now() - originalSendTime;
+
+
+	if(reportedVelocity.x == 0 && reportedVelocity.y ==0)
+	{
+		//Calculate averages to try to get a better reading
+		Vector avgVelocity = m_RsuCache.GetAverageVelocity(nodeAddress);
+
+		//If both reported velocity AND average velocity are both 0 only option left is to return the original position and assume
+		//the node hasn't moved
+		if(avgVelocity.x == 0 && avgVelocity.y == 0)
+		{
+			newPosition = oldPosition;
+		}else
+		{
+			newPosition.x = oldPosition.x + (diff.GetSeconds() * avgVelocity.x);
+			newPosition.y = oldPosition.y + (diff.GetSeconds() * avgVelocity.y);
+		}
+
+	}else
+	{
+		//Velocities were not 0; calculate position based on the reported velocity
+		newPosition.x = oldPosition.x + (diff.GetSeconds() * reportedVelocity.x);
+		newPosition.y = oldPosition.y + (diff.GetSeconds() * reportedVelocity.y);
+	}
+
+	return newPosition;
+}
+
 
 bool
 ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const NetDevice> idev,

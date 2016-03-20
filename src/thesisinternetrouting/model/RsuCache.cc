@@ -163,8 +163,8 @@ RsuCache::RemoveEntry(Ipv6Address toRemove)
 bool
 RsuCache::Lookup(Ipv6Address toFind, RsuCacheEntry * entry)
 {
+	CleanCache();
 	bool hasEntry = false;
-
 	for (RSUCacheIC it = m_cache.begin (); it != m_cache.end(); it++)
 	{
 		RsuCacheEntry * toCheck = it -> first;
@@ -177,6 +177,32 @@ RsuCache::Lookup(Ipv6Address toFind, RsuCacheEntry * entry)
 	}
 
 	return hasEntry;
+}
+
+Vector
+RsuCache::GetAverageVelocity(Ipv6Address toFind)
+{
+	Vector avgVelocity;
+	int div = 0;
+	for (RSUCacheIC it = m_cache.begin (); it != m_cache.end(); it++)
+	{
+		RsuCacheEntry * toCheck = it -> first;
+		if(toCheck -> GetSource().IsEqual(toFind))
+		{
+			//Found a previous entry
+			avgVelocity.x = toCheck -> GetSendingNodeVelocity().x;
+			avgVelocity.y = toCheck -> GetSendingNodeVelocity().y;
+			div++;
+		}
+	}
+
+	if(div > 0)
+	{
+		avgVelocity.x = avgVelocity.x/div;
+		avgVelocity.y = avgVelocity.y/div;
+	}
+
+	return avgVelocity;
 }
 
 

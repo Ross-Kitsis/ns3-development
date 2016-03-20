@@ -100,6 +100,11 @@ public:
 	 */
 	bool Lookup(Ipv6Address toFind, RsuCacheEntry * entry);
 
+	/**
+	 * Iterates through all entries in the cache and averages the velocities of all	entries with teh passed source address
+	 */
+	Vector GetAverageVelocity(Ipv6Address toFind);
+
 private:
 
 	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)

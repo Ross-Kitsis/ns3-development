@@ -21,6 +21,7 @@ def build(bld):
         'Application/ThesisUdpEchoServer.cc',
         'Application/ThesisUdpEchoClient.cc',
         'helper/ThesisUdpEchoHelper.cc',
+        'model/ITVHeader.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('thesisinternetrouting')
@@ -43,6 +44,7 @@ def build(bld):
         'Application/ThesisUdpEchoServer.h',
         'Application/ThesisUdpEchoClient.h',
         'helper/ThesisUdpEchoHelper.h',
+        'model/ITVHeader.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

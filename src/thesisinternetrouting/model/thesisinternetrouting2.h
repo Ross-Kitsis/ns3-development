@@ -41,6 +41,7 @@
 #include "InternetHeader.h"
 #include "Thesis-Internet-Routing-Queue.h"
 #include "RsuCache.h"
+#include "ITVHeader.h"
 
 namespace ns3
 {
@@ -287,7 +288,6 @@ protected:
 	void DeleteRoute(ThesisInternetRoutingTableEntry2 *route);
 
 
-
 private:
 
 	/**
@@ -311,6 +311,12 @@ private:
 	 * Returns the first interface number on w p2p interface; else -1
 	 */
 	int32_t GetP2pInterface();
+
+	/*
+	 * Predict a VANET nodes position based on its position, velocity and timestamp in its header
+	 * Using the provided node address can average velocities in case of a 0 velocity (Both x and y should be 0)
+	 */
+	Vector GetPredictedNodePosition(Ipv6Address nodeAddress,Vector oldPosition, Vector reportedVelocity ,Time originalSendTime);
 
 	/**
 	 * \brief Pointer to IPv6 protocol on node
