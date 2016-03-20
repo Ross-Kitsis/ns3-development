@@ -254,7 +254,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 
 			//	l3 ->Send(ack,ackHdr.GetSourceAddress(), ackHdr.GetDestinationAddress(),1,ackRoute);
 
-//				ucb(m_wi,ackRoute,ack,ackHdr);
+				ucb(m_wi,ackRoute,ack,ackHdr);
 
 			/*
 			Timer toAck;
@@ -303,6 +303,18 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 				Ptr<Ipv6Route> route = Lookup(destination,m_pp);
 				if(route)
 				{
+
+					/*
+					Ptr<Ipv6Route> rtentry = Create<Ipv6Route> ();
+					rtentry -> SetDestination(destination);
+					rtentry -> SetGateway(Ipv6Address::GetLoopback());
+					rtentry -> SetOutputDevice(m_lo);
+					rtentry -> SetSource(m_ipv6 -> GetAddress(1,1).GetAddress());
+					*/
+
+					//Set gateway to RSU TO VANET multicast address to avoid ARP
+					route -> SetGateway(Ipv6Address(RSU_TO_VANET));
+
 					mcast::TypeHeader RToVheader (mcast::INTERNET_RSU_TO_VANET);
 					packet -> AddHeader(RToVheader);
 
@@ -473,16 +485,31 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		}else if(theader.Get() == 4)
 		{
 			//Type 4 is RSU to VANET (Handle later)
+			std::cout << std::endl;
 			std::cout << ">>>>>> GOT PACKET WITH TYPE 4 - RSU forwarding back into VANET <<<<<<<"<< std::endl;
 
 			Ipv6Address destination = header.GetDestinationAddress();
 
 			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1)
 			{
+				std::cout << ">>>>>> Received packet for this node; forwarding UCB <<<<<<<"<< std::endl;
+
+				std::cout << "Header Properties: "<< std::endl;
+				std::cout << "Destination: " << header.GetDestinationAddress() << std::endl;
+				std::cout << "Source: " << header.GetSourceAddress() << std::endl;
+				std::cout << std::endl;
+
+				//Remove headers before forwarding up, maybe thats causing the problem??
+				mcast::TypeHeader typeHeader (mcast::UNKNOWN);
+				packet -> RemoveHeader(typeHeader);
+				//IF THIS WORKS WILL ALSO NEED TO REMOVE INTERNET/ROUTING HEADER
+
 				int32_t iif = m_ipv6->GetInterfaceForDevice (idev);
-				lcb (p, header, iif);
+				lcb (packet, header, iif);
+				return true;
 			}else
 			{
+				return true;
 				//Transmission not for me, may need to retransmit, put this in later
 			}
 

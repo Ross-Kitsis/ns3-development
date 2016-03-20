@@ -322,7 +322,7 @@ ThesisUdpEchoClient::ScheduleTransmit (Time dt)
 	}
 
 	//Bind to socket
-	m_socket->Bind (Inet6SocketAddress (src, m_peerPort));
+	m_socket->Bind (Inet6SocketAddress (src, 0));
 	//m_socket->
 
 	//Set Recv callback again in case re-binding caused problems
