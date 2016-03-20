@@ -100,6 +100,9 @@ public:
 	void SetSenderPosition(Vector p) {m_SenderPosition = p;}
 	Vector GetSenderPosition() {return m_SenderPosition;}
 
+	void SetRsuAddress(Ipv6Address address) {m_RsuAddress = address;}
+	Ipv6Address GetRsuAddress() {return m_RsuAddress;}
+
 	bool operator== (InternetHeader const & o) const;
 
 private:
