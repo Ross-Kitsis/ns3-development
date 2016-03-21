@@ -161,7 +161,7 @@ RsuCache::RemoveEntry(Ipv6Address toRemove)
 }
 
 bool
-RsuCache::Lookup(Ipv6Address toFind, RsuCacheEntry * entry)
+RsuCache::Lookup(Ipv6Address toFind, RsuCacheEntry  &entry)
 {
 	CleanCache();
 	bool hasEntry = false;
@@ -171,8 +171,9 @@ RsuCache::Lookup(Ipv6Address toFind, RsuCacheEntry * entry)
 
 		if(toCheck -> GetSource().IsEqual(toFind))
 		{
+			std::cout << "ToCheck found entry with address: " << toCheck -> GetSource() << std::endl;
 			hasEntry = true;
-			entry = toCheck;
+			entry = *toCheck;
 		}
 	}
 

@@ -98,7 +98,7 @@ public:
 	 * Set entry to the entry
 	 * Return true if entry found; false otherwise
 	 */
-	bool Lookup(Ipv6Address toFind, RsuCacheEntry * entry);
+	bool Lookup(Ipv6Address toFind, RsuCacheEntry &entry);
 
 	/**
 	 * Iterates through all entries in the cache and averages the velocities of all	entries with teh passed source address

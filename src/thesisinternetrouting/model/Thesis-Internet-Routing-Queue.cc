@@ -42,6 +42,7 @@ ThesisInternetRoutingQueue::RemoveRoutingQueueEntry(Ipv6Address source, Ipv6Addr
 		//Source, destination and sendtime must be equal to be a duplicate packet
 		if(entrySource.IsEqual(source) && entryDestination.IsEqual(destination) && entrySendTime == sendTime)
 		{
+			entry->m_RetransmitTimer.Cancel();
 			m_queue.erase(it);
 			return;
 		}

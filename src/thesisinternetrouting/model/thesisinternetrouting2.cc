@@ -15,6 +15,7 @@
 #define VANET_TO_RSU "ff02::116"
 #define RSU_TO_VANET "ff02::117"
 
+
 namespace ns3
 {
 
@@ -168,7 +169,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 		//Create new typeHeader and peek
 		mcast::TypeHeader theader (mcast::HELLO);
 		packet -> PeekHeader(theader);
-		if(theader.Get() == 3)
+		if(theader.Get() == mcast::INTERNET)
 		{
 			//Received type header of type internet
 			packet -> RemoveHeader(theader);
@@ -205,6 +206,14 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 																							 Ih.GetTimestamp(), Simulator::Now());
 			m_RsuCache.AddEntry(entry);
 
+
+			std::cout << " Adding entry to cache with properties: " << std::endl;
+			std::cout << " Destination: " << entry -> GetDestination() << std::endl;
+			std::cout << " Source: " << entry -> GetSource() << std::endl;
+			std::cout << "Send Time: " << entry -> GetSendTime() << std::endl;
+			std::cout << "Receive Time: " << entry -> GetReceiveTime() << std::endl;
+			std::cout << "Sending node position " << entry -> GetSendingNodePosition() << std::endl;
+			std::cout << "Sending node velocity " << entry -> GetSendingNodeVelocity() << std::endl;
 
 			/*
 			std::cout << " RSU Header Properties " << header.GetDestinationAddress() << std::endl;
@@ -266,19 +275,16 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 
 			ucb(m_wi,ackRoute,ack,ackHdr);
 
-			/*
-			Timer toAck;
-
-			toAck.SetFunction(&ThesisInternetRoutingProtocol2::SendAckMessage,this);
-			toAck.SetArguments(ack,ucb);
-			toAck.SetDelay(MicroSeconds(3));
-			 */
-
-			//return true;
-		}else if(theader.Get() == 4)
+		}else if(theader.Get() == mcast::INTERNET_RSU_TO_VANET)
 		{
-			//Type 4 is RSU to VANET (Handle later)
-			//Should not really happen on RSU
+			//Type 4: RSU transmitting into VANET or VANET retransmitting
+			//Do not react to this transmission if it happens
+			return true;
+		}else if(theader.Get() == mcast::INTERNET_VANET_ACK)
+		{
+			//Type 6 message - VANET node ACK recieving a packet
+			//Don't need to do any processing on this end, allow entry in queue to naturally expire
+			return true;
 		}
 
 	}else if(idev == m_pp)
@@ -291,16 +297,17 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 		//Create new typeHeader and peek
 		mcast::TypeHeader theader (mcast::UNKNOWN);
 		packet -> PeekHeader(theader);
-		if(theader.Get() == 5)
+		if(theader.Get() == mcast::INTERNET_RSU_ACK)
 		{
-			//Need to double check this
-		}else if(theader.Get() ==1)
+			//Shouldn't be possible
+			return true;
+		}else if(theader.Get() == mcast::HELLO)
 		{
 			//Shouldn't happen but if it does kill the transmission here before it goes into the VANET
 			return true;
 		}else
 		{
-			RsuCacheEntry * entry = NULL;
+			RsuCacheEntry entry;
 			if(m_RsuCache.Lookup(header.GetDestinationAddress(), entry))
 			{
 				std::cout << "<<<<<<<<<<<< Found an entry in RSU cache >>>>>>>>>>>>>>>>" << std::endl;
@@ -328,15 +335,21 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 					//Set gateway to RSU TO VANET multicast address to avoid ARP
 					route -> SetGateway(Ipv6Address(RSU_TO_VANET));
 
+//					std::cout << "Attempting to predict position" << std::endl;
+
 					//Create ITV header and attach to packed
-					//ITVHeader itvh(mobility -> GetPosition(), entry -> GetSendTime(), false, mobility -> GetPosition(),mobility -> GetVelocity());
+//					std::cout << "Destination: " << header.GetDestinationAddress() << std::endl;
+//					std::cout << "Sending Node Position: " << entry.GetSendingNodePosition() << std::endl;
+//					std::cout << "Sending Node Velocity: " << entry.GetSendingNodeVelocity() << std::endl;
+//					std::cout << "Sending Node Time: " << entry.GetSendTime() << std::endl;
 
-					/*
-					Vector m_OriginPosition = Vector(), Time m_OriginalTimestamp = Simulator::Now(),
-											bool m_isDtnTolerant = false, Vector m_SenderPosition = Vector(),
-											Vector m_SenderVelocity = Vector(), Vector m_PredictedPosition = Vector()
-					*/
 
+					Vector predictedPosition = GetPredictedNodePosition(header.GetDestinationAddress(), entry.GetSendingNodePosition(),
+																															entry.GetSendingNodeVelocity(),entry.GetSendTime());
+
+//					std::cout << "Predicted position: " << predictedPosition << std::endl;
+					ITVHeader itvh(mobility -> GetPosition(), entry.GetSendTime(), false, mobility -> GetPosition(),mobility -> GetVelocity(),predictedPosition);
+					packet -> AddHeader(itvh);
 
 					//Create type header add to packet
 					mcast::TypeHeader RToVheader (mcast::INTERNET_RSU_TO_VANET);
@@ -351,7 +364,6 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			}
 		}
 
-
 	}
 
 
@@ -361,7 +373,14 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 Vector
 ThesisInternetRoutingProtocol2::GetPredictedNodePosition(Ipv6Address nodeAddress,Vector oldPosition, Vector reportedVelocity ,Time originalSendTime)
 {
+
+	NS_LOG_FUNCTION(this);
+
 	Vector newPosition;
+
+	std::cout << "Current time: " << Simulator::Now() << std::endl;
+	std::cout << "Original Send Time " << originalSendTime << std::endl;
+
 	Time diff = Simulator::Now() - originalSendTime;
 
 
@@ -476,7 +495,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		//Create new typeHeader and peek
 		mcast::TypeHeader theader (mcast::UNKNOWN);
 		packet -> PeekHeader(theader);
-		if(theader.Get() == 3)
+		if(theader.Get() == mcast::INTERNET)
 		{
 			//Received type header of type internet
 			//packet -> PeekHeader(theader);
@@ -530,8 +549,6 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 				//Cache does not contain and entry with the tuple (Add to cache and start timer on retransmit
 				ThesisInternetQueueEntry * entry = new ThesisInternetQueueEntry(packet, header, ucb, ecb, timeStamp);
 
-				//Timer * toRetransmit = entry -> GetTimer();
-
 				entry->m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::SendInternetRetransmit, this);
 				entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
 				entry->m_RetransmitTimer.Schedule(backoff);
@@ -540,7 +557,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 				return true;
 			}
-		}else if(theader.Get() == 4)
+		}else if(theader.Get() == mcast::INTERNET_RSU_TO_VANET)
 		{
 			//Type 4 is RSU to VANET (Handle later)
 			std::cout << std::endl;
@@ -550,7 +567,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1)
 			{
-				std::cout << ">>>>>> Received packet for this node; forwarding UCB <<<<<<<"<< std::endl;
+				std::cout << ">>>>>> Received packet for this node; forwarding LCB <<<<<<<"<< std::endl;
 
 				std::cout << "Header Properties: "<< std::endl;
 				std::cout << "Destination: " << header.GetDestinationAddress() << std::endl;
@@ -560,41 +577,202 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 				//Remove headers before forwarding up, maybe thats causing the problem??
 				mcast::TypeHeader typeHeader (mcast::UNKNOWN);
 				packet -> RemoveHeader(typeHeader);
-				//IF THIS WORKS WILL ALSO NEED TO REMOVE INTERNET/ROUTING HEADER
+
+				ITVHeader itvhdr(Vector(), Simulator::Now(), false, Vector(), Vector(), Vector());
+				packet -> RemoveHeader(itvhdr);
 
 				int32_t iif = m_ipv6->GetInterfaceForDevice (idev);
 				lcb (packet, header, iif);
+
+				//Need to send out an ACK message to surrounding node to stop their retransmission
+				//Ensure sending out to a multi-cast address to avoid ARP issues
+
+				Ptr<Packet> ackPacket = Create<Packet> ();
+
+				mcast::TypeHeader ackHeader (mcast::INTERNET_VANET_ACK);
+
+				ackPacket -> AddHeader(itvhdr);
+				ackPacket -> AddHeader(ackHeader);
+
+				Ptr<Ipv6Route> ackEntry = Create<Ipv6Route> ();
+				ackEntry -> SetDestination(Ipv6Address(VANET_TO_RSU));
+				ackEntry -> SetGateway(Ipv6Address(VANET_TO_RSU));
+				ackEntry -> SetOutputDevice(m_wi);
+				ackEntry -> SetSource(Ipv6Address(VANET_TO_RSU));
+
+				//Send Ack Message
+				ucb (m_wi,ackEntry, ackPacket, header);
+
 				return true;
 			}else
 			{
+				//Transmission not for me, may need to retransmit
+				//Calculate a backoff timer and place into routing queue
+
+				//Remove headers before forwarding up, maybe thats causing the problem??
+				mcast::TypeHeader typeHeader (mcast::UNKNOWN);
+				packet -> RemoveHeader(typeHeader);
+
+				ITVHeader itvhdr(Vector(), Simulator::Now(), false, Vector(), Vector(), Vector());
+				packet -> RemoveHeader(itvhdr);
+
+				if(m_isStrictEffective)
+				{
+					//VANET routing mode is strictly effective; check effectivity of retransmitting
+					if(!IsEffectiveV2VTransmission(itvhdr.GetSenderPosition(),itvhdr.GetPredictedPosition()))
+					{
+						return true;
+					}
+				}
+
+				///////////////////////////////////////////////////////////////////////////////////////////////////
+
+				Time backoff = GetV2VBackoffDuration(itvhdr.GetSenderPosition(), itvhdr.GetPredictedPosition());
+				Ipv6Address source = header.GetSourceAddress();
+				Ipv6Address destination = header.GetDestinationAddress();
+				Time timeStamp = itvhdr.GetOriginalTimestamp();
+
+				bool CacheContains = m_RoutingCache.Lookup(source, destination, timeStamp);
+
+				if(CacheContains)
+				{
+					//Cache contains entry with the source,destination,timestamp tuple already (Stop timer on retransmit and remove)
+					ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,timeStamp);
+
+					//Stop timer before removing
+					entry -> m_RetransmitTimer.Cancel();
+
+					//Remove queue entry to stop retransmit
+					m_RoutingCache.RemoveRoutingQueueEntry(source,destination,timeStamp);
+
+				}else
+				{
+					//Re-Add headers before placing into queue
+					packet ->AddHeader(itvhdr);
+					packet ->AddHeader(typeHeader);
+
+					//Cache does not contain and entry with the tuple (Add to cache and start timer on retransmit
+					ThesisInternetQueueEntry * entry = new ThesisInternetQueueEntry(packet, header, ucb, ecb, timeStamp);
+
+					//Timer * toRetransmit = entry -> GetTimer();
+
+					entry->m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::SendInternetRetransmitIntoVanet, this);
+					entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
+					//entry->m_RetransmitTimer.Schedule(backoff);
+
+					m_RoutingCache.AddRoutingEntry(entry);
+
+					return true;
+				}
+				///////////////////////////////////////////////////////////////////////////////////////////////////
+
 				return true;
-				//Transmission not for me, may need to retransmit, put this in later
 			}
 
-
-		}else if(theader.Get() == 5)
+		}else if(theader.Get() == mcast::INTERNET_RSU_ACK)
 		{
 
 			std::cout << ">>>>>> GOT PACKET WITH TYPE 5 - RSU ACK <<<<<<<"<< std::endl;
 
 			/////////////////////////Remove headers; packet will be discarded after this anyway
-			mcast::TypeHeader typeHeader (mcast::HELLO);
+			mcast::TypeHeader typeHeader (mcast::UNKNOWN);
 			packet -> RemoveHeader(typeHeader);
 
 			InternetHeader Ih;
 			packet -> RemoveHeader(Ih);
-			//////////////////////////////////////////
+			////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 			//Remove entry for queue (If it exists)
 			m_RoutingCache.RemoveRoutingQueueEntry(header.GetSourceAddress(), header.GetDestinationAddress(), Ih.GetTimestamp());
 
 			return true;
-		}
+		}else if(theader.Get() == mcast::INTERNET_VANET_ACK)
+		{
+			//Ack message by a VANET node
+			//Cancel stop and cancel timer retransmission
+			//Remove entry from routing cache
+			mcast::TypeHeader ack(mcast::UNKNOWN);
+			packet -> RemoveHeader(ack);
 
+			ITVHeader itvhdr(Vector(), Simulator::Now(), false, Vector(), Vector(), Vector());
+			packet -> RemoveHeader(itvhdr);
+
+			std::cout << "Received VANET Ack, Source: " << header.GetSourceAddress() <<
+									 " Destination: " << header.GetDestinationAddress() <<
+									 " Original timestamp: " << itvhdr.GetOriginalTimestamp() << std::endl;
+
+			m_RoutingCache.RemoveRoutingQueueEntry(header. GetSourceAddress(), header.GetDestinationAddress(), itvhdr.GetOriginalTimestamp());
+
+			return true;
+		}
 	}
 
-	return true;
+	return false;
 }
+
+void
+ThesisInternetRoutingProtocol2::SendInternetRetransmitIntoVanet(Ipv6Address source, Ipv6Address destination, Time timestamp)
+{
+	NS_LOG_FUNCTION(this);
+	std::cout << "**************** Sending V2VInternet Retransmit ******************" << std::endl;
+
+		ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,timestamp);
+		UnicastForwardCallback ucb = entry -> GetUnicastForwardCallback();
+
+		//Get mobility model properties and extract values needed for header
+		Ptr<MobilityModel> mobility = m_ipv6 -> GetObject<MobilityModel>();
+		Vector position = mobility -> GetPosition();
+		Vector velocity = mobility -> GetVelocity();
+
+
+		Ptr<Packet> packet = entry -> GetPacket();
+
+		//Remove headers to modify Internet header - need to change sender parameters
+		mcast::TypeHeader theader (mcast::UNKNOWN);
+		packet -> RemoveHeader(theader);
+
+		ITVHeader itvhdr;
+		packet -> RemoveHeader(itvhdr);
+
+		//Update sender position and velocity
+		itvhdr.SetSenderPosition(position);
+		itvhdr.SetSenderVelocity(velocity);
+
+		//Re-add headers
+		packet -> AddHeader(itvhdr);
+		packet -> AddHeader(theader);
+
+		//Lookup route to send forward packet
+		Ptr<Ipv6Route> route = Lookup(destination,m_wi);
+
+		//Remove entry from cache
+		m_RoutingCache.RemoveRoutingQueueEntry(source,destination,timestamp);
+
+		ucb (route -> GetOutputDevice(),route, packet, entry -> GetIpv6Header());
+}
+
+bool
+ThesisInternetRoutingProtocol2::IsEffectiveV2VTransmission(Vector senderPosition, Vector targetPosition)
+{
+	NS_LOG_FUNCTION(this);
+	bool isEffective = false;
+
+	Ptr<Node> theNode = GetObject<Node>();
+	Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
+
+	Vector currentPos = mobility -> GetPosition();
+
+	double currentDistanceToTarget = utils.GetDistanceBetweenPoints(currentPos.x, currentPos.y, targetPosition.x, targetPosition.y);
+	double senderDistanceToTarget = utils.GetDistanceBetweenPoints(senderPosition.x, senderPosition.y, targetPosition.x, targetPosition.y);
+
+	if(currentDistanceToTarget < senderDistanceToTarget)
+	{
+		isEffective = true;
+	}
+
+	return isEffective;
+}
+
 
 void
 ThesisInternetRoutingProtocol2::SendAckMessage(Ptr<Packet> ack, UnicastForwardCallback ucb)
@@ -682,7 +860,7 @@ ThesisInternetRoutingProtocol2::SendInternetRetransmit(Ipv6Address source, Ipv6A
 	//Remove entry from cache
 	m_RoutingCache.RemoveRoutingQueueEntry(source,destination,sendTime);
 
-	ucb (route -> GetOutputDevice(),route, entry->GetPacket(), entry -> GetIpv6Header());
+	ucb (route -> GetOutputDevice(),route, packet, entry -> GetIpv6Header());
 }
 
 
@@ -1018,9 +1196,13 @@ ThesisInternetRoutingProtocol2::DoInitialize()
 	if(!m_IsRSU)
 	{
 		SetIpToZone();
+
+		m_wi = m_ipv6 -> GetNetDevice(GetWirelessInterface());
+
 	}else if (m_IsRSU)
 	{
 		SetInterfacePointers();
+
 	}
 
 	Ipv6RoutingProtocol::DoInitialize ();
@@ -1264,6 +1446,28 @@ ThesisInternetRoutingProtocol2::GetBackoffDuration(Vector SenderPosition)
 	toWait = MicroSeconds(ratio * m_rWait);
 
 	std::cout << "Waiting time in microseconds: " << toWait.GetMicroSeconds() << std::endl;
+
+	return toWait;
+}
+
+Time
+ThesisInternetRoutingProtocol2::GetV2VBackoffDuration(Vector senderPosition, Vector targetPosition)
+{
+	Time toWait;
+
+	Ptr<Node> theNode = GetObject<Node>();
+	Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
+
+	Vector currentPos = mobility -> GetPosition();
+
+	double currentDistanceToTarget = utils.GetDistanceBetweenPoints(currentPos.x, currentPos.y, targetPosition.x, targetPosition.y);
+	double senderDistanceToTarget = utils.GetDistanceBetweenPoints(senderPosition.x, senderPosition.y, targetPosition.x, targetPosition.y);
+
+	double ratio = currentDistanceToTarget/senderDistanceToTarget;
+	ratio = ceil(ratio * 100);
+
+	//Backoff in microseconds
+	toWait = MicroSeconds(ratio * m_rWait);
 
 	return toWait;
 }

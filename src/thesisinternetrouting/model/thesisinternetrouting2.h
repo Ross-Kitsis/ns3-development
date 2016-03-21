@@ -319,6 +319,25 @@ private:
 	Vector GetPredictedNodePosition(Ipv6Address nodeAddress,Vector oldPosition, Vector reportedVelocity ,Time originalSendTime);
 
 	/**
+	 * Retransmits a reply message from an RSU to a VANET node
+	 * Called when retransmit timer expires on a mcast::RSU_TO_VANET type transmission
+	 */
+	void SendInternetRetransmitIntoVanet(Ipv6Address source, Ipv6Address destination, Time timestamp);
+
+	/**
+	 * Determines if a transmission is effective for a VANET to VANET transmission when
+	 * routing towards a VANET position
+	 */
+	bool IsEffectiveV2VTransmission(Vector senderPosition, Vector targetPosition);
+
+	/**
+	 * Used when a node is attempting to get the backoff duration before retransmitting a RSU to Vanet packet
+	 * Calculate the backoff duration before retransmitting a packet
+	 * Return the backoff time in microseconds
+	 */
+	Time GetV2VBackoffDuration(Vector SenderPosition, Vector TargetPosition);
+
+	/**
 	 * \brief Pointer to IPv6 protocol on node
 	 */
 	Ptr<Ipv6> m_ipv6;
