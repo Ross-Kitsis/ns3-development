@@ -12,6 +12,7 @@
 #include "ns3/wifi-module.h"
 #include "ns3/point-to-point-module.h"
 
+
 #define VANET_TO_RSU "ff02::116"
 #define RSU_TO_VANET "ff02::117"
 
@@ -336,6 +337,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			packet -> AddHeader(vanetHeader);
 
 			ucb (route -> GetOutputDevice(),route, packet, header);
+			return true;
 		}
 		else
 		{
@@ -593,7 +595,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		{
 			//Received type header of type internet
 			//packet -> PeekHeader(theader);
-			std::cout << " BREAKING? Type header with type: " << theader.Get() << std::endl;
+			//std::cout << " BREAKING? Type header with type: " << theader.Get() << std::endl;
 
 			/////////////////////////Remove headers; add again before placing into queue
 
@@ -659,7 +661,11 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 			Ipv6Address destination = header.GetDestinationAddress();
 
-			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1 /*|| CheckHostBits(destination)*/)
+			//Test to see why byte check not working correctly (Always return true)
+			//CheckHostBits(destination);
+
+
+			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1 || CheckHostBits(destination))
 			{
 				std::cout << ">>>>>> Received packet for this node; forwarding LCB <<<<<<<"<< std::endl;
 
@@ -815,13 +821,34 @@ ThesisInternetRoutingProtocol2::CheckHostBits(Ipv6Address hostAddress)
 	uint8_t currentBytes[16];
 	uint8_t hostBytes[16];
 
+	///////////////////////////////////////////////
+	//Test Section
+	//Print out host and current address bytes
+
+	//uint8_t test[16] = {};
+	//hostAddress.GetBytes(test);
+
+/*
+	std::cout << "Printing current address bytes " << currentAddress << std::endl;
 	//Get bytes for current address
 	currentAddress.GetBytes(currentBytes);
+	for(int i = 0; i < 16; i++)
+	{
+		std::cout << unsigned(currentBytes[i]) << " ";
+	}
+	std::cout  << std::endl;
 
+	std::cout << "Printing passed host address bytes " << hostAddress << std::endl;
 	//Get bytes for passed host address
 	hostAddress.GetBytes(hostBytes);
-
-	for(int i = 8; i < 15; i++)
+	for(int i = 0; i < 16; i++)
+	{
+		std::cout << unsigned(hostBytes[i]) << " ";
+	}
+	std::cout  << std::endl;
+*/
+	////////////////////////////////////////////////
+	for(int i = 8; i < 16; i++)
 	{
 		if(currentBytes[i] != hostBytes[i])
 		{
