@@ -305,7 +305,40 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 		{
 			//Shouldn't happen but if it does kill the transmission here before it goes into the VANET
 			return true;
-		}else
+		}else if(theader.Get() == mcast::INTERNET_RSU_TO_RSU_REDIRECT)
+		{
+			//Got a packet from another RSU to forward onto VANET
+			//Remove headers, update ITVHeader, change type header, form packet and send into VANET
+			//VANET nodes should be oblivious of this redirect
+
+			mcast::TypeHeader redirectHeader (mcast::UNKNOWN);
+			packet -> RemoveHeader(redirectHeader);
+
+			ITVHeader itvhdr(Vector(), Simulator::Now(), false, Vector(), Vector(), Vector());
+			packet -> RemoveHeader(itvhdr);
+
+			Ptr<Node> theNode = GetObject<Node>();
+			Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
+
+			itvhdr.SetOriginPosition(mobility -> GetPosition());
+			itvhdr.SetSenderPosition(mobility -> GetPosition());
+			itvhdr.SetSenderVelocity(mobility -> GetVelocity());
+
+/////////////////////////////////////////////////////////////////////////////
+			Ptr<Ipv6Route> route = Lookup(header.GetDestinationAddress(),m_pp);
+			route -> SetGateway(Ipv6Address(RSU_TO_VANET));
+/////////////////////////////////////////////////////////////////////////////
+
+			//Re-form packet by adding headers
+			mcast::TypeHeader vanetHeader(mcast::INTERNET_RSU_TO_VANET);
+
+			packet -> AddHeader(itvhdr);
+			packet -> AddHeader(vanetHeader);
+
+			ucb (route -> GetOutputDevice(),route, packet, header);
+
+		}
+		else
 		{
 			RsuCacheEntry entry;
 			if(m_RsuCache.Lookup(header.GetDestinationAddress(), entry))
@@ -347,6 +380,12 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 					Vector predictedPosition = GetPredictedNodePosition(header.GetDestinationAddress(), entry.GetSendingNodePosition(),
 																															entry.GetSendingNodeVelocity(),entry.GetSendTime());
 
+					DbEntry t1 = m_Db -> GetEntryForCurrentPosition(predictedPosition);
+					int intCheck = m_ipv6 ->GetInterfaceForAddress(t1.GetRsuAddress());
+
+					if(intCheck != -1)
+					{
+						//Interface for address was found meaning this is the RSU for the zone, forward normally
 //					std::cout << "Predicted position: " << predictedPosition << std::endl;
 					ITVHeader itvh(mobility -> GetPosition(), entry.GetSendTime(), false, mobility -> GetPosition(),mobility -> GetVelocity(),predictedPosition);
 					packet -> AddHeader(itvh);
@@ -357,6 +396,62 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 
 					ucb (route -> GetOutputDevice(),route, packet, header);
 					return true;
+					}else
+					{
+						//Predicted position puts the node inside a different zone
+
+						//Get bytes for destination address
+						uint8_t addressBuf[16];
+						destination.GetBytes(addressBuf);
+
+						//Get bytes for RSU address
+						uint8_t rsuAddressBuf[16];
+						t1.GetRsuAddress().GetBytes(rsuAddressBuf);
+
+						//Buffer to hold newly formed address
+						uint8_t newDestinationAddressBuffer[16];
+
+						//Set Network address bits
+						for(int i = 0; i < 8; i++)
+						{
+							newDestinationAddressBuffer[i] = rsuAddressBuf[i];
+						}
+
+						//Set Host address bits
+						for(int i = 8; i < 16; i++)
+						{
+							newDestinationAddressBuffer[i] = addressBuf[i];
+						}
+
+						Ipv6Address newDestinationAddress;
+						newDestinationAddress.Set(newDestinationAddressBuffer);
+
+						//Create new header with the updated location
+						Ipv6Header newV6Header;
+						newV6Header.SetSourceAddress(header.GetSourceAddress());
+						newV6Header.SetDestinationAddress(newDestinationAddress);
+						newV6Header.SetNextHeader(header.GetNextHeader());
+						newV6Header.SetHopLimit(header.GetHopLimit());
+						newV6Header.SetPayloadLength(header.GetPayloadLength());
+						newV6Header.SetTrafficClass(newV6Header.GetTrafficClass());
+						newV6Header.SetFlowLabel(header.GetFlowLabel());
+
+						//Create a new type header
+						mcast::TypeHeader redirectHeader(mcast::INTERNET_RSU_TO_RSU_REDIRECT);
+
+						//Create new ITV header
+						ITVHeader itvh(mobility -> GetPosition(), entry.GetSendTime(), false, mobility -> GetPosition(),mobility -> GetVelocity(),predictedPosition);
+
+						//Get route to the new RSU
+						Ptr<Ipv6Route> redirectRoute = Lookup(newDestinationAddress,m_pp);
+
+						//Form packet
+						packet -> AddHeader(itvh);
+						packet -> AddHeader(redirectHeader);
+
+						ucb (route -> GetOutputDevice(),redirectRoute, packet, newV6Header);
+
+					}
 				}
 			}else
 			{
