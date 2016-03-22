@@ -336,7 +336,6 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			packet -> AddHeader(vanetHeader);
 
 			ucb (route -> GetOutputDevice(),route, packet, header);
-
 		}
 		else
 		{
@@ -660,7 +659,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 			Ipv6Address destination = header.GetDestinationAddress();
 
-			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1)
+			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1 /*|| CheckHostBits(destination)*/)
 			{
 				std::cout << ">>>>>> Received packet for this node; forwarding LCB <<<<<<<"<< std::endl;
 
@@ -803,6 +802,36 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 	}
 
 	return false;
+}
+
+bool
+ThesisInternetRoutingProtocol2::CheckHostBits(Ipv6Address hostAddress)
+{
+	NS_LOG_FUNCTION(this);
+	bool toReturn = true;
+
+	Ipv6Address currentAddress = m_ipv6->GetAddress(m_ipv6->GetInterfaceForDevice(m_wi),1).GetAddress();
+
+	uint8_t currentBytes[16];
+	uint8_t hostBytes[16];
+
+	//Get bytes for current address
+	currentAddress.GetBytes(currentBytes);
+
+	//Get bytes for passed host address
+	hostAddress.GetBytes(hostBytes);
+
+	for(int i = 8; i < 15; i++)
+	{
+		if(currentBytes[i] != hostBytes[i])
+		{
+			std::cout << "SETTING TORETURN TO FALSE" << std::endl;
+			toReturn = false;
+			break;
+		}
+	}
+
+	return toReturn;
 }
 
 void
@@ -997,7 +1026,7 @@ ThesisInternetRoutingProtocol2::RouteOutput (Ptr<Packet> p, const Ipv6Header &he
 
 		//return Lookup(Ipv6Address::GetLoopback(),oif);
 
-		std::cout << ">>>>>>>>>> ROUTE OUTPUT RETURNING LOOPBACK ROUTE WITH FOLLOWING PROPERTIES <<<<<<<<<<<<<<<<<<" << std::endl;
+		std::cout << Simulator::Now() << " >>>>>>>>>> ROUTE OUTPUT RETURNING LOOPBACK ROUTE WITH FOLLOWING PROPERTIES <<<<<<<<<<<<<<<<<<" << std::endl;
 
 		std::cout << "Output Interface (OIF): " << m_ipv6->GetInterfaceForDevice(oif) << std::endl;
 		std::cout << "Original destination: " << destination << std::endl;

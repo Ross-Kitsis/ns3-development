@@ -338,6 +338,12 @@ private:
 	Time GetV2VBackoffDuration(Vector SenderPosition, Vector TargetPosition);
 
 	/**
+	 * Checks if host bits match this nodes host bits
+	 * Returns true if bits match, false otherwise
+	 */
+	bool CheckHostBits(Ipv6Address hostAddress);
+
+	/**
 	 * \brief Pointer to IPv6 protocol on node
 	 */
 	Ptr<Ipv6> m_ipv6;
