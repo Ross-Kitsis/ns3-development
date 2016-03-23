@@ -60,7 +60,8 @@ ThesisRoutingProtocol::ThesisRoutingProtocol():
 		m_neighbors(Seconds(m_helloInterval * 5)),
 		m_dpd(MilliSeconds(100)),
 		m_sendHello(true),
-		m_mcastPacketSize(1024)
+		m_mcastPacketSize(1024),
+		m_initialDelay(Seconds(10))
 {
 	m_rng = CreateObject<UniformRandomVariable>();
 	//m_neighbors = ThesisNeighbors(Seconds(m_helloInterval * 5));
@@ -88,6 +89,13 @@ ThesisRoutingProtocol::GetTypeId (void)
 										BooleanValue (true),
 										MakeBooleanAccessor (&ThesisRoutingProtocol::m_sendHello),
 										MakeBooleanChecker ())
+		.AddAttribute ("Initial Delay",
+									 "Initial delay before sending any hello messages",
+									  TimeValue (Seconds(10)),
+										MakeTimeAccessor (&ThesisRoutingProtocol::m_initialDelay),
+										MakeTimeChecker ())
+
+
 
     /*
     .AddAttribute ("UnsolicitedRoutingUpdate", "The time between two Unsolicited Routing Updates.",
@@ -1149,7 +1157,7 @@ ThesisRoutingProtocol::DoInitialize ()
   }
 
 
-  Time delay = m_helloInterval + Seconds (m_rng->GetValue (0, 0.5*m_helloInterval.GetSeconds ()) );
+  Time delay = m_initialDelay + Seconds (m_rng->GetValue (0, 0.5*m_helloInterval.GetSeconds ()) );
   //m_nextUnsolicitedUpdate = Simulator::Schedule (delay, &RipNg::SendUnsolicitedRouteUpdate, this);
 
   if(m_sendHello)

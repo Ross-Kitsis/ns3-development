@@ -46,7 +46,9 @@ enum MessageType
   MCAST_CONTROL = 2, //!< MCAST Control type
   INTERNET = 3, //!< ThesisInternetRouting type (VANET TO RSU)
   INTERNET_RSU_TO_VANET = 4, //!< ThesisInternetRouting type (RSU TO VANET)
-
+  INTERNET_RSU_ACK = 5, //!< Ack that RSU got msg (RSU TO VANET)
+  INTERNET_VANET_ACK = 6, //!< ThesisInternetRouting type VANET TO VANET ACK of success
+  INTERNET_RSU_TO_RSU_REDIRECT = 7, //!< ThesisInternetRouting RSU to RSU transmission if a node changes zones before reply could go out
 
   UNKNOWN = 128
 };

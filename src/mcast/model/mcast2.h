@@ -418,6 +418,7 @@ private:
 
 	uint32_t m_mcastPacketSize;
 
+	Time m_initialDelay;
 };
 
 }//namespace mcast

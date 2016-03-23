@@ -111,6 +111,18 @@ TypeHeader::Deserialize (Buffer::Iterator start)
 	{
 		m_type = (MessageType) type;
 		break;
+	}case INTERNET_RSU_ACK:
+	{
+		m_type = (MessageType) type;
+		break;
+	}case INTERNET_VANET_ACK:
+	{
+		m_type = (MessageType) type;
+		break;
+	}case INTERNET_RSU_TO_RSU_REDIRECT:
+	{
+		m_type = (MessageType) type;
+		break;
 	}
 
 	default:
@@ -149,6 +161,21 @@ TypeHeader::Print (std::ostream &os) const
 	case INTERNET_RSU_TO_VANET:
 	{
 		os << "INTERNET_RSU_TO_VANET";
+		break;
+	}
+	case INTERNET_RSU_ACK:
+	{
+		os << "INTERNET_RSU_ACK";
+		break;
+	}
+	case INTERNET_VANET_ACK:
+	{
+		os << "INTERNET_VANET_ACK";
+		break;
+	}
+	case INTERNET_RSU_TO_RSU_REDIRECT:
+	{
+		os << "RSU_TO_RSU_REDIRECT" << std::endl;
 		break;
 	}
 	default:
