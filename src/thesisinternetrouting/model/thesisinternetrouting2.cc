@@ -599,6 +599,12 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 			/////////////////////////Remove headers; add again before placing into queue
 
+			//Check that this isn't a packet retransmitted from another VANET node but originating from this node
+			if(m_ipv6->GetInterfaceForAddress(header.GetSourceAddress()) != -1)
+			{
+				return true;
+			}
+
 			mcast::TypeHeader typeHeader (mcast::UNKNOWN);
 			packet -> RemoveHeader(typeHeader);
 
@@ -660,10 +666,6 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 			std::cout << ">>>>>> GOT PACKET WITH TYPE 4 - RSU forwarding back into VANET <<<<<<<"<< std::endl;
 
 			Ipv6Address destination = header.GetDestinationAddress();
-
-			//Test to see why byte check not working correctly (Always return true)
-			//CheckHostBits(destination);
-
 
 			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1 || CheckHostBits(destination))
 			{
@@ -736,6 +738,9 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 				if(CacheContains)
 				{
+
+					std::cout << "Cache Entry hit in INTERNET_RSU_TO_VANET" << std::endl;
+
 					//Cache contains entry with the source,destination,timestamp tuple already (Stop timer on retransmit and remove)
 					ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,timeStamp);
 
@@ -758,7 +763,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 					entry->m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::SendInternetRetransmitIntoVanet, this);
 					entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
-					//entry->m_RetransmitTimer.Schedule(backoff);
+					entry->m_RetransmitTimer.Schedule(backoff);
 
 					m_RoutingCache.AddRoutingEntry(entry);
 
@@ -894,7 +899,14 @@ ThesisInternetRoutingProtocol2::SendInternetRetransmitIntoVanet(Ipv6Address sour
 		packet -> AddHeader(theader);
 
 		//Lookup route to send forward packet
-		Ptr<Ipv6Route> route = Lookup(destination,m_wi);
+//		Ptr<Ipv6Route> route = Lookup(destination,m_wi);
+
+		Ptr<Ipv6Route> route = Create<Ipv6Route>();
+
+		route -> SetDestination(destination);
+		route -> SetSource(source);
+		route -> SetOutputDevice(m_wi);
+		route -> SetGateway(Ipv6Address(RSU_TO_VANET));
 
 		//Remove entry from cache
 		m_RoutingCache.RemoveRoutingQueueEntry(source,destination,timestamp);
@@ -916,10 +928,21 @@ ThesisInternetRoutingProtocol2::IsEffectiveV2VTransmission(Vector senderPosition
 	double currentDistanceToTarget = utils.GetDistanceBetweenPoints(currentPos.x, currentPos.y, targetPosition.x, targetPosition.y);
 	double senderDistanceToTarget = utils.GetDistanceBetweenPoints(senderPosition.x, senderPosition.y, targetPosition.x, targetPosition.y);
 
+	std::cout<<std::endl;
+	std::cout << " Target Position (Type 4) :" << targetPosition << std::endl;
+	std::cout << " V2V Current Distance to Target: " << currentDistanceToTarget << std::endl;
+	std::cout << " V2V Sender Distance to Target: " << senderDistanceToTarget <<std::endl;
+
+
 	if(currentDistanceToTarget < senderDistanceToTarget)
 	{
 		isEffective = true;
+	}else
+	{
+		std::cout << "FOUND INEFFECTIVE TRANSMISSION IN IsEffectiveV2VTransmission" << std::endl;
 	}
+
+	std::cout<<std::endl;
 
 	return isEffective;
 }
@@ -1635,6 +1658,9 @@ ThesisInternetRoutingProtocol2::IsEffective(Vector SenderPosition)
 
 	double currentDistanceToRsu = utils.GetDistanceBetweenPoints(currentPos.x, currentPos.y, m_currentRsu.GetRsuPosition().x, m_currentRsu.GetRsuPosition().y);
 	double senderDistanceToRsu = utils.GetDistanceBetweenPoints(SenderPosition.x, SenderPosition.y, m_currentRsu.GetRsuPosition().x, m_currentRsu.GetRsuPosition().y);
+
+	std::cout << "Current Distance to RSU: " << currentDistanceToRsu << std::endl;
+	std::cout << "Sender Distance to RSU: " << senderDistanceToRsu <<std::endl;
 
 	if(currentDistanceToRsu < senderDistanceToRsu)
 	{
