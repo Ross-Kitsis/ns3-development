@@ -98,6 +98,9 @@ ThesisInternetRoutingProtocol2::ThesisInternetRoutingProtocol2() :
 	m_numReceived = 0;
 	m_AverageLatency = 0;
 	m_receiveRate = 0;
+	m_HopCountAgregatorVanetToRsu = 0;
+	m_HopCountAgregatorRsuToVanet = 0;
+	m_numRsuRec = 0;
 }
 
 //Destructor
@@ -194,12 +197,30 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 
 			std::cout << "  Internet Header: " << Ih << std::endl;
 
+			//Check if cache already contains an entry with the unique source,destination,sendtime tuple
+			//If contained this indicates the RSU has already received this transmission
+			//Do not forward any further as the packet was already forwarded
+			if(m_RsuCache.ContainsEntry(header.GetSourceAddress(),header.GetDestinationAddress(), Ih.GetTimestamp()))
+			{
+				return true;
+			}//Else fall through for further processing
+
+
 			Ipv6RoutingTableEntry toHub = m_sr6 -> GetDefaultRoute();
 			Ptr<Ipv6Route> route = Create<Ipv6Route> ();
 			route -> SetDestination(toHub.GetDestNetwork());
 			route -> SetGateway(toHub.GetGateway());
 			route -> SetOutputDevice(m_ipv6 -> GetNetDevice(toHub.GetInterface()));
 			route -> SetSource(m_ipv6 -> GetAddress(1,1).GetAddress());
+
+			//////////////////////////////////////////// Statistics
+
+			//Add the difference between the maximum hop count (64) and to hops to get to the RSU
+			m_HopCountAgregatorVanetToRsu += (64 - header.GetHopLimit());
+			m_numRsuRec++;
+			std::cout << "CURRENT VANETTORSU Agregate" << m_HopCountAgregatorVanetToRsu <<std::endl;
+			std::cout << "GOT HERE _______________________________" << 64 - header.GetHopLimit() <<std::endl;
+			////////////////////////////////////////////
 
 
 			ucb (route -> GetOutputDevice(),route, packet, header);
@@ -209,7 +230,6 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 																							 Ih.GetSourcePosition(), Ih.GetSourceVelocity(),
 																							 Ih.GetTimestamp(), Simulator::Now());
 			m_RsuCache.AddEntry(entry);
-
 
 			std::cout << " Adding entry to cache with properties: " << std::endl;
 			std::cout << " Destination: " << entry -> GetDestination() << std::endl;
@@ -720,6 +740,15 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 						std::cout << "RTT: " << Simulator::Now() - itvhdr.GetOriginalTimestamp() << std::endl;
 
 						m_RTT = m_RTT + (Simulator::Now() - itvhdr.GetOriginalTimestamp());
+
+						//Ptr<Ipv6L3Protocol> l3 = GetObject<Ipv6L3Protocol>();
+						//l3 -> GetTypeId() .Get
+						//std::cout << "Hop Limit: " << (unsigned)header.GetHopLimit() << std::endl;
+
+
+						//Remove 1 from hop count to offset the hop from the Hub to the RSU
+						//Default hop limit set to 64
+						m_HopCountAgregatorRsuToVanet = m_HopCountAgregatorRsuToVanet + (64- header.GetHopLimit()) -1;
 
 						m_sourcedTrans.erase(it);
 						break;

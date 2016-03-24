@@ -165,15 +165,24 @@ RsuCache::Lookup(Ipv6Address toFind, RsuCacheEntry  &entry)
 {
 	CleanCache();
 	bool hasEntry = false;
+	Time min = Days(1);
+	Time currentTime = Simulator::Now();
+
 	for (RSUCacheIC it = m_cache.begin (); it != m_cache.end(); it++)
 	{
 		RsuCacheEntry * toCheck = it -> first;
 
 		if(toCheck -> GetSource().IsEqual(toFind))
 		{
-			std::cout << "ToCheck found entry with address: " << toCheck -> GetSource() << std::endl;
-			hasEntry = true;
-			entry = *toCheck;
+
+			if(currentTime - toCheck -> GetSendTime() < min)
+			{
+				min = currentTime - toCheck -> GetSendTime();
+
+				std::cout << "ToCheck found Min entry with address: " << toCheck -> GetSource() << std::endl;
+				hasEntry = true;
+				entry = *toCheck;
+			}
 		}
 	}
 
@@ -204,6 +213,23 @@ RsuCache::GetAverageVelocity(Ipv6Address toFind)
 	}
 
 	return avgVelocity;
+}
+
+bool
+RsuCache::ContainsEntry(Ipv6Address source, Ipv6Address destination, Time sendTime)
+{
+	CleanCache();
+	bool contains = false;
+	for (RSUCacheIC it = m_cache.begin (); it != m_cache.end(); it++)
+	{
+		RsuCacheEntry * toCheck = it -> first;
+		if(toCheck -> GetSource().IsEqual(source) && toCheck -> GetDestination().IsEqual(destination) &&toCheck -> GetSendTime() == sendTime)
+		{
+			contains = true;
+			break;
+		}
+	}
+	return contains;
 }
 
 

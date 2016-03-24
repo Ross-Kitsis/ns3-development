@@ -105,6 +105,11 @@ public:
 	 */
 	Vector GetAverageVelocity(Ipv6Address toFind);
 
+	/**
+	 * Check if cache contains a specific entry
+	 */
+	bool ContainsEntry(Ipv6Address source, Ipv6Address destination, Time sendTime);
+
 private:
 
 	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)

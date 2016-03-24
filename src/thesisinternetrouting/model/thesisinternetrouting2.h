@@ -265,7 +265,8 @@ public:
   int32_t GetNumReceived(){return m_numReceived;}
   int32_t GetNumSourced(){return m_numSourced;}
   Time GetAverageLatency(){return m_RTT/m_numReceived;}
-
+  double GetAverageHopCountRsuToVanet(){return m_HopCountAgregatorRsuToVanet/(double)m_numReceived;}
+  double GetAverageHopCountVanetToRsu(){return m_HopCountAgregatorVanetToRsu/(double)m_numRsuRec;}
 
 protected:
 	/**
@@ -543,6 +544,24 @@ private:
    */
   Time m_RTT;
 
+  /**
+   * Counter tracking the total hop count of all packets coming to the node
+   * Tracks the number of hops from the RSU to the final receiving node
+   * Divide by number of received packets to get the average hop count
+   */
+  int32_t m_HopCountAgregatorRsuToVanet;
+
+  /**
+   * Counter tracking the total hop count of all packets coming to the node
+   * Tracks the number of hops from the node to the nearest RSU
+   * Divide by number of received packets to get the average hop count
+   */
+  int32_t m_HopCountAgregatorVanetToRsu;
+
+  /**
+   * Counter tracking number of internet transmisions an RSU receives
+   */
+  int32_t m_numRsuRec;
 
 };
 
