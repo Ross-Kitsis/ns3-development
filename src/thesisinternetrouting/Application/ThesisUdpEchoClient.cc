@@ -49,30 +49,30 @@ ThesisUdpEchoClient::GetTypeId (void)
     				UintegerValue (100),
     				MakeUintegerAccessor (&ThesisUdpEchoClient::m_count),
     				MakeUintegerChecker<uint32_t> ())
-    				.AddAttribute ("Interval",
-    						"The time to wait between packets",
-    						TimeValue (Seconds (1.0)),
-    						MakeTimeAccessor (&ThesisUdpEchoClient::m_interval),
-    						MakeTimeChecker ())
-    						.AddAttribute ("RemoteAddress",
-    								"The destination Address of the outbound packets",
-    								AddressValue (),
-    								MakeAddressAccessor (&ThesisUdpEchoClient::m_peerAddress),
-    								MakeAddressChecker ())
-    								.AddAttribute ("RemotePort",
-    										"The destination port of the outbound packets",
-    										UintegerValue (0),
-    										MakeUintegerAccessor (&ThesisUdpEchoClient::m_peerPort),
-    										MakeUintegerChecker<uint16_t> ())
-    										.AddAttribute ("PacketSize", "Size of echo data in outbound packets",
-    												UintegerValue (100),
-    												MakeUintegerAccessor (&ThesisUdpEchoClient::SetDataSize,
-    														&ThesisUdpEchoClient::GetDataSize),
-    														MakeUintegerChecker<uint32_t> ())
-    														.AddTraceSource ("Tx", "A new packet is created and is sent",
-    																MakeTraceSourceAccessor (&ThesisUdpEchoClient::m_txTrace),
-    																"ns3::Packet::TracedCallback")
-    																;
+    		.AddAttribute ("Interval",
+    				"The time to wait between packets",
+    				TimeValue (Seconds (1.0)),
+    				MakeTimeAccessor (&ThesisUdpEchoClient::m_interval),
+    				MakeTimeChecker ())
+    		.AddAttribute ("RemoteAddress",
+    				"The destination Address of the outbound packets",
+    				AddressValue (),
+    				MakeAddressAccessor (&ThesisUdpEchoClient::m_peerAddress),
+    				MakeAddressChecker ())
+    		.AddAttribute ("RemotePort",
+    				"The destination port of the outbound packets",
+    				UintegerValue (0),
+    				MakeUintegerAccessor (&ThesisUdpEchoClient::m_peerPort),
+    				MakeUintegerChecker<uint16_t> ())
+    		.AddAttribute ("PacketSize", "Size of echo data in outbound packets",
+    				UintegerValue (100),
+    				MakeUintegerAccessor (&ThesisUdpEchoClient::SetDataSize,
+    				&ThesisUdpEchoClient::GetDataSize),
+    				MakeUintegerChecker<uint32_t> ())
+    		.AddTraceSource ("Tx", "A new packet is created and is sent",
+    				MakeTraceSourceAccessor (&ThesisUdpEchoClient::m_txTrace),
+    				"ns3::Packet::TracedCallback")
+    		;
 	return tid;
 }
 

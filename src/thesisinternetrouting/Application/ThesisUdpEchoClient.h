@@ -24,6 +24,8 @@
 #include "ns3/ptr.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/traced-callback.h"
+#include "ns3/simulator.h"
+#include "ns3/nstime.h"
 
 namespace ns3 {
 
@@ -38,6 +40,7 @@ class Packet;
  */
 class ThesisUdpEchoClient : public Application
 {
+
 public:
   /**
    * \brief Get the type ID.

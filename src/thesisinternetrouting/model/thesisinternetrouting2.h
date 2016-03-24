@@ -43,6 +43,10 @@
 #include "RsuCache.h"
 #include "ITVHeader.h"
 
+//Tracing
+#include "ns3/traced-value.h"
+#include "ns3/trace-source-accessor.h"
+
 namespace ns3
 {
 namespace thesis
@@ -254,6 +258,14 @@ public:
 	 * Used when position changes
 	 */
 	void RemoveDefaultRoute();
+
+	/////////////////////// Statistics
+
+  double GetReceiveRate() {return m_numReceived/(double)m_numSourced;}
+  int32_t GetNumReceived(){return m_numReceived;}
+  int32_t GetNumSourced(){return m_numSourced;}
+  Time GetAverageLatency(){return m_RTT/m_numReceived;}
+
 
 protected:
 	/**
@@ -484,6 +496,53 @@ private:
 	 * Send Ack message after RSU receives msg on wifi
 	 */
 	void SendAckMessage(Ptr<Packet> ack, UnicastForwardCallback ucb);
+//////////////////////////// Statistics
+	/**
+	 * Struct to hold pair of destination and sendtime set via route input
+	 * Used to track average latency (ATT) and send time
+	 */
+	typedef struct Transmission
+	{
+		Ipv6Address Destination;
+		Time SendTime;
+	}Transmission;
+
+	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)
+	typedef std::list<Transmission> Transmissions;
+
+	//Iterator for routes
+  typedef std::list<Transmission>::iterator TransmissionsIt;
+
+  /**
+   * List of transmissions used to keep track of receieved packets
+   */
+  Transmissions m_sourcedTrans;
+
+  /**
+   * Average latency of a transmission
+   */
+  double m_AverageLatency;
+
+  /**
+   * Number of packets sourced from this node
+   */
+  int32_t m_numSourced;
+
+  /**
+   * Number of packets received
+   */
+  int32_t m_numReceived;
+
+  /**
+   * Receive rate
+   */
+  double m_receiveRate;
+
+  /**
+   * Time between sending and receiving
+   */
+  Time m_RTT;
+
 
 };
 

@@ -94,7 +94,10 @@ ThesisInternetRoutingProtocol2::ThesisInternetRoutingProtocol2() :
 						m_CheckPosition(Seconds(10)), m_IsDtnTolerant(false),
 						m_isStrictEffective(true),m_rWait(5)
 {
-
+	m_numSourced = 0;
+	m_numReceived = 0;
+	m_AverageLatency = 0;
+	m_receiveRate = 0;
 }
 
 //Destructor
@@ -705,6 +708,24 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 				//Send Ack Message
 				ucb (m_wi,ackEntry, ackPacket, header);
 
+
+				Ipv6Address source = header.GetSourceAddress();
+				///Set transmission statistics for data collection
+				for(TransmissionsIt it = m_sourcedTrans.begin(); it != m_sourcedTrans.end(); it++)
+				{
+					if(it -> Destination == source && it -> SendTime == itvhdr.GetOriginalTimestamp())
+					{
+						m_numReceived++;
+
+						std::cout << "RTT: " << Simulator::Now() - itvhdr.GetOriginalTimestamp() << std::endl;
+
+						m_RTT = m_RTT + (Simulator::Now() - itvhdr.GetOriginalTimestamp());
+
+						m_sourcedTrans.erase(it);
+						break;
+					}
+				}
+
 				return true;
 			}else
 			{
@@ -1094,6 +1115,12 @@ ThesisInternetRoutingProtocol2::RouteOutput (Ptr<Packet> p, const Ipv6Header &he
 		std::cout << "Output Device " << rtentry -> GetOutputDevice() -> GetIfIndex() << std::endl;
 
 		std::cout << ">>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+
+		Transmission t;
+		t.Destination = destination;
+		t.SendTime = Simulator::Now();
+		m_sourcedTrans.push_back(t);
+		m_numSourced++;
 
 		return rtentry;
 	}else
