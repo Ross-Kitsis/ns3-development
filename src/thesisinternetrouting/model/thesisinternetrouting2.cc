@@ -218,8 +218,8 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			//Add the difference between the maximum hop count (64) and to hops to get to the RSU
 			m_HopCountAgregatorVanetToRsu += (64 - header.GetHopLimit());
 			m_numRsuRec++;
-			std::cout << "CURRENT VANETTORSU Agregate" << m_HopCountAgregatorVanetToRsu <<std::endl;
-			std::cout << "GOT HERE _______________________________" << 64 - header.GetHopLimit() <<std::endl;
+			//std::cout << "CURRENT VANETTORSU Agregate" << m_HopCountAgregatorVanetToRsu <<std::endl;
+			//std::cout << "GOT HERE _______________________________" << 64 - header.GetHopLimit() <<std::endl;
 			////////////////////////////////////////////
 
 
@@ -230,7 +230,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 																							 Ih.GetSourcePosition(), Ih.GetSourceVelocity(),
 																							 Ih.GetTimestamp(), Simulator::Now());
 			m_RsuCache.AddEntry(entry);
-
+/*
 			std::cout << " Adding entry to cache with properties: " << std::endl;
 			std::cout << " Destination: " << entry -> GetDestination() << std::endl;
 			std::cout << " Source: " << entry -> GetSource() << std::endl;
@@ -238,7 +238,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			std::cout << "Receive Time: " << entry -> GetReceiveTime() << std::endl;
 			std::cout << "Sending node position " << entry -> GetSendingNodePosition() << std::endl;
 			std::cout << "Sending node velocity " << entry -> GetSendingNodeVelocity() << std::endl;
-
+*/
 			/*
 			std::cout << " RSU Header Properties " << header.GetDestinationAddress() << std::endl;
 
@@ -497,8 +497,8 @@ ThesisInternetRoutingProtocol2::GetPredictedNodePosition(Ipv6Address nodeAddress
 
 	Vector newPosition;
 
-	std::cout << "Current time: " << Simulator::Now() << std::endl;
-	std::cout << "Original Send Time " << originalSendTime << std::endl;
+//	std::cout << "Current time: " << Simulator::Now() << std::endl;
+//	std::cout << "Original Send Time " << originalSendTime << std::endl;
 
 	Time diff = Simulator::Now() - originalSendTime;
 
@@ -544,13 +544,13 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 	//Input device was loopback; only packets coming through loopback should be deferred
 	if(idev == m_lo)
 	{
-		std::cout << "VANET RECV ON LOOPBACK <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+		//std::cout << "VANET RECV ON LOOPBACK <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
 		uint32_t iif = (idev ? m_ipv6->GetInterfaceForDevice (idev) : -1);
 		DeferredRouteOutputTag tag(iif);
 		if(packet->PeekPacketTag(tag))
 		{
-			std::cout << "Peek finished; deferred tag found, remove and start IR" << std::endl;
+			//std::cout << "Peek finished; deferred tag found, remove and start IR" << std::endl;
 		}
 
 		//Remove DR tag
@@ -577,9 +577,9 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		//Instantiate new ThesisInternetRouting header.
 		InternetHeader Ih(position,velocity,CurrentTime,m_IsDtnTolerant,position,velocity,m_RsuDestination);
 
-		std::cout << "Sending IH position:  " << position << std::endl;
-		std::cout << "Sending IH velocity " << velocity  << std::endl;
-		std::cout << "Sending IH currentTime" << CurrentTime  << std::endl;
+//		std::cout << "Sending IH position:  " << position << std::endl;
+//		std::cout << "Sending IH velocity " << velocity  << std::endl;
+//		std::cout << "Sending IH currentTime" << CurrentTime  << std::endl;
 
 		//Add headers; IH first than type, read in reverse order on receving end
 		packet -> AddHeader(Ih);
@@ -599,8 +599,8 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		//Found route; forward along
 		if(route)
 		{
-			std::cout << ">>>>>>>>>>CALLBACK SET - ROUTE INPUT FINISHED<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
-			std::cout << "Sending on interface " << m_ipv6 -> GetInterfaceForAddress(source) << std::endl;
+//			std::cout << ">>>>>>>>>>CALLBACK SET - ROUTE INPUT FINISHED<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+//			std::cout << "Sending on interface " << m_ipv6 -> GetInterfaceForAddress(source) << std::endl;
 
 			ucb (ndev,route, packet, header);
 			return true;
@@ -692,12 +692,12 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1 || CheckHostBits(destination))
 			{
-				std::cout << ">>>>>> Received packet for this node; forwarding LCB <<<<<<<"<< std::endl;
+//				std::cout << ">>>>>> Received packet for this node; forwarding LCB <<<<<<<"<< std::endl;
 
-				std::cout << "Header Properties: "<< std::endl;
-				std::cout << "Destination: " << header.GetDestinationAddress() << std::endl;
-				std::cout << "Source: " << header.GetSourceAddress() << std::endl;
-				std::cout << std::endl;
+//				std::cout << "Header Properties: "<< std::endl;
+//				std::cout << "Destination: " << header.GetDestinationAddress() << std::endl;
+//				std::cout << "Source: " << header.GetSourceAddress() << std::endl;
+//				std::cout << std::endl;
 
 				//Remove headers before forwarding up, maybe thats causing the problem??
 				mcast::TypeHeader typeHeader (mcast::UNKNOWN);
@@ -978,21 +978,37 @@ ThesisInternetRoutingProtocol2::IsEffectiveV2VTransmission(Vector senderPosition
 	double currentDistanceToTarget = utils.GetDistanceBetweenPoints(currentPos.x, currentPos.y, targetPosition.x, targetPosition.y);
 	double senderDistanceToTarget = utils.GetDistanceBetweenPoints(senderPosition.x, senderPosition.y, targetPosition.x, targetPosition.y);
 
-	std::cout<<std::endl;
-	std::cout << " Target Position (Type 4) :" << targetPosition << std::endl;
-	std::cout << " V2V Current Distance to Target: " << currentDistanceToTarget << std::endl;
-	std::cout << " V2V Sender Distance to Target: " << senderDistanceToTarget <<std::endl;
+	//std::cout<<std::endl;
+	//std::cout << " Target Position (Type 4) :" << targetPosition << std::endl;
+	//std::cout << " V2V Current Distance to Target: " << currentDistanceToTarget << std::endl;
+	//std::cout << " V2V Sender Distance to Target: " << senderDistanceToTarget <<std::endl;
 
-
+	//Check if current node is closer to target than the sending node
+	bool isCloserToTargetThanSender = false;
 	if(currentDistanceToTarget < senderDistanceToTarget)
 	{
-		isEffective = true;
+		isCloserToTargetThanSender = true;
 	}else
 	{
-		std::cout << "FOUND INEFFECTIVE TRANSMISSION IN IsEffectiveV2VTransmission" << std::endl;
+		//std::cout << "FOUND INEFFECTIVE TRANSMISSION IN IsEffectiveV2VTransmission" << std::endl;
 	}
 
-	std::cout<<std::endl;
+	//Check if current node is closer to RSU than target point
+	//If not its possible the target point was missed and no ACK sent; don't keep transmitting
+
+	double currentDistanceToRsu = utils.GetDistanceBetweenPoints(currentPos.x, currentPos.y, m_currentRsu.GetRsuPosition().x, m_currentRsu.GetRsuPosition().y);
+	double targetDistanceToRsu = utils.GetDistanceBetweenPoints(targetPosition.x, targetPosition.y, m_currentRsu.GetRsuPosition().x, m_currentRsu.GetRsuPosition().y);
+
+	bool isCloserToRsuThanTarget = false;
+	if(currentDistanceToRsu < targetDistanceToRsu)
+	{
+		isCloserToRsuThanTarget = true;
+	}
+
+	//True if node is both closer to target than
+	isEffective = isCloserToTargetThanSender && isCloserToRsuThanTarget;
+
+	//std::cout<<std::endl;
 
 	return isEffective;
 }
