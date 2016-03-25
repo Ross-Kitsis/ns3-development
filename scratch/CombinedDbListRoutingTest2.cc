@@ -18,28 +18,34 @@
 #include <sstream>
 #include <fstream>
 
-#include "ns3/thesisinternetrouting.h"
-#include "ns3/thesisinternetrouting-helper.h"
+#include "ns3/thesisinternetrouting2.h"
+#include "ns3/thesisinternetrouting-helper2.h"
 #include "ns3/ThesisPing6Helper.h"
 
 #include "ns3/Db.h"
 
+#include "ns3/ThesisUdpEchoHelper.h"
+#include "ns3/ThesisUdpEchoServer.h"
+#include "ns3/ThesisUdpEchoClient.h"
+
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("ListRoutingTest");
+NS_LOG_COMPONENT_DEFINE("ListRoutingTest2");
 
 int main (int argc, char *argv[])
 {
-	int debug = 1;
+	int debug = 0;
 	if(debug)
 	{
 		//Define compnents to log
-		LogComponentEnable ("Ipv6L3Protocol", LOG_LEVEL_ALL);
-		LogComponentEnable ("Icmpv6L4Protocol", LOG_LEVEL_ALL);
-	  LogComponentEnable ("Ipv6StaticRouting", LOG_LEVEL_ALL);
-		LogComponentEnable ("Ipv6Interface", LOG_LEVEL_ALL);
-		LogComponentEnable ("ThesisInternetRoutingProtocol", LOG_LEVEL_ALL);
+		//LogComponentEnable ("Ipv6L3Protocol", LOG_LEVEL_ALL);
+		//LogComponentEnable ("Icmpv6L4Protocol", LOG_LEVEL_ALL);
+	  //LogComponentEnable ("Ipv6StaticRouting", LOG_LEVEL_ALL);
+		//LogComponentEnable ("Ipv6Interface", LOG_LEVEL_ALL);
+		LogComponentEnable ("ThesisInternetRoutingProtocol2", LOG_LEVEL_ALL);
+		//LogComponentEnable ("ThesisUdpEchoServerApplication", LOG_LEVEL_ALL);
+
 	}
 
 	uint32_t nVeh = 1; //Number of vehicle
@@ -111,7 +117,7 @@ int main (int argc, char *argv[])
 
 	//Create Routing Helpers
 	Ipv6StaticRoutingHelper staticRoutingHelper;
-	ThesisInternetRoutingHelper tihelper;
+	ThesisInternetRoutingHelper2 tihelper;
 
 	//m_rng = CreateObject<UniformRandomVariable>();
 	Ptr<Db> RsuDatabase = CreateObject<Db>();
@@ -151,7 +157,22 @@ int main (int argc, char *argv[])
 
 	//Install Internet onto RSUs and Hub
 	internet.Install(RSU);
-	internet.Install(Hub);
+
+	/////////////////////// HUB
+
+	//Create list routing helper and add routing protocols
+	Ipv6ListRoutingHelper listRHub;
+
+	listRHub.Add(staticRoutingHelper,10);
+
+	//Install internet stack on HUB
+	InternetStackHelper HubInternet;
+
+	//Install routing
+	HubInternet.SetRoutingHelper(listRHub);
+
+	HubInternet.Install(Hub);
+///////////////////// HUB END
 
 	InternetStackHelper VanetInternet;
 	tihelper.SetIsRSU(false);
@@ -219,7 +240,33 @@ int main (int argc, char *argv[])
 	Ipv6Address sinkAdd = sink -> GetObject<Ipv6>() -> GetAddress(1,1).GetAddress();
 	Ipv6Address sourceAdd = source -> GetObject<Ipv6>() -> GetAddress(1,1).GetAddress();
 
+  NS_LOG_INFO ("Create Applications.");
+//
+// Create a UdpEchoServer application hub
+//
 
+
+
+  uint16_t port = 9;  // well-known echo port number
+  ThesisUdpEchoServerHelper server (port);
+  ApplicationContainer apps = server.Install (sink);
+  apps.Start (Seconds (1.0));
+  apps.Stop (Seconds (90.0));
+
+  uint32_t packetSize = 1024;
+  uint32_t maxPacketCount = 100;
+  Time interPacketInterval = Seconds (3.);
+  ThesisUdpEchoClientHelper client (sinkAdd, port);
+  client.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
+  client.SetAttribute ("Interval", TimeValue (interPacketInterval));
+  client.SetAttribute ("PacketSize", UintegerValue (packetSize));
+  apps = client.Install (source);
+  apps.Start (Seconds (6.0));
+  apps.Stop (Seconds (90.0));
+
+
+
+/*
 	Time packetInterval = Seconds(3);
 	uint32_t packetSize = 1024;
 	uint32_t packetCount = 100;
@@ -235,6 +282,8 @@ int main (int argc, char *argv[])
   ApplicationContainer apps = ping.Install (VehNodes.Get (0));
   apps.Start (Seconds (6.0));
   apps.Stop (Seconds (90.0));
+*/
+
 //////////////////////////////////////////////////////////////////////////
 
   Names::Add("WifiNode1", source);

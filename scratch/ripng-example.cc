@@ -85,6 +85,9 @@ public:
 
     routing = routingHelper.GetStaticRouting (ipv6);
 
+    Ptr<OutputStreamWrapper> routingStream = Create<OutputStreamWrapper> (&std::cout);
+    routingHelper.PrintRoutingTableEvery(Seconds(5),n,routingStream);
+
     std::cout << "Routing table of " << n << " : " << std::endl;
     std::cout << "Destination\t\t\t\t" << "Gateway\t\t\t\t\t" << "Interface\t" <<  "Prefix to use" << std::endl;
 
@@ -177,7 +180,7 @@ int main (int argc, char** argv)
   Ipv6InterfaceContainer i2 = ipv6.Assign (d2);
   i2.SetForwarding (0, true);
 
-  stackHelper.PrintRoutingTable (n0);
+  stackHelper.PrintRoutingTable(n0);
 
   /* Create a Ping6 application to send ICMPv6 echo request from n0 to n1 via r */
   uint32_t packetSize = 1024;
