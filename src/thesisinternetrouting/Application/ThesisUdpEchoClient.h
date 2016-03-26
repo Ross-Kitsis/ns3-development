@@ -16,8 +16,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef UDP_ECHO_CLIENT_H
-#define UDP_ECHO_CLIENT_H
+#ifndef ThesisUDP_ECHO_CLIENT_H
+#define ThesisUDP_ECHO_CLIENT_H
 
 #include "ns3/application.h"
 #include "ns3/event-id.h"
