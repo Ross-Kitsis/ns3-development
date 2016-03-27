@@ -30,9 +30,12 @@
 
 #include "ns3/thesisinternetrouting2.h"
 
+
+#include "ns3/mpi-interface.h"
+
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("ListRoutingTestRetransmit");
+NS_LOG_COMPONENT_DEFINE("ThesisRoutingNsMobility");
 
 int main (int argc, char *argv[])
 {
@@ -44,7 +47,7 @@ int main (int argc, char *argv[])
 		//LogComponentEnable ("Icmpv6L4Protocol", LOG_LEVEL_ALL);
 	  //LogComponentEnable ("Ipv6StaticRouting", LOG_LEVEL_ALL);
 		//LogComponentEnable ("Ipv6Interface", LOG_LEVEL_ALL);
-		LogComponentEnable ("ThesisInternetRoutingProtocol2", LOG_LEVEL_ALL);
+		//LogComponentEnable ("ThesisInternetRoutingProtocol2", LOG_LEVEL_ALL);
 		//LogComponentEnable ("ThesisUdpEchoServerApplication", LOG_LEVEL_ALL);
 
 	}
@@ -55,13 +58,16 @@ int main (int argc, char *argv[])
 	uint32_t vstep = 1000; //Vertical step
 	uint32_t numRsuRow = 4; //Number of RSU to place in a row
 	uint32_t simTime = 20; //Simulation time
-	double transmittingPercentage = 0.5; //Percentage of vanet nodes generating packets
-	std::string m_CSVfileName = "ThesisInternetRouting.csv";
+	double transmittingPercentage = 0.1; //Percentage of vanet nodes generating packets
+	std::string m_CSVfileName = "ThesisInternetRoutingNSMobility.csv";
+	std::string m_TraceFile = "";
 
 	CommandLine cmd;
 	cmd.AddValue ("nVeh", "Number of vehicle nodes", nVeh);
 	cmd.AddValue ("nRSU", "Number backbone nodes", nRSU);
+	cmd.AddValue ("nRsuRow", "Number of RSU in a row", numRsuRow);
 	cmd.AddValue ("nSendPerc", "Percentage of vehicular nodes acting as sources",transmittingPercentage);
+	cmd.AddValue ("trace","Location of the mobility trace",m_TraceFile);
 	cmd.Parse (argc, argv);
 
 	NodeContainer RSU;
@@ -70,11 +76,18 @@ int main (int argc, char *argv[])
 	NodeContainer AllNodes;
 
 	//Create Nodes
-	RSU.Create(nRSU);
+	RSU.Create(nRSU,0);
 
-	Hub.Create(1);
+	Hub.Create(1,0);
 
-	VehNodes.Create(nVeh);
+//	VehNodes.Create(nVeh);
+	//Create vehicle nodes on differnt processors
+	MpiInterface::Enable(&argc, &argv);
+	VehNodes.Create(247,0);
+	VehNodes.Create(247,1);
+	VehNodes.Create(247,2);
+	VehNodes.Create(248,3);
+
 
 	//Aggregate nodes into allNodes node container
 	AllNodes.Add(RSU);
@@ -84,7 +97,6 @@ int main (int argc, char *argv[])
 	//Create p2p channel and set characteristics
 	PointToPointHelper pointToPoint;
 	pointToPoint.SetDeviceAttribute("DataRate",StringValue("10Gbps"));
-	//pointToPoint.SetChannelAttribute("Delay",StringValue("200ms"));
 
 	// Create static grid and install onto RSU
 	MobilityHelper mobility;
@@ -103,35 +115,15 @@ int main (int argc, char *argv[])
 
 	/////////////////////////SET vehicles to same mobility as RSU and set postions to test retransmit
 
-	/*
-	MobilityHelper VehicleMobility;
-	VehicleMobility.SetPositionAllocator("ns3::RandomBoxPositionAllocator",
-			"X",StringValue ("ns3::UniformRandomVariable[Min=400|Max=600]"),
-			"Y",StringValue ("ns3::UniformRandomVariable[Min=400|Max=600]"),
-			"Z",StringValue ("ns3::UniformRandomVariable[Min=0|Max=0]")
-	);
-
-	VehicleMobility.Install(VehNodes);
-*/
-
 	//Set hub position
 	Ptr<ConstantPositionMobilityModel> HubLoc = Hub.Get(0) ->GetObject<ConstantPositionMobilityModel>();
 	Vector hubPos((hstep*numRsuRow)/2 ,vstep,0);
 	HubLoc -> SetPosition(hubPos);
 
 
-
-	MobilityHelper vehMobility;
 /*
-	vehMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-			"MinX", DoubleValue (0),
-			"MinY", DoubleValue (1),
-			"DeltaX", DoubleValue (10),
-			"DeltaY", DoubleValue (10),
-			"GridWidth", UintegerValue (10),
-			"LayoutType", StringValue ("RowFirst"));
-	vehMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-*/
+	MobilityHelper vehMobility;
+
 	//Create Mobility allocator and add to vehicular nodes
   vehMobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
                              "Bounds", RectangleValue (Rectangle (450, 550, 550, 750)),
@@ -139,6 +131,9 @@ int main (int argc, char *argv[])
                              "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
 
 	vehMobility.Install(VehNodes);
+*/
+  Ns2MobilityHelper ns2 = Ns2MobilityHelper (m_TraceFile);
+  ns2.Install(VehNodes.Begin(), VehNodes.End());
 
 	/*
 	//Set VehNode position 0 (Sending node)

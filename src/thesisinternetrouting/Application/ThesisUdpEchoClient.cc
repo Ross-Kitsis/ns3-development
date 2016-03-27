@@ -328,7 +328,7 @@ ThesisUdpEchoClient::ScheduleTransmit (Time dt)
 	//Set Recv callback again in case re-binding caused problems
 	m_socket->SetRecvCallback (MakeCallback (&ThesisUdpEchoClient::HandleRead, this));
 
-	std::cout << " ****** New address bound and callbacks set *******" << std::endl;
+	//std::cout << " ****** New address bound and callbacks set *******" << std::endl;
 
 	m_sendEvent = Simulator::Schedule (dt, &ThesisUdpEchoClient::Send, this);
 }
@@ -340,7 +340,7 @@ ThesisUdpEchoClient::Send (void)
 
 	NS_ASSERT (m_sendEvent.IsExpired ());
 
-	std::cout << " ****** Sending packet from UDP Client *******" << std::endl;
+	//std::cout << " ****** Sending packet from UDP Client *******" << std::endl;
 
 	Ptr<Packet> p;
 	if (m_dataSize)
@@ -395,9 +395,9 @@ ThesisUdpEchoClient::HandleRead (Ptr<Socket> socket)
 {
 	NS_LOG_FUNCTION (this << socket);
 
-	std::cout << std::endl;
-	std::cout << std::endl;
-	std::cout << "UDP ECHO CLIENT RECEIEVED PACKET BACK" << std:: endl;
+	//std::cout << std::endl;
+	//std::cout << std::endl;
+	//std::cout << "UDP ECHO CLIENT RECEIEVED PACKET BACK" << std:: endl;
 
 
 	Ptr<Packet> packet;
@@ -417,8 +417,8 @@ ThesisUdpEchoClient::HandleRead (Ptr<Socket> socket)
 					Inet6SocketAddress::ConvertFrom (from).GetPort ());
 		}
 	}
-	std::cout << std::endl;
-	std::cout << std::endl;
+	//std::cout << std::endl;
+	//std::cout << std::endl;
 }
 
 } // Namespace ns3

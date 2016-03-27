@@ -135,9 +135,9 @@ ThesisUdpEchoServer::HandleRead (Ptr<Socket> socket)
 {
   NS_LOG_FUNCTION (this << socket);
 
-  std::cout << "" << std::endl;
-  std::cout << "" << std::endl;
-  std::cout << "UDP SERVER RECEIVED PACKET" << std::endl;
+  //std::cout << "" << std::endl;
+  //std::cout << "" << std::endl;
+  //std::cout << "UDP SERVER RECEIVED PACKET" << std::endl;
 
 
   Ptr<Packet> packet;
@@ -179,9 +179,9 @@ ThesisUdpEchoServer::HandleRead (Ptr<Socket> socket)
                        Inet6SocketAddress::ConvertFrom (from).GetPort ());
         }
 
-      std::cout << "Server attempted to send reply to " << from  << " ToSend: " << toSend << std::endl;
-      std::cout << "Socket send result: " << sendResult << std::endl;
-      std::cout << "" << std::endl;
+      //std::cout << "Server attempted to send reply to " << from  << " ToSend: " << toSend << std::endl;
+      //std::cout << "Socket send result: " << sendResult << std::endl;
+      //std::cout << "" << std::endl;
     }
 }
 

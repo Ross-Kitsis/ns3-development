@@ -139,7 +139,7 @@ ThesisInternetRoutingProtocol2::RouteInput (Ptr<const Packet> p, const Ipv6Heade
 {
 	NS_LOG_FUNCTION (this << p << header << header.GetSourceAddress () << header.GetDestinationAddress () << idev);
 
-	std::cout << "ROUTE INPUT" << std::endl;
+//	std::cout << "ROUTE INPUT" << std::endl;
 
 	if(m_IsRSU)
 	{
@@ -167,7 +167,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 		//Received on loopback (Will be done later to handle sending into the network
 	}else if(idev == m_wi)
 	{
-		std::cout << "RSU RECV ON WIFI <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+//		std::cout << "RSU RECV ON WIFI <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 		//Received on wifi interface (Must be from VANET)
 		//Need to send an ACK msg, add node information to a DB and forward through the internet (OR accept itself)
 
@@ -180,7 +180,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 		{
 			//Received type header of type internet
 			packet -> RemoveHeader(theader);
-			std::cout << "Type header with type: " << theader.Get() << std::cout;
+//			std::cout << "Type header with type: " << theader.Get() << std::cout;
 
 			InternetHeader Ih;
 			packet -> RemoveHeader(Ih);
@@ -191,11 +191,11 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			//Check is this is the RSU the node originally sent the msg towards
 			if(!(currentAd.IsEqual(Ih.GetRsuAddress())))
 			{
-				std::cout << " CURRENT RSU ADDRESS " << currentAd << " NOT EQUAL TO HEADER ADDRESS: "<< Ih.GetRsuAddress() << std::endl;
+//				std::cout << " CURRENT RSU ADDRESS " << currentAd << " NOT EQUAL TO HEADER ADDRESS: "<< Ih.GetRsuAddress() << std::endl;
 				return true;
 			}
 
-			std::cout << "  Internet Header: " << Ih << std::endl;
+//			std::cout << "  Internet Header: " << Ih << std::endl;
 
 			//Check if cache already contains an entry with the unique source,destination,sendtime tuple
 			//If contained this indicates the RSU has already received this transmission
@@ -261,13 +261,13 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 
 			Ptr<Ipv6Route> ackRoute= Create<Ipv6Route> ();
 			//ackRoute = Lookup(Ipv6Address(VANET_TO_RSU),m_wi);
-
+/*
 			std::cout << std::endl;
 			std::cout << std::endl;
 			std::cout << std::endl;
 			std::cout << std::endl;
 			std::cout << " >>>>>>> OUTPUT ADDRESS FOR ACK: " << m_ipv6 -> GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1).GetAddress() << std::endl;
-
+*/
 			Ptr<Ipv6L3Protocol> l3 = GetObject<Ipv6L3Protocol>();
 
 			Ipv6Header ackHdr;
@@ -313,7 +313,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 
 	}else if(idev == m_pp)
 	{
-		std::cout << "RSU RECV ON P2P <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+//		std::cout << "RSU RECV ON P2P <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 		//Received on P2P interface; packet must have come from internet
 		//Check header to see destination; look up destination in DB
 		//Forward to other RSU if required or send out of wifi interface node is in the current area. (To be done later)
@@ -367,7 +367,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			RsuCacheEntry entry;
 			if(m_RsuCache.Lookup(header.GetDestinationAddress(), entry))
 			{
-				std::cout << "<<<<<<<<<<<< Found an entry in RSU cache >>>>>>>>>>>>>>>>" << std::endl;
+//				std::cout << "<<<<<<<<<<<< Found an entry in RSU cache >>>>>>>>>>>>>>>>" << std::endl;
 
 				//Packet from a normal internet source
 				Ipv6Address destination = header.GetDestinationAddress();
@@ -591,7 +591,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		Ipv6Address destination = header.GetDestinationAddress();
 		Ipv6Address source = header.GetSourceAddress();
 
-		std::cout << "Interface " << tag.GetInterface() << " Source" << source << std::endl;
+//		std::cout << "Interface " << tag.GetInterface() << " Source" << source << std::endl;
 
 		Ptr<NetDevice> ndev = m_ipv6->GetNetDevice(m_ipv6 -> GetInterfaceForAddress(source));
 		route = Lookup(destination,ndev);
@@ -610,7 +610,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 	{
 		//Received packet on another interface; must have been wifi since only 2 interfaces
 
-		std::cout << "Peeking at type header - Input VANET" << std::endl;
+	//	std::cout << "Peeking at type header - Input VANET" << std::endl;
 		//Create new typeHeader and peek
 		mcast::TypeHeader theader (mcast::UNKNOWN);
 		packet -> PeekHeader(theader);
@@ -685,8 +685,8 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		}else if(theader.Get() == mcast::INTERNET_RSU_TO_VANET)
 		{
 			//Type 4 is RSU to VANET (Handle later)
-			std::cout << std::endl;
-			std::cout << ">>>>>> GOT PACKET WITH TYPE 4 - RSU forwarding back into VANET <<<<<<<"<< std::endl;
+//			std::cout << std::endl;
+//			std::cout << ">>>>>> GOT PACKET WITH TYPE 4 - RSU forwarding back into VANET <<<<<<<"<< std::endl;
 
 			Ipv6Address destination = header.GetDestinationAddress();
 
@@ -737,7 +737,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 					{
 						m_numReceived++;
 
-						std::cout << "RTT: " << Simulator::Now() - itvhdr.GetOriginalTimestamp() << std::endl;
+//						std::cout << "RTT: " << Simulator::Now() - itvhdr.GetOriginalTimestamp() << std::endl;
 
 						m_RTT = m_RTT + (Simulator::Now() - itvhdr.GetOriginalTimestamp());
 
@@ -789,7 +789,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 				if(CacheContains)
 				{
 
-					std::cout << "Cache Entry hit in INTERNET_RSU_TO_VANET" << std::endl;
+//					std::cout << "Cache Entry hit in INTERNET_RSU_TO_VANET" << std::endl;
 
 					//Cache contains entry with the source,destination,timestamp tuple already (Stop timer on retransmit and remove)
 					ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,timeStamp);
@@ -827,7 +827,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		}else if(theader.Get() == mcast::INTERNET_RSU_ACK)
 		{
 
-			std::cout << ">>>>>> GOT PACKET WITH TYPE 5 - RSU ACK <<<<<<<"<< std::endl;
+//			std::cout << ">>>>>> GOT PACKET WITH TYPE 5 - RSU ACK <<<<<<<"<< std::endl;
 
 			/////////////////////////Remove headers; packet will be discarded after this anyway
 			mcast::TypeHeader typeHeader (mcast::UNKNOWN);
@@ -852,9 +852,9 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 			ITVHeader itvhdr(Vector(), Simulator::Now(), false, Vector(), Vector(), Vector());
 			packet -> RemoveHeader(itvhdr);
 
-			std::cout << "Received VANET Ack, Source: " << header.GetSourceAddress() <<
-									 " Destination: " << header.GetDestinationAddress() <<
-									 " Original timestamp: " << itvhdr.GetOriginalTimestamp() << std::endl;
+//			std::cout << "Received VANET Ack, Source: " << header.GetSourceAddress() <<
+//									 " Destination: " << header.GetDestinationAddress() <<
+//									 " Original timestamp: " << itvhdr.GetOriginalTimestamp() << std::endl;
 
 			m_RoutingCache.RemoveRoutingQueueEntry(header. GetSourceAddress(), header.GetDestinationAddress(), itvhdr.GetOriginalTimestamp());
 
@@ -907,7 +907,7 @@ ThesisInternetRoutingProtocol2::CheckHostBits(Ipv6Address hostAddress)
 	{
 		if(currentBytes[i] != hostBytes[i])
 		{
-			std::cout << "SETTING TORETURN TO FALSE" << std::endl;
+//			std::cout << "SETTING TORETURN TO FALSE" << std::endl;
 			toReturn = false;
 			break;
 		}
@@ -920,7 +920,7 @@ void
 ThesisInternetRoutingProtocol2::SendInternetRetransmitIntoVanet(Ipv6Address source, Ipv6Address destination, Time timestamp)
 {
 	NS_LOG_FUNCTION(this);
-	std::cout << "**************** Sending V2VInternet Retransmit ******************" << std::endl;
+//	std::cout << "**************** Sending V2VInternet Retransmit ******************" << std::endl;
 
 		ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,timestamp);
 		UnicastForwardCallback ucb = entry -> GetUnicastForwardCallback();
@@ -1023,11 +1023,11 @@ ThesisInternetRoutingProtocol2::SendAckMessage(Ptr<Packet> ack, UnicastForwardCa
 	Ptr<Ipv6Route> ackRoute= Create<Ipv6Route> ();
 	//ackRoute = Lookup(Ipv6Address(VANET_TO_RSU),m_wi);
 
-	std::cout << std::endl;
-	std::cout << std::endl;
-	std::cout << std::endl;
-	std::cout << std::endl;
-	std::cout << " >>>>>>> OUTPUT ADDRESS FOR ACK: " << m_ipv6 -> GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1).GetAddress() << std::endl;
+//	std::cout << std::endl;
+//	std::cout << std::endl;
+//	std::cout << std::endl;
+//	std::cout << std::endl;
+//	std::cout << " >>>>>>> OUTPUT ADDRESS FOR ACK: " << m_ipv6 -> GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1).GetAddress() << std::endl;
 
 	Ptr<Ipv6L3Protocol> l3 = GetObject<Ipv6L3Protocol>();
 
@@ -1066,7 +1066,7 @@ ThesisInternetRoutingProtocol2::SendInternetRetransmit(Ipv6Address source, Ipv6A
 {
 	NS_LOG_FUNCTION(this);
 
-	std::cout << "**************** Sending Internet Retransmit ******************" << std::endl;
+//	std::cout << "**************** Sending Internet Retransmit ******************" << std::endl;
 
 	ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,sendTime);
 	UnicastForwardCallback ucb = entry -> GetUnicastForwardCallback();
@@ -1114,7 +1114,7 @@ ThesisInternetRoutingProtocol2::RouteOutput (Ptr<Packet> p, const Ipv6Header &he
 	Ipv6Address destination = header.GetDestinationAddress();
 	Ipv6Address source = header.GetSourceAddress();
 
-	std::cout << "Route output: Destination: " << destination << " Source: " << source << " Is RSU? " << m_IsRSU << std::endl;
+//	std::cout << "Route output: Destination: " << destination << " Source: " << source << " Is RSU? " << m_IsRSU << std::endl;
 
 	sockerr = Socket::ERROR_NOTERROR;
 	Ptr<Ipv6Route> route;
@@ -1134,33 +1134,33 @@ ThesisInternetRoutingProtocol2::RouteOutput (Ptr<Packet> p, const Ipv6Header &he
 		NS_LOG_LOGIC("Route found - adding deferred tag to allow processing at input");
 		if(!p->PeekPacketTag(tag))
 		{
-			std::cout << "Peek finished - No tag" << std::endl;
+//			std::cout << "Peek finished - No tag" << std::endl;
 			p -> AddPacketTag(tag);
 		}
 
-		std::cout << "Added packet tag" << std::endl;
+//		std::cout << "Added packet tag" << std::endl;
 
 		//return Lookup(Ipv6Address::GetLoopback(),oif);
-
+/*
 		std::cout << Simulator::Now() << " >>>>>>>>>> ROUTE OUTPUT RETURNING LOOPBACK ROUTE WITH FOLLOWING PROPERTIES <<<<<<<<<<<<<<<<<<" << std::endl;
 
 		std::cout << "Output Interface (OIF): " << m_ipv6->GetInterfaceForDevice(oif) << std::endl;
 		std::cout << "Original destination: " << destination << std::endl;
 		std::cout << "Original source     : " << source << std::endl;
-
+*/
 		Ptr<Ipv6Route> rtentry = Create<Ipv6Route> ();
 		rtentry -> SetDestination(destination);
 		rtentry -> SetGateway(Ipv6Address::GetLoopback());
 		rtentry -> SetOutputDevice(m_lo);
 		rtentry -> SetSource(m_ipv6 -> GetAddress(1,1).GetAddress());
-
+/*
 		std::cout << "Destination:  " << rtentry ->GetDestination() << std::endl;
 		std::cout << "Gateway       " << rtentry-> GetGateway() << std::endl;
 		std::cout << "Source        " << rtentry -> GetSource() << std::endl;
 		std::cout << "Output Device " << rtentry -> GetOutputDevice() -> GetIfIndex() << std::endl;
 
 		std::cout << ">>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
-
+*/
 		Transmission t;
 		t.Destination = destination;
 		t.SendTime = Simulator::Now();
@@ -1224,6 +1224,7 @@ ThesisInternetRoutingProtocol2::Lookup(Ipv6Address destination, Ptr<NetDevice> i
 
 	if (rtentry)
 	{
+		/*
 		//NS_LOG_LOGIC ("Matching route to " << rtentry->GetDestination () << " (through " << rtentry->GetGateway () << ") at the end");
 		std::cout << "Route found, printing route properties: " << std::endl;
 		std::cout << "Destination:  " << rtentry->GetDestination() << std::endl;
@@ -1231,6 +1232,7 @@ ThesisInternetRoutingProtocol2::Lookup(Ipv6Address destination, Ptr<NetDevice> i
 		std::cout << "Source        " << rtentry-> GetSource() << std::endl;
 		std::cout << "Reference     " << rtentry->GetReferenceCount() << std::endl;
 		std::cout << "Output Device " << rtentry-> GetOutputDevice() -> GetIfIndex() << std::endl;
+		*/
 	}
 	return rtentry;
 }
@@ -1308,7 +1310,7 @@ ThesisInternetRoutingProtocol2::NotifyRemoveRoute (Ipv6Address dst, Ipv6Prefix m
 void
 ThesisInternetRoutingProtocol2::SetIpv6 (Ptr<Ipv6> ipv6)
 {
-	std::cout << "Setting IPv6 in routing protocol \n";
+//	std::cout << "Setting IPv6 in routing protocol \n";
 
 	NS_LOG_FUNCTION (this << ipv6);
 	NS_ASSERT (m_ipv6 == 0 && ipv6 != 0);
@@ -1358,7 +1360,7 @@ ThesisInternetRoutingProtocol2::PrintRoutingTable (Ptr<OutputStreamWrapper> stre
 
 	*os << "Node: " << m_ipv6->GetObject<Node> ()->GetId ()
 	      		<< " Time: " << Simulator::Now ().GetSeconds () << "s "
-	      		<< "Ipv6 RIPng table" << std::endl;
+	      		<< "Ipv6 Thesis table" << std::endl;
 
 	if (!m_routes.empty ())
 	{
@@ -1473,7 +1475,7 @@ ThesisInternetRoutingProtocol2::SetIpToZone()
 	Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
 	Vector position = mobility -> GetPosition();
 
-	std::cout << "Node position: " << position << std::endl;
+//	std::cout << "Node position: " << position << std::endl;
 	DbEntry t1 = m_Db -> GetEntryForCurrentPosition(position);
 
 	//Set pointer to current RSU DB entry (For convenience)
@@ -1481,8 +1483,8 @@ ThesisInternetRoutingProtocol2::SetIpToZone()
 
 	Ipv6Address network = t1.GetRsuAddress().CombinePrefix(Ipv6Prefix(64));
 
-	std::cout << "Nearest RSU position: " << t1.GetRsuPosition() << std::endl;
-	std::cout << "Vanet node network based on position: " << network << std::endl;
+//	std::cout << "Nearest RSU position: " << t1.GetRsuPosition() << std::endl;
+//	std::cout << "Vanet node network based on position: " << network << std::endl;
 
 
 	Ptr<Ipv6L3Protocol> l3 = theNode ->GetObject<Ipv6L3Protocol>();
@@ -1503,8 +1505,8 @@ ThesisInternetRoutingProtocol2::SetIpToZone()
 
 					Ipv6Address newAddress;
 					newAddress = newAddress.MakeAutoconfiguredAddress(mac,network);
-					std::cout << "New Address: " << newAddress << std::endl;
-					std::cout << "" << std::endl;
+//					std::cout << "New Address: " << newAddress << std::endl;
+//					std::cout << "" << std::endl;
 
 					/*
 					 * 0. Remove all routes to this interface
@@ -1519,20 +1521,20 @@ ThesisInternetRoutingProtocol2::SetIpToZone()
 
 					NotifyInterfaceDown(i);
 
-					std::cout << "Remove Address" << " interface = " << i << " index= " << j << std::endl;
+//					std::cout << "Remove Address" << " interface = " << i << " index= " << j << std::endl;
 					m_ipv6 ->RemoveAddress(i,j);
 
-					std::cout << "Adding new address: " << newAddress << std::endl;
+//					std::cout << "Adding new address: " << newAddress << std::endl;
 					m_ipv6 -> AddAddress(i,newAddress);
 
-					std::cout << "Setting interface " << i << " to up" << std::endl;
+//					std::cout << "Setting interface " << i << " to up" << std::endl;
 					m_ipv6 -> SetUp(i);
 
 					Ipv6Address RsuAddress = t1.GetRsuAddress();
 					//std::cout << "Adding default route, next hop:  " << nextHop << std::endl;
 					AddNetworkRouteTo(Ipv6Address("::"),Ipv6Prefix::GetZero(),Ipv6Address(VANET_TO_RSU),i,Ipv6Address ("::"),RsuAddress);
 
-					std::cout << "Setting loopback to up "<< std::endl;
+//					std::cout << "Setting loopback to up "<< std::endl;
 					m_ipv6 -> SetUp(0);
 
 					NotifyInterfaceUp(i);
@@ -1544,11 +1546,11 @@ ThesisInternetRoutingProtocol2::SetIpToZone()
 
 		      if(nEntry)
 		      {
-		      	std::cout << "Neighbor Entry FOUND!!!!" << std::endl;
+//		      	std::cout << "Neighbor Entry FOUND!!!!" << std::endl;
 		      }else
 		      {
 		      	//gateway neighbor not in cache; manually add to cache
-		      	std::cout << "Neighbor Entry NOT FOUND!!!!" << std::endl;
+//		      	std::cout << "Neighbor Entry NOT FOUND!!!!" << std::endl;
 
 		      	nEntry = nCache -> Add(RsuAddress);
 
@@ -1558,7 +1560,7 @@ ThesisInternetRoutingProtocol2::SetIpToZone()
 
 		      }
 
-					std::cout << "Address refreshed to current zone" << std::endl;
+//					std::cout << "Address refreshed to current zone" << std::endl;
 
 					break;
 				}
@@ -1582,14 +1584,14 @@ ThesisInternetRoutingProtocol2::SetInterfacePointers()
 	m_pp = m_ipv6 ->GetNetDevice(interface);
 
 
-	std::cout << "First wifi interface " << interface << std::endl;
+//	std::cout << "First wifi interface " << interface << std::endl;
 
 	interface = -1;
 	interface = GetWirelessInterface();
 	NS_ASSERT(interface > -1);
 	m_wi = m_ipv6 -> GetNetDevice(interface);
 
-	std::cout << "First physical interface " << interface << std::endl;
+//	std::cout << "First physical interface " << interface << std::endl;
 
 }
 
@@ -1662,7 +1664,7 @@ ThesisInternetRoutingProtocol2::RemoveDefaultRoute()
 
 		if(destination.IsEqual(defaultRouteAddress))
 		{
-			std::cout << " >>>>>>>>>>>>>>>> Attempting to remove route with destination: <<<<<<<<<<<<<" << destination << std::endl;
+//			std::cout << " >>>>>>>>>>>>>>>> Attempting to remove route with destination: <<<<<<<<<<<<<" << destination << std::endl;
 			it = m_routes.erase(it);
 			return;
 		}
@@ -1691,7 +1693,7 @@ ThesisInternetRoutingProtocol2::GetBackoffDuration(Vector SenderPosition)
 	//Backoff in microseconds
 	toWait = MicroSeconds(ratio * m_rWait);
 
-	std::cout << "Waiting time in microseconds: " << toWait.GetMicroSeconds() << std::endl;
+//	std::cout << "Waiting time in microseconds: " << toWait.GetMicroSeconds() << std::endl;
 
 	return toWait;
 }
@@ -1731,15 +1733,15 @@ ThesisInternetRoutingProtocol2::IsEffective(Vector SenderPosition)
 	double currentDistanceToRsu = utils.GetDistanceBetweenPoints(currentPos.x, currentPos.y, m_currentRsu.GetRsuPosition().x, m_currentRsu.GetRsuPosition().y);
 	double senderDistanceToRsu = utils.GetDistanceBetweenPoints(SenderPosition.x, SenderPosition.y, m_currentRsu.GetRsuPosition().x, m_currentRsu.GetRsuPosition().y);
 
-	std::cout << "Current Distance to RSU: " << currentDistanceToRsu << std::endl;
-	std::cout << "Sender Distance to RSU: " << senderDistanceToRsu <<std::endl;
+//	std::cout << "Current Distance to RSU: " << currentDistanceToRsu << std::endl;
+//	std::cout << "Sender Distance to RSU: " << senderDistanceToRsu <<std::endl;
 
 	if(currentDistanceToRsu < senderDistanceToRsu)
 	{
 		isEffective = true;
 	}else
 	{
-		std::cout << "Ineffective transmission detected; current distance further from RSU than sending node" << std::endl;
+//		std::cout << "Ineffective transmission detected; current distance further from RSU than sending node" << std::endl;
 	}
 
 	return isEffective;
