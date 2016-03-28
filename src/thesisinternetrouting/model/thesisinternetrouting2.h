@@ -264,8 +264,27 @@ public:
   double GetReceiveRate() {return m_numReceived/(double)m_numSourced;}
   int32_t GetNumReceived(){return m_numReceived;}
   int32_t GetNumSourced(){return m_numSourced;}
-  Time GetAverageLatency(){return m_RTT/m_numReceived;}
-  double GetAverageHopCountRsuToVanet(){return m_HopCountAgregatorRsuToVanet/(double)m_numReceived;}
+  Time GetAverageLatency()
+  {
+  	if(m_numReceived == 0)
+  	{
+  		return Time(Seconds(0));
+  	}else
+  	{
+  		return m_RTT/m_numReceived;
+  	}
+  }
+
+  double GetAverageHopCountRsuToVanet()
+  {
+  	if(m_numReceived ==  0)
+  	{
+  		return 0;
+  	}else
+  	{
+  		return m_HopCountAgregatorRsuToVanet/(double)m_numReceived;
+  	}
+  }
   double GetAverageHopCountVanetToRsu(){return m_HopCountAgregatorVanetToRsu/(double)m_numRsuRec;}
 
 protected:
@@ -453,10 +472,17 @@ private:
 
 	/**
 	 * Pointer to the internet routing queue
-	 * Used by VANET nodes to manage retransmissions
+	 * Used by VANET nodes to manage retransmissions when sending from VANET to RSU
 	 *
 	 */
 	ThesisInternetRoutingQueue m_RoutingCache;
+
+	/**
+	 * Pointer to a second internet routing queue
+	 * Used by VANET nodes to manage retransmissions when sending from RSU to VANET
+	 *
+	 */
+	ThesisInternetRoutingQueue m_RoutingRtoVCache;
 
 	/*
 	 * Utilities created in mcast routing protocol
@@ -497,7 +523,29 @@ private:
 	 * Send Ack message after RSU receives msg on wifi
 	 */
 	void SendAckMessage(Ptr<Packet> ack, UnicastForwardCallback ucb);
-//////////////////////////// Statistics
+
+	/*
+	 * Time before removing a thesisinternetroutingcache entry
+	 */
+	Time m_ThesisInternetRoutingCacheCooldown;
+
+	/**
+	 * Remove timer expired, remove routing queue entry (Used by VANET nodes to remove entries in their queue)
+	 */
+	void RemoveThesisRoutingCacheEntry(Ipv6Address source, Ipv6Address destination, Time sendTime);
+
+	/**
+	 * Remove timer expired, remove routing queue entry (Used by VANET nodes to remove entries in their queue)
+	 */
+	void RemoveThesisRoutingRtVCacheEntry(Ipv6Address source, Ipv6Address destination, Time sendTime);
+
+  /**
+   * Hop count limit
+   * Any packets with a hop count above will be dropped
+   */
+	uint8_t m_hopCountLimit;
+
+	//////////////////////////// Statistics
 	/**
 	 * Struct to hold pair of destination and sendtime set via route input
 	 * Used to track average latency (ATT) and send time
@@ -562,6 +610,8 @@ private:
    * Counter tracking number of internet transmisions an RSU receives
    */
   int32_t m_numRsuRec;
+
+
 
 };
 

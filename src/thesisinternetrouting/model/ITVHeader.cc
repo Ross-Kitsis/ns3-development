@@ -14,9 +14,10 @@ namespace thesis
 
 ITVHeader::ITVHeader(Vector OriginPosition, Time OriginalTimestamp,
 		bool isDtnTolerant, Vector SenderPosition,
-		Vector SenderVelocity, Vector PredictedPosition) :
+		Vector SenderVelocity, Vector PredictedPosition, uint8_t hopCount) :
 		m_OriginPosition(OriginPosition), m_OriginalTimestamp(OriginalTimestamp), m_isDtnTolerant(isDtnTolerant),
-		m_SenderPosition(SenderPosition), m_SenderVelocity(SenderVelocity), m_PredictedPosition(PredictedPosition)
+		m_SenderPosition(SenderPosition), m_SenderVelocity(SenderVelocity), m_PredictedPosition(PredictedPosition),
+		m_hopCount(hopCount)
 {
 	// TODO Auto-generated constructor stub
 }
@@ -47,7 +48,7 @@ uint32_t
 ITVHeader::GetSerializedSize() const
 {
 	//Size of header in BYTES!!!!!
-	return 75;
+	return 76;
 }
 
 void
@@ -101,6 +102,8 @@ ITVHeader::Serialize(Buffer::Iterator i) const
 	i.WriteHtolsbU64((uint64_t) abs (m_PredictedPosition.x * 1000));
 	i.WriteHtolsbU64((uint64_t) abs (m_PredictedPosition.y * 1000));
 
+	//Serialize hop count
+	i.WriteU8(m_hopCount);
 }
 
 uint32_t
@@ -142,6 +145,9 @@ ITVHeader::Deserialize(Buffer::Iterator start)
   //Read predicted velocity
 	m_PredictedPosition.x =(double) (i.ReadLsbtohU64 ()/1000.0);
 	m_PredictedPosition.y =(double) (i.ReadLsbtohU64 ()/1000.0);
+
+	//Deserialize hop count
+	m_hopCount = (uint8_t) (i.ReadU8());
 
 	uint32_t dist = i.GetDistanceFrom (start);
 	NS_ASSERT (dist == GetSerializedSize ());

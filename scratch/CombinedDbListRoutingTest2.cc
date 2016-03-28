@@ -35,7 +35,7 @@ NS_LOG_COMPONENT_DEFINE("ListRoutingTest2");
 
 int main (int argc, char *argv[])
 {
-	int debug = 0;
+	int debug = 1;
 	if(debug)
 	{
 		//Define compnents to log

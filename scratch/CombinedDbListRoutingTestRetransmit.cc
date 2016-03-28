@@ -55,7 +55,7 @@ int main (int argc, char *argv[])
 	uint32_t vstep = 1000; //Vertical step
 	uint32_t numRsuRow = 4; //Number of RSU to place in a row
 	uint32_t simTime = 20; //Simulation time
-	double transmittingPercentage = 0.5; //Percentage of vanet nodes generating packets
+	double transmittingPercentage = 0.1; //Percentage of vanet nodes generating packets
 	std::string m_CSVfileName = "ThesisInternetRouting.csv";
 
 	CommandLine cmd;
@@ -135,8 +135,14 @@ int main (int argc, char *argv[])
 	//Create Mobility allocator and add to vehicular nodes
   vehMobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
                              "Bounds", RectangleValue (Rectangle (450, 550, 550, 750)),
+  //											 		 "Bounds", RectangleValue (Rectangle (0, 3000, 0, 3000)),
                              "Speed", StringValue ("ns3::UniformRandomVariable[Min=5.0|Max=15.0]"),
                              "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+
+  //vehMobility.SetPositionAllocator("ns3::RandomBoxPositionAllocator",
+  //																 "X",StringValue("ns3::UniformRandomVariable[Min=0|Max=3000]"),
+  //																 "Y",StringValue("ns3::UniformRandomVariable[Min=0|Max=3000]"),
+  //																 "Z",StringValue("ns3::UniformRandomVariable[Min=0|Max=0]"));
 
 	vehMobility.Install(VehNodes);
 
@@ -160,6 +166,11 @@ int main (int argc, char *argv[])
 	//Create Routing Helpers
 	Ipv6StaticRoutingHelper staticRoutingHelper;
 	ThesisInternetRoutingHelper2 tihelper;
+
+	//Set thesis attributes
+	//uint8_t hopLimit = 10;
+	tihelper.Set("HopCountLimit",UintegerValue(9));
+	tihelper.Set("ThesisRoutingCacheCooldown",TimeValue(Seconds(5)));
 
 	//m_rng = CreateObject<UniformRandomVariable>();
 	Ptr<Db> RsuDatabase = CreateObject<Db>();

@@ -63,7 +63,7 @@ class InternetHeader : public Header
 public:
 	InternetHeader(Vector m_OriginPosition = Vector(), Vector m_OriginVelocity = Vector(), Time m_timestamp = Time(),
 								 bool m_isDtnTolerant = false, Vector m_SenderPosition = Vector(), Vector m_SenderVelocity = Vector(),
-								 Ipv6Address m_RsuAddress = Ipv6Address());
+								 Ipv6Address m_RsuAddress = Ipv6Address(), uint8_t m_hopCount = 0);
 
 	virtual ~InternetHeader();
 
@@ -102,6 +102,9 @@ public:
 
 	void SetRsuAddress(Ipv6Address address) {m_RsuAddress = address;}
 	Ipv6Address GetRsuAddress() {return m_RsuAddress;}
+
+	void SetHopCount(uint8_t hop) {m_hopCount = hop;}
+	uint8_t GetHopCount() {return m_hopCount;}
 
 	bool operator== (InternetHeader const & o) const;
 
@@ -143,6 +146,12 @@ private:
 	 * Ipv6Address of RSU destination
 	 */
 	Ipv6Address m_RsuAddress;
+
+	/**
+	 * Hop count
+	 */
+	uint8_t m_hopCount;
+
 };
 } /*namesaoce thesisinternet*/
 } /* namespace ns3 */

@@ -76,17 +76,17 @@ int main (int argc, char *argv[])
 	NodeContainer AllNodes;
 
 	//Create Nodes
-	RSU.Create(nRSU,0);
+	RSU.Create(nRSU);
 
-	Hub.Create(1,0);
+	Hub.Create(1);
 
-//	VehNodes.Create(nVeh);
+	VehNodes.Create(nVeh);
 	//Create vehicle nodes on differnt processors
-	MpiInterface::Enable(&argc, &argv);
-	VehNodes.Create(247,0);
-	VehNodes.Create(247,1);
-	VehNodes.Create(247,2);
-	VehNodes.Create(248,3);
+//	MpiInterface::Enable(&argc, &argv);
+//	VehNodes.Create(60,0);
+//	VehNodes.Create(60,1);
+//	VehNodes.Create(60,2);
+//	VehNodes.Create(61,3);
 
 
 	//Aggregate nodes into allNodes node container

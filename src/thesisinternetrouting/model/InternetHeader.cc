@@ -18,9 +18,9 @@ NS_LOG_COMPONENT_DEFINE("ThesisInternetHeader");
 
 namespace thesis
 {
-InternetHeader::InternetHeader(Vector OriginPosition, Vector OriginVelocity, Time timestamp, bool isDtnTolerant, Vector senderPosition, Vector senderVelocity, Ipv6Address RsuAddress) :
+InternetHeader::InternetHeader(Vector OriginPosition, Vector OriginVelocity, Time timestamp, bool isDtnTolerant, Vector senderPosition, Vector senderVelocity, Ipv6Address RsuAddress, uint8_t hopCount) :
 		m_OriginPosition(OriginPosition), m_OriginVelocity(OriginVelocity), m_timestamp(timestamp), m_isDtnTolerant(isDtnTolerant),
-		m_SenderPosition(senderPosition), m_SenderVelocity(senderVelocity), m_RsuAddress(RsuAddress)
+		m_SenderPosition(senderPosition), m_SenderVelocity(senderVelocity), m_RsuAddress(RsuAddress), m_hopCount(hopCount)
 
 {
 	// TODO Auto-generated constructor stub
@@ -54,7 +54,7 @@ uint32_t
 InternetHeader::GetSerializedSize() const
 {
 	//Size of header in BYTES!!!!!
-	return 93;
+	return 94;
 }
 
 void
@@ -126,6 +126,7 @@ InternetHeader::Serialize(Buffer::Iterator i) const
 
   WriteTo(i,m_RsuAddress);
 
+  i.WriteU8(m_hopCount);
 }
 
 uint32_t
@@ -171,6 +172,8 @@ InternetHeader::Deserialize(Buffer::Iterator start)
   	  m_SenderVelocity.y = - m_SenderVelocity.y;
 
 	ReadFrom (i, m_RsuAddress);
+
+	m_hopCount = i.ReadU8();
 
 	uint32_t dist = i.GetDistanceFrom (start);
 	NS_ASSERT (dist == GetSerializedSize ());

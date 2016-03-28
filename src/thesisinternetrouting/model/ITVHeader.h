@@ -27,7 +27,7 @@ public:
 
 	ITVHeader(Vector m_OriginPosition = Vector(), Time m_OriginalTimestamp = Simulator::Now(),
 						bool m_isDtnTolerant = false, Vector m_SenderPosition = Vector(),
-						Vector m_SenderVelocity = Vector(), Vector m_PredictedPosition = Vector());
+						Vector m_SenderVelocity = Vector(), Vector m_PredictedPosition = Vector(), uint8_t m_hopCount = 0);
 
 	virtual ~ITVHeader();
 
@@ -63,6 +63,9 @@ public:
 	Vector GetPredictedPosition() {return m_PredictedPosition;}
 	void SetPredictedPosition(Vector position) {m_PredictedPosition = position;}
 
+	uint8_t GetHopCount() {return m_hopCount;}
+	void SetHopCount(uint8_t hopCount) {m_hopCount = hopCount;}
+
 private:
 
 	Vector m_OriginPosition;
@@ -71,6 +74,7 @@ private:
 	Vector m_SenderPosition;
 	Vector m_SenderVelocity;
 	Vector m_PredictedPosition;
+	uint8_t m_hopCount;
 
 };
 

@@ -164,7 +164,8 @@ ThesisUdpEchoServer::HandleRead (Ptr<Socket> socket)
       packet->RemoveAllByteTags ();
 
       NS_LOG_LOGIC ("Echoing packet");
-      int sendResult = socket->SendTo (packet, 0, from);
+      //int sendResult = socket->SendTo (packet, 0, from);
+      socket->SendTo (packet, 0, from);
 
       if (InetSocketAddress::IsMatchingType (from))
         {
