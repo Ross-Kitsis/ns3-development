@@ -92,7 +92,7 @@ NS_OBJECT_ENSURE_REGISTERED(ThesisInternetRoutingProtocol2);
 ThesisInternetRoutingProtocol2::ThesisInternetRoutingProtocol2() :
 						m_hasMcast(true), m_IsRSU(false),
 						m_CheckPosition(Seconds(10)), m_IsDtnTolerant(false),
-						m_isStrictEffective(true),m_rWait(5),m_ThesisInternetRoutingCacheCooldown(Seconds(5)),
+						m_isStrictEffective(true),m_rWait(100),m_ThesisInternetRoutingCacheCooldown(Seconds(1)),
 						m_hopCountLimit(10)
 {
 	m_numSourced = 0;
@@ -378,7 +378,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			RsuCacheEntry entry;
 			if(m_RsuCache.Lookup(header.GetDestinationAddress(), entry))
 			{
-				std::cout << "<<<<<<<<<<<< Found an entry in RSU cache >>>>>>>>>>>>>>>>" << std::endl;
+				//std::cout << "<<<<<<<<<<<< Found an entry in RSU cache >>>>>>>>>>>>>>>>" << std::endl;
 
 				//Packet from a normal internet source
 				Ipv6Address destination = header.GetDestinationAddress();
@@ -416,6 +416,14 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 																															entry.GetSendingNodeVelocity(),entry.GetSendTime());
 
 					DbEntry t1 = m_Db -> GetEntryForCurrentPosition(predictedPosition);
+
+					//if(!t1)
+					//{
+					//	std::cout << "COULD NOT GET ZONE FOR NODE POSITION" << std::endl;
+					//	return true;
+					//}
+
+
 					int intCheck = m_ipv6 ->GetInterfaceForAddress(t1.GetRsuAddress());
 
 					if(intCheck != -1)
@@ -478,13 +486,21 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 						ITVHeader itvh(mobility -> GetPosition(), entry.GetSendTime(), false, mobility -> GetPosition(),mobility -> GetVelocity(),predictedPosition,0);
 
 						//Get route to the new RSU
-						Ptr<Ipv6Route> redirectRoute = Lookup(newDestinationAddress,m_pp);
+//						Ptr<Ipv6Route> redirectRoute = Lookup(newDestinationAddress,m_pp);
+
+						Ipv6RoutingTableEntry sr = m_sr6 -> GetDefaultRoute();
+						Ptr<Ipv6Route> redirectRoute = Create<Ipv6Route> ();
+						redirectRoute -> SetDestination(sr.GetDestNetwork());
+						redirectRoute -> SetGateway(sr.GetGateway());
+						redirectRoute -> SetOutputDevice(m_ipv6 -> GetNetDevice(sr.GetInterface()));
+						redirectRoute -> SetSource(m_ipv6 -> GetAddress(1,1).GetAddress());
+
 
 						//Form packet
 						packet -> AddHeader(itvh);
 						packet -> AddHeader(redirectHeader);
 
-						ucb (route -> GetOutputDevice(),redirectRoute, packet, newV6Header);
+						ucb (m_pp,redirectRoute, packet, newV6Header);
 
 					}
 				}
@@ -727,21 +743,22 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		}else if(theader.Get() == mcast::INTERNET_RSU_TO_VANET)
 		{
 			//Type 4 is RSU to VANET (Handle later)
-			std::cout << std::endl;
-			std::cout << ">>>>>> GOT PACKET WITH TYPE 4 - RSU forwarding back into VANET <<<<<<<"<< std::endl;
+			//std::cout << std::endl;
+	//		std::cout << ">>>>>> GOT PACKET WITH TYPE 4 - RSU forwarding back into VANET <<<<<<<"<< std::endl;
 
 			Ipv6Address destination = header.GetDestinationAddress();
 
-			std::cout << "Internet Rsu to Vanet destination: " << destination << std::endl;
+			//std::cout << "Internet Rsu to Vanet destination: " << destination << std::endl;
 
 			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1 || CheckHostBits(destination))
 			{
-//				std::cout << ">>>>>> Received packet for this node; forwarding LCB <<<<<<<"<< std::endl;
+				std::cout << ">>>>>> Received packet for this node; forwarding LCB <<<<<<<"<< std::endl;
 
 //				std::cout << "Header Properties: "<< std::endl;
 //				std::cout << "Destination: " << header.GetDestinationAddress() << std::endl;
 //				std::cout << "Source: " << header.GetSourceAddress() << std::endl;
 //				std::cout << std::endl;
+
 
 				//Remove headers before forwarding up, maybe thats causing the problem??
 				mcast::TypeHeader typeHeader (mcast::UNKNOWN);
@@ -749,6 +766,51 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 				ITVHeader itvhdr(Vector(), Simulator::Now(), false, Vector(), Vector(), Vector(),0);
 				packet -> RemoveHeader(itvhdr);
+
+
+				Ipv6Address source = header.GetSourceAddress();
+				///Set transmission statistics for data collection
+				std::cout << std::endl;
+				for(TransmissionsIt it = m_sourcedTrans.begin(); it != m_sourcedTrans.end(); it++)
+				{
+					std::cout << "Cache destination: " << it -> Destination << std::endl;
+					std::cout << "Cache SendTime: " << it -> SendTime << std::endl;
+
+					//Header properties
+					std::cout << "Source: (From RSU) " << source << std::endl;
+					std::cout << "source Timestamp: (From RSU) " << itvhdr.GetOriginalTimestamp() << std::endl;
+
+
+					if(/*it -> Destination == source && */ it -> SendTime == itvhdr.GetOriginalTimestamp())
+					{
+						std::cout << "GOT HERE" << std::endl;
+						m_numReceived++;
+
+//						std::cout << "RTT: " << Simulator::Now() - itvhdr.GetOriginalTimestamp() << std::endl;
+
+						m_RTT = m_RTT + (Simulator::Now() - itvhdr.GetOriginalTimestamp());
+
+						//Ptr<Ipv6L3Protocol> l3 = GetObject<Ipv6L3Protocol>();
+						//l3 -> GetTypeId() .Get
+						//std::cout << "Hop Limit: " << (unsigned)header.GetHopLimit() << std::endl;
+
+
+						//Remove 1 from hop count to offset the hop from the Hub to the RSU
+						//Default hop limit set to 64
+						m_HopCountAgregatorRsuToVanet = m_HopCountAgregatorRsuToVanet + (64- header.GetHopLimit()) -1;
+
+						m_sourcedTrans.erase(it);
+						break;
+					}
+				}
+				std::cout << std::endl;
+
+
+
+
+
+
+
 
 				int32_t iif = m_ipv6->GetInterfaceForDevice (idev);
 				lcb (packet, header, iif);
@@ -771,33 +833,6 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 				//Send Ack Message
 				ucb (m_wi,ackEntry, ackPacket, header);
-
-
-				Ipv6Address source = header.GetSourceAddress();
-				///Set transmission statistics for data collection
-				for(TransmissionsIt it = m_sourcedTrans.begin(); it != m_sourcedTrans.end(); it++)
-				{
-					if(it -> Destination == source && it -> SendTime == itvhdr.GetOriginalTimestamp())
-					{
-						m_numReceived++;
-
-//						std::cout << "RTT: " << Simulator::Now() - itvhdr.GetOriginalTimestamp() << std::endl;
-
-						m_RTT = m_RTT + (Simulator::Now() - itvhdr.GetOriginalTimestamp());
-
-						//Ptr<Ipv6L3Protocol> l3 = GetObject<Ipv6L3Protocol>();
-						//l3 -> GetTypeId() .Get
-						//std::cout << "Hop Limit: " << (unsigned)header.GetHopLimit() << std::endl;
-
-
-						//Remove 1 from hop count to offset the hop from the Hub to the RSU
-						//Default hop limit set to 64
-						m_HopCountAgregatorRsuToVanet = m_HopCountAgregatorRsuToVanet + (64- header.GetHopLimit()) -1;
-
-						m_sourcedTrans.erase(it);
-						break;
-					}
-				}
 
 				return true;
 			}else
@@ -822,7 +857,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 				}
 
 				//Check hop count; if exceed max then drop packets
-				std::cout << "Checking hop count limit of: " << (unsigned)m_hopCountLimit << std::endl;
+				//std::cout << "Checking hop count limit of: " << (unsigned)m_hopCountLimit << std::endl;
 				if(itvhdr.GetHopCount() > m_hopCountLimit)
 				{
 					return true;
@@ -1006,66 +1041,66 @@ void
 ThesisInternetRoutingProtocol2::SendInternetRetransmitIntoVanet(Ipv6Address source, Ipv6Address destination, Time timestamp)
 {
 	NS_LOG_FUNCTION(this);
-//	std::cout << "**************** Sending V2VInternet Retransmit ******************" << std::endl;
+	//std::cout << "**************** Sending V2VInternet Retransmit ******************" << std::endl;
+
+	ThesisInternetQueueEntry * entry = m_RoutingRtoVCache.GetRoutingEntry(source,destination,timestamp);
+	UnicastForwardCallback ucb = entry -> GetUnicastForwardCallback();
+
+	//Get mobility model properties and extract values needed for header
+	Ptr<MobilityModel> mobility = m_ipv6 -> GetObject<MobilityModel>();
+	Vector position = mobility -> GetPosition();
+	Vector velocity = mobility -> GetVelocity();
+
+
+	Ptr<Packet> packet = entry -> GetPacket();
+
+	//Remove headers to modify Internet header - need to change sender parameters
+	mcast::TypeHeader theader (mcast::UNKNOWN);
+	packet -> RemoveHeader(theader);
+
+	ITVHeader itvhdr;
+	packet -> RemoveHeader(itvhdr);
+
+	//Update sender position and velocity
+	itvhdr.SetSenderPosition(position);
+	itvhdr.SetSenderVelocity(velocity);
+
+	//Update hop count
+	uint8_t newHopCount = itvhdr.GetHopCount() + 1;
+	itvhdr.SetHopCount(newHopCount);
+
+	//Re-add headers
+	packet -> AddHeader(itvhdr);
+	packet -> AddHeader(theader);
+
+	//Lookup route to send forward packet
+	//		Ptr<Ipv6Route> route = Lookup(destination,m_wi);
+
+	Ptr<Ipv6Route> route = Create<Ipv6Route>();
+
+	route -> SetDestination(destination);
+	route -> SetSource(source);
+	route -> SetOutputDevice(m_wi);
+	route -> SetGateway(Ipv6Address(RSU_TO_VANET));
+
+	//Remove entry from cache
+	//		m_RoutingCache.RemoveRoutingQueueEntry(source,destination,timestamp);
+
+	//Schedule removal with delay
+
+	if(m_RoutingRtoVCache.Lookup(source,destination,timestamp))
+	{
 
 		ThesisInternetQueueEntry * entry = m_RoutingRtoVCache.GetRoutingEntry(source,destination,timestamp);
-		UnicastForwardCallback ucb = entry -> GetUnicastForwardCallback();
+		//Schedule removal of entry
+		entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveThesisRoutingRtVCacheEntry, this);
+		entry->m_RetransmitTimer.SetArguments(source,destination,timestamp);
+		entry->m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
+	}
 
-		//Get mobility model properties and extract values needed for header
-		Ptr<MobilityModel> mobility = m_ipv6 -> GetObject<MobilityModel>();
-		Vector position = mobility -> GetPosition();
-		Vector velocity = mobility -> GetVelocity();
+	//NS_LOG_INFO(""packet);
 
-
-		Ptr<Packet> packet = entry -> GetPacket();
-
-		//Remove headers to modify Internet header - need to change sender parameters
-		mcast::TypeHeader theader (mcast::UNKNOWN);
-		packet -> RemoveHeader(theader);
-
-		ITVHeader itvhdr;
-		packet -> RemoveHeader(itvhdr);
-
-		//Update sender position and velocity
-		itvhdr.SetSenderPosition(position);
-		itvhdr.SetSenderVelocity(velocity);
-
-		//Update hop count
-		uint8_t newHopCount = itvhdr.GetHopCount() + 1;
-		itvhdr.SetHopCount(newHopCount);
-
-		//Re-add headers
-		packet -> AddHeader(itvhdr);
-		packet -> AddHeader(theader);
-
-		//Lookup route to send forward packet
-//		Ptr<Ipv6Route> route = Lookup(destination,m_wi);
-
-		Ptr<Ipv6Route> route = Create<Ipv6Route>();
-
-		route -> SetDestination(destination);
-		route -> SetSource(source);
-		route -> SetOutputDevice(m_wi);
-		route -> SetGateway(Ipv6Address(RSU_TO_VANET));
-
-		//Remove entry from cache
-//		m_RoutingCache.RemoveRoutingQueueEntry(source,destination,timestamp);
-
-		//Schedule removal with delay
-
-		if(m_RoutingRtoVCache.Lookup(source,destination,timestamp))
-			{
-
-			ThesisInternetQueueEntry * entry = m_RoutingRtoVCache.GetRoutingEntry(source,destination,timestamp);
-			//Schedule removal of entry
-			entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveThesisRoutingRtVCacheEntry, this);
-			entry->m_RetransmitTimer.SetArguments(source,destination,timestamp);
-			entry->m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
-			}
-
-		//NS_LOG_INFO(""packet);
-
-		ucb (route -> GetOutputDevice(),route, packet, entry -> GetIpv6Header());
+	ucb (route -> GetOutputDevice(),route, packet, entry -> GetIpv6Header());
 }
 
 bool
@@ -1170,7 +1205,7 @@ ThesisInternetRoutingProtocol2::SendInternetRetransmit(Ipv6Address source, Ipv6A
 {
 	NS_LOG_FUNCTION(this);
 
-//	std::cout << "**************** Sending Internet Retransmit ******************" << std::endl;
+	//std::cout << "**************** Sending Internet Retransmit ******************" << std::endl;
 
 	ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,sendTime);
 	UnicastForwardCallback ucb = entry -> GetUnicastForwardCallback();

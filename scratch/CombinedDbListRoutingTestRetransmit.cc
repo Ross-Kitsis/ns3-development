@@ -53,7 +53,7 @@ int main (int argc, char *argv[])
 	uint32_t nRSU = 2; //Number of RSU stations
 	uint32_t hstep = 1000; //Horizontal step
 	uint32_t vstep = 1000; //Vertical step
-	uint32_t numRsuRow = 4; //Number of RSU to place in a row
+	uint32_t numRsuRow = 2; //Number of RSU to place in a row
 	uint32_t simTime = 20; //Simulation time
 	double transmittingPercentage = 0.1; //Percentage of vanet nodes generating packets
 	std::string m_CSVfileName = "ThesisInternetRouting.csv";
@@ -133,6 +133,7 @@ int main (int argc, char *argv[])
 	vehMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
 */
 	//Create Mobility allocator and add to vehicular nodes
+	/*
   vehMobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
                              "Bounds", RectangleValue (Rectangle (450, 550, 550, 750)),
   //											 		 "Bounds", RectangleValue (Rectangle (0, 3000, 0, 3000)),
@@ -143,6 +144,19 @@ int main (int argc, char *argv[])
   //																 "X",StringValue("ns3::UniformRandomVariable[Min=0|Max=3000]"),
   //																 "Y",StringValue("ns3::UniformRandomVariable[Min=0|Max=3000]"),
   //																 "Z",StringValue("ns3::UniformRandomVariable[Min=0|Max=0]"));
+	*/
+
+	//Large scale test
+	vehMobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
+  											 		 "Bounds", RectangleValue (Rectangle (250, 1750, 250, 1750)),
+                             "Speed", StringValue ("ns3::UniformRandomVariable[Min=5.0|Max=10.0]"),
+                             "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+
+  vehMobility.SetPositionAllocator("ns3::RandomBoxPositionAllocator",
+  																 "X",StringValue("ns3::UniformRandomVariable[Min=250|Max=1750]"),
+  																 "Y",StringValue("ns3::UniformRandomVariable[Min=250|Max=1750]"),
+  																 "Z",StringValue("ns3::UniformRandomVariable[Min=0|Max=0]"));
+
 
 	vehMobility.Install(VehNodes);
 
@@ -195,12 +209,17 @@ int main (int argc, char *argv[])
 	wifiMac.SetType ("ns3::AdhocWifiMac");
 
 	YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+	wifiPhy.Set ("TxPowerStart", DoubleValue (25.0) );
+	wifiPhy.Set ("TxPowerEnd", DoubleValue (25.0) );
+	wifiPhy.Set ("TxPowerLevels", UintegerValue(1) );
+	wifiPhy.Set ("TxGain", DoubleValue (1) );
+	wifiPhy.Set ("RxGain", DoubleValue (1) );
 
 	YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
 	wifiPhy.SetChannel (wifiChannel.Create ());
 
 	WifiHelper wifi = WifiHelper::Default ();
-	wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager", "DataMode", StringValue ("OfdmRate6Mbps"), "RtsCtsThreshold", UintegerValue (0));
+	wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager", "DataMode", StringValue ("OfdmRate24Mbps"), "RtsCtsThreshold", UintegerValue (0));
 
 	NetDeviceContainer RsuWifiDevices;
 	RsuWifiDevices = wifi.Install (wifiPhy, wifiMac, RSU);
@@ -267,7 +286,7 @@ int main (int argc, char *argv[])
 	//Schedule creation of static routes between nodes
 	star.ScheduleCreateStaticRoutes(Seconds(5),Hub,RSU,staticRoutingHelper);
 
-	std::cout << "Attempting to build RSU Database ---" << std::endl;
+	//std::cout << "Attempting to build RSU Database ---" << std::endl;
 
 
 	//Populate database
@@ -324,7 +343,8 @@ int main (int argc, char *argv[])
 		//
 		uint32_t packetSize = 1024;
 	  uint32_t maxPacketCount = 100;
-	  Time interPacketInterval = Seconds (3.);
+//	  Time interPacketInterval = Seconds (3.);
+	  Time interPacketInterval = Seconds (0.5);
 	  ThesisUdpEchoClientHelper client (sinkAdd, port);
 	  client.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
 	  client.SetAttribute ("Interval", TimeValue (interPacketInterval));

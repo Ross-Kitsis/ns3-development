@@ -179,7 +179,7 @@ RsuCache::Lookup(Ipv6Address toFind, RsuCacheEntry  &entry)
 			{
 				min = currentTime - toCheck -> GetSendTime();
 
-				std::cout << "ToCheck found Min entry with address: " << toCheck -> GetSource() << std::endl;
+				//std::cout << "ToCheck found Min entry with address: " << toCheck -> GetSource() << std::endl;
 				hasEntry = true;
 				entry = *toCheck;
 			}

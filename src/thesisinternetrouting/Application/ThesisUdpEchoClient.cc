@@ -386,7 +386,7 @@ ThesisUdpEchoClient::Send (void)
 
 	if (m_sent < m_count)
 	{
-		ScheduleTransmit (m_interval);
+		ScheduleTransmit (m_interval + MilliSeconds(rand()%10));
 	}
 }
 

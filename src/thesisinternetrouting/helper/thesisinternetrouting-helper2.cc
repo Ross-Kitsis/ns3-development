@@ -20,7 +20,7 @@ ThesisInternetRoutingHelper2::Copy(void) const
 Ptr<Ipv6RoutingProtocol>
 ThesisInternetRoutingHelper2::Create (Ptr<Node> node) const
 {
-	std::cout << "Creating new thesisInternetRouting protocol (new) for" << node << std::endl;
+	//std::cout << "Creating new thesisInternetRouting protocol (new) for" << node << std::endl;
 	Ptr<thesis::ThesisInternetRoutingProtocol2> agent = m_agentFactory.Create<thesis::ThesisInternetRoutingProtocol2> ();
 
 	//////////////ADD DATABASE ASSIGNMENT HERE!!!
