@@ -27,6 +27,9 @@
 #include "ns3/simulator.h"
 #include "ns3/nstime.h"
 
+#include <cstdlib>
+#include <ctime>
+
 namespace ns3 {
 
 class Socket;

@@ -132,6 +132,7 @@ ThesisUdpEchoClient::StartApplication (void)
 {
 	NS_LOG_FUNCTION (this);
 
+	std::srand(std::time(0));
 
 	if (m_socket == 0)
 	{
@@ -386,7 +387,7 @@ ThesisUdpEchoClient::Send (void)
 
 	if (m_sent < m_count)
 	{
-		ScheduleTransmit (m_interval + MilliSeconds(rand()%10));
+		ScheduleTransmit (m_interval + MilliSeconds(std::rand()%1000));
 	}
 }
 

@@ -92,7 +92,7 @@ NS_OBJECT_ENSURE_REGISTERED(ThesisInternetRoutingProtocol2);
 ThesisInternetRoutingProtocol2::ThesisInternetRoutingProtocol2() :
 						m_hasMcast(true), m_IsRSU(false),
 						m_CheckPosition(Seconds(10)), m_IsDtnTolerant(false),
-						m_isStrictEffective(true),m_rWait(100),m_ThesisInternetRoutingCacheCooldown(Seconds(1)),
+						m_isStrictEffective(true),m_rWait(50),m_ThesisInternetRoutingCacheCooldown(Seconds(1)),
 						m_hopCountLimit(10)
 {
 	m_numSourced = 0;
@@ -506,7 +506,9 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 				}
 			}else
 			{
+				packet -> Print(std::cout);
 				std::cout << "<<<<<<<<<<<<<< Should not have happened yet >>>>>>>>>>>>>>>>>" << std::endl;
+				std::cout << "Destination: " << header.GetDestinationAddress() << std::endl;
 			}
 		}
 
@@ -685,6 +687,18 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 				return true;
 			}
 
+			//Check that the packet did not come from another zone
+			//Don't allow interzone wifi routing for the moment
+			Ipv6Address destinationRSU = Ih.GetRsuAddress();
+			if(!destinationRSU.IsEqual(m_currentRsu.GetRsuAddress()))
+			{
+				//Destination address was not equal to current RSU address
+				//Drop packet
+//				std::cout << "Destination RSU: " << destinationRSU << std::endl;
+//				std::cout << "Current RSU " << m_currentRsu.GetRsuAddress() << std::endl;
+				return true;
+			}
+
 
 			//////////////////////////////////////////
 
@@ -752,7 +766,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1 || CheckHostBits(destination))
 			{
-				std::cout << ">>>>>> Received packet for this node; forwarding LCB <<<<<<<"<< std::endl;
+//				std::cout << ">>>>>> Received packet for this node; forwarding LCB <<<<<<<"<< std::endl;
 
 //				std::cout << "Header Properties: "<< std::endl;
 //				std::cout << "Destination: " << header.GetDestinationAddress() << std::endl;
@@ -770,20 +784,20 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 				Ipv6Address source = header.GetSourceAddress();
 				///Set transmission statistics for data collection
-				std::cout << std::endl;
+				//std::cout << std::endl;
 				for(TransmissionsIt it = m_sourcedTrans.begin(); it != m_sourcedTrans.end(); it++)
 				{
-					std::cout << "Cache destination: " << it -> Destination << std::endl;
-					std::cout << "Cache SendTime: " << it -> SendTime << std::endl;
+					//std::cout << "Cache destination: " << it -> Destination << std::endl;
+					//std::cout << "Cache SendTime: " << it -> SendTime << std::endl;
 
 					//Header properties
-					std::cout << "Source: (From RSU) " << source << std::endl;
-					std::cout << "source Timestamp: (From RSU) " << itvhdr.GetOriginalTimestamp() << std::endl;
+					//std::cout << "Source: (From RSU) " << source << std::endl;
+					//std::cout << "source Timestamp: (From RSU) " << itvhdr.GetOriginalTimestamp() << std::endl;
 
 
 					if(/*it -> Destination == source && */ it -> SendTime == itvhdr.GetOriginalTimestamp())
 					{
-						std::cout << "GOT HERE" << std::endl;
+						//std::cout << "GOT HERE" << std::endl;
 						m_numReceived++;
 
 //						std::cout << "RTT: " << Simulator::Now() - itvhdr.GetOriginalTimestamp() << std::endl;
@@ -803,12 +817,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 						break;
 					}
 				}
-				std::cout << std::endl;
-
-
-
-
-
+				//std::cout << std::endl;
 
 
 

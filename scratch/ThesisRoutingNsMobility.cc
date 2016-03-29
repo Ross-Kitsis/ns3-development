@@ -68,6 +68,7 @@ int main (int argc, char *argv[])
 	cmd.AddValue ("nRsuRow", "Number of RSU in a row", numRsuRow);
 	cmd.AddValue ("nSendPerc", "Percentage of vehicular nodes acting as sources",transmittingPercentage);
 	cmd.AddValue ("trace","Location of the mobility trace",m_TraceFile);
+	cmd.AddValue ("simTime","Simulation time",simTime);
 	cmd.Parse (argc, argv);
 
 	NodeContainer RSU;
@@ -179,12 +180,17 @@ int main (int argc, char *argv[])
 	wifiMac.SetType ("ns3::AdhocWifiMac");
 
 	YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+	wifiPhy.Set ("TxPowerStart", DoubleValue (25.0) );
+	wifiPhy.Set ("TxPowerEnd", DoubleValue (25.0) );
+	wifiPhy.Set ("TxPowerLevels", UintegerValue(1) );
+	wifiPhy.Set ("TxGain", DoubleValue (1) );
+	wifiPhy.Set ("RxGain", DoubleValue (1) );
 
 	YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
 	wifiPhy.SetChannel (wifiChannel.Create ());
 
 	WifiHelper wifi = WifiHelper::Default ();
-	wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager", "DataMode", StringValue ("OfdmRate6Mbps"), "RtsCtsThreshold", UintegerValue (0));
+	wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager", "DataMode", StringValue ("OfdmRate24Mbps"), "RtsCtsThreshold", UintegerValue (0));
 
 	NetDeviceContainer RsuWifiDevices;
 	RsuWifiDevices = wifi.Install (wifiPhy, wifiMac, RSU);
@@ -403,7 +409,12 @@ int main (int argc, char *argv[])
 
   std::ofstream out (m_CSVfileName.c_str (), std::ios::app);
 
-  //Build first row of values with node numbers
+  //Build first row with simulation parameters
+  out << "TotalSimulationTime," << simTime << ",SendingPercentage," << transmittingPercentage <<
+  		   ",NumRsu," << nRSU << ",TotalNumberOfVehicles," << nVeh <<
+  		   ",SimulationArea (Km^2)," << ((nRSU/numRsuRow * hstep) * (nRSU/numRsuRow * vstep))/ (1000 * 1000) <<std::endl;
+
+  //Build second row of values with node numbers
   out << ""<<",";
   for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
   {

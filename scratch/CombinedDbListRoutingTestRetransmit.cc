@@ -62,6 +62,7 @@ int main (int argc, char *argv[])
 	cmd.AddValue ("nVeh", "Number of vehicle nodes", nVeh);
 	cmd.AddValue ("nRSU", "Number backbone nodes", nRSU);
 	cmd.AddValue ("nSendPerc", "Percentage of vehicular nodes acting as sources",transmittingPercentage);
+	cmd.AddValue ("simTime","Time to run simulation",simTime);
 	cmd.Parse (argc, argv);
 
 	NodeContainer RSU;
@@ -439,7 +440,12 @@ int main (int argc, char *argv[])
 
   std::ofstream out (m_CSVfileName.c_str (), std::ios::app);
 
-  //Build first row of values with node numbers
+  //Build first row with simulation parameters
+  out << "TotalSimulationTime," << simTime << ",SendingPercentage," << transmittingPercentage <<
+  		   ",NumRsu," << nRSU << ",TotalNumberOfVehicles," << nVeh <<
+  		   ",SimulationArea (Km^2)," << ((nRSU/numRsuRow * hstep) * (nRSU/numRsuRow * vstep))/ (1000 * 1000) <<std::endl;
+
+  //Build second row of values with node numbers
   out << ""<<",";
   for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
   {
@@ -487,20 +493,6 @@ int main (int argc, char *argv[])
   	Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
 
   	out << sntr -> GetReceiveRate() << ",";
-  }
-  out << std::endl;
-
-  //Print average route trip time
-  out << "AverageRTT,";
-  for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
-  {
-  	Ptr<Node> sNode = SourceNodes.Get(i);
-  	Ptr<Application> app = sNode -> GetApplication(0);
-  	//Ptr<ThesisUdpEchoClient> udpEcho =  DynamicCast<ThesisUdpEchoClient>(app);
-  	Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
-  	Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
-
-  	out << sntr -> GetAverageLatency() << ",";
   }
   out << std::endl;
 
