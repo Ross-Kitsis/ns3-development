@@ -92,7 +92,7 @@ NS_OBJECT_ENSURE_REGISTERED(ThesisInternetRoutingProtocol2);
 ThesisInternetRoutingProtocol2::ThesisInternetRoutingProtocol2() :
 						m_hasMcast(true), m_IsRSU(false),
 						m_CheckPosition(Seconds(10)), m_IsDtnTolerant(false),
-						m_isStrictEffective(true),m_rWait(50),m_ThesisInternetRoutingCacheCooldown(Seconds(1)),
+						m_isStrictEffective(true),m_rWait(10),m_ThesisInternetRoutingCacheCooldown(Seconds(1)),
 						m_hopCountLimit(10)
 {
 	m_numSourced = 0;
@@ -1861,7 +1861,7 @@ ThesisInternetRoutingProtocol2::GetBackoffDuration(Vector SenderPosition)
 	//Backoff in microseconds
 	toWait = MicroSeconds(ratio * m_rWait);
 
-//	std::cout << "Waiting time in microseconds: " << toWait.GetMicroSeconds() << std::endl;
+	//std::cout << "Waiting time in microseconds (Internet retransmit): " << toWait.GetMicroSeconds() << std::endl;
 
 	return toWait;
 }

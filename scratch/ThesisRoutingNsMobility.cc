@@ -61,6 +61,7 @@ int main (int argc, char *argv[])
 	double transmittingPercentage = 0.1; //Percentage of vanet nodes generating packets
 	std::string m_CSVfileName = "ThesisInternetRoutingNSMobility.csv";
 	std::string m_TraceFile = "";
+	int packetSendFrequency = 1;
 
 	CommandLine cmd;
 	cmd.AddValue ("nVeh", "Number of vehicle nodes", nVeh);
@@ -69,6 +70,7 @@ int main (int argc, char *argv[])
 	cmd.AddValue ("nSendPerc", "Percentage of vehicular nodes acting as sources",transmittingPercentage);
 	cmd.AddValue ("trace","Location of the mobility trace",m_TraceFile);
 	cmd.AddValue ("simTime","Simulation time",simTime);
+	cmd.AddValue ("sFreq", "Number of packets sent per second",packetSendFrequency);
 	cmd.Parse (argc, argv);
 
 	NodeContainer RSU;
@@ -314,7 +316,7 @@ int main (int argc, char *argv[])
 		//
 		uint32_t packetSize = 1024;
 	  uint32_t maxPacketCount = 100;
-	  Time interPacketInterval = Seconds (3.);
+	  Time interPacketInterval = Seconds (1.0/packetSendFrequency);
 	  ThesisUdpEchoClientHelper client (sinkAdd, port);
 	  client.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
 	  client.SetAttribute ("Interval", TimeValue (interPacketInterval));
@@ -412,7 +414,9 @@ int main (int argc, char *argv[])
   //Build first row with simulation parameters
   out << "TotalSimulationTime," << simTime << ",SendingPercentage," << transmittingPercentage <<
   		   ",NumRsu," << nRSU << ",TotalNumberOfVehicles," << nVeh <<
-  		   ",SimulationArea (Km^2)," << ((nRSU/numRsuRow * hstep) * (nRSU/numRsuRow * vstep))/ (1000 * 1000) <<std::endl;
+  		   ",SimulationArea (Km^2)," << ((nRSU/numRsuRow * hstep) * (nRSU/numRsuRow * vstep))/ (1000 * 1000) <<
+  		   ",PacketSendFrequency: ," << packetSendFrequency << " packets/s" <<
+  		   ",Packet every," << 1.0/ packetSendFrequency << "s" <<std::endl;
 
   //Build second row of values with node numbers
   out << ""<<",";
@@ -586,6 +590,9 @@ int main (int argc, char *argv[])
 		out << avgNtoR <<",";
 	}
 	out << std::endl;
+	out << "," << std::endl;
+	out << std::endl;
+
 	////////////////////////////////////////////
 
 	Simulator::Destroy ();
