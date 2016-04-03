@@ -176,11 +176,21 @@ int main (int argc, char *argv[])
   aodv.Set("EnableHello", BooleanValue(true));
   // you can configure AODV attributes here using aodv.Set(name, value)
 
+  aodv.SetIsHub(false);
+  aodv.SetIsRsu(false);
 	internet.SetRoutingHelper(aodv);
 
   //star.InstallStack (internet);
   internet.Install(VehNodes);
+
+  aodv.SetIsHub(false);
+  aodv.SetIsRsu(true);
+  internet.SetRoutingHelper(aodv);
   internet.Install(RSU);
+
+  aodv.SetIsHub(true);
+  aodv.SetIsRsu(false);
+  internet.SetRoutingHelper(aodv);
   internet.Install(Hub);
 
 

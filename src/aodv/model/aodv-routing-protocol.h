@@ -100,6 +100,14 @@ public:
   */
   int64_t AssignStreams (int64_t stream);
 
+
+  void SetIsRsu (bool isRsu) { m_isRSU = isRsu; }
+  bool GetIsRsu () const { return m_isRSU; }
+
+  void SetIsHub (bool isHub) { m_isHub = isHub; }
+  bool GetIsHub () const { return m_isHub; }
+
+
 protected:
   virtual void DoInitialize (void);
 private:
@@ -174,8 +182,8 @@ private:
   //Is the node an RSU?
   bool m_isRSU;
 
-  void SetIsRsu (bool isRsu) { m_isRSU = isRsu; }
-  bool GetIsRsu () const { return m_isRSU; }
+  //Is the node the hub?
+  bool m_isHub;
 
 	/**
 	 * Struct to hold pair of destination and sendtime set via route input
