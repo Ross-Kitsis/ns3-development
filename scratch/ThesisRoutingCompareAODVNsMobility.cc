@@ -38,6 +38,7 @@
 
 #include "ns3/mpi-interface.h"
 
+#include "ns3/flow-monitor-module.h"
 
 using namespace ns3;
 
@@ -172,7 +173,7 @@ int main (int argc, char *argv[])
 
   AodvHelper aodv;
 
-  aodv.Set("EnableHello", BooleanValue(false));
+  aodv.Set("EnableHello", BooleanValue(true));
   // you can configure AODV attributes here using aodv.Set(name, value)
 
 	internet.SetRoutingHelper(aodv);
@@ -225,7 +226,7 @@ int main (int argc, char *argv[])
 	//Create Mobility allocator and add to vehicular nodes
   vehMobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
                              "Bounds", RectangleValue (Rectangle (450, 550, 550, 750)),
-                             "Speed", StringValue ("ns3::UniformRandomVariable[Min=5.0|Max=15.0]"),
+                             "Speed", StringValue ("ns3::UniformRandomVariable[Min=0.1|Max=0.2]"),
                              "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
 
 	vehMobility.Install(VehNodes);
@@ -273,6 +274,11 @@ int main (int argc, char *argv[])
 
 	NS_LOG_INFO ("Run Simulation.");
 	Simulator::Stop(Time(Seconds(simTime)));
+
+	FlowMonitorHelper flowmon;
+	Ptr<FlowMonitor> monitor = flowmon.InstallAll ();
+
+
 	Simulator::Run ();
 ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -283,6 +289,33 @@ int main (int argc, char *argv[])
   std::cout << "Number of packets received" << udpa -> GetNumReceived() << std::endl;
   std::cout << "Receive rate: " << udpa -> GetReceiveRate() << std::endl;
   std::cout << "Average RTT: " << udpa -> GetAverageLatency() << std::endl;
+
+  std::cout << "----------------- Flow Monitor -------------" << std::endl;
+
+  monitor->CheckForLostPackets ();
+  Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier());
+  std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats ();
+  uint64_t bytesTotal = 0;
+  double lastRxTime=-1;
+  double firstRxTime=-1;
+  for (std::map<FlowId,FlowMonitor::FlowStats>::const_iterator i=stats.begin();i!=stats.end();
+  		++i)
+  {
+  	if (firstRxTime < 0)
+  		firstRxTime = i->second.timeFirstRxPacket.GetSeconds();
+  	else if (firstRxTime > i->second.timeFirstRxPacket.GetSeconds() )
+  		firstRxTime = i->second.timeFirstRxPacket.GetSeconds();
+  	if (lastRxTime < i->second.timeLastRxPacket.GetSeconds() )
+  		lastRxTime = i->second.timeLastRxPacket.GetSeconds();
+  	bytesTotal = bytesTotal + i->second.rxBytes;
+  }
+
+
+  std::cout << "Num clients = " << 1 << " "
+   << "Avg throughput = "
+   << bytesTotal*8/(lastRxTime-firstRxTime)/1024
+   << " kbits/sec" << std::endl;
+
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

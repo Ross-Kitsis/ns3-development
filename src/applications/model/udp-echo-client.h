@@ -220,6 +220,9 @@ private:
 
   Time m_RTT;
 
+  //Length of string serialized
+  int strLength;
+
   //////////////////////
 
   /// Callbacks for tracing the packet Tx events

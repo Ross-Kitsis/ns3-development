@@ -381,6 +381,8 @@ UdpEchoClient::Send (void)
 
 //		std::cout << "String length " << str.length() << std::endl;
 
+		strLength = str.length();
+
 		memcpy (newdata, str.c_str(), str.length());
 		uint32_t newSize = m_size - str.length();
 
@@ -392,13 +394,16 @@ UdpEchoClient::Send (void)
 		//std::cout << "(2) Created packet with size: " << m_dataSize << std::endl;
 		//std::cout << "(2) Packet size: " << m_size << std::endl;
 		p = Create<Packet> (newdata,m_size);
+
+		Transmission t;
+		t.Destination = Ipv4Address::ConvertFrom(m_peerAddress);
+		t.SendTime = currentTime;
+		m_sourcedTrans.push_back(t);
+
     }
 
 
-	Transmission t;
-	t.Destination = Ipv4Address::ConvertFrom(m_peerAddress);
-	t.SendTime = Simulator::Now();
-	m_sourcedTrans.push_back(t);
+
 
 //	std::cout << "Sending transmission at time: " << t.SendTime << std::endl;
 
@@ -408,7 +413,8 @@ UdpEchoClient::Send (void)
   m_txTrace (p);
 
   std::cout << std::endl;
-  std::cout << "UDP ECHO CLIENT sending packet to: " << Ipv4Address::ConvertFrom(m_peerAddress) << std::endl;
+  std::cout << "UDP ECHO CLIENT sending packet to: " << Ipv4Address::ConvertFrom(m_peerAddress) << " At time: " <<
+  		Simulator::Now() << std::endl;
   std::cout << std::endl;
 
   m_socket->Send (p);
@@ -457,9 +463,9 @@ UdpEchoClient::HandleRead (Ptr<Socket> socket)
       packet->RemoveAllByteTags ();
 
     	uint8_t * Data;
-    	Data = new uint8_t [10];
+    	Data = new uint8_t [strLength];
 
-      packet-> CopyData(Data,10);
+      packet-> CopyData(Data,strLength);
 
       std::string s( reinterpret_cast< char const* >(Data) ) ;
 
@@ -467,7 +473,7 @@ UdpEchoClient::HandleRead (Ptr<Socket> socket)
 //      std::cout << "String s: " << s.c_str() << std::endl;
 
       std::string final;
-      for(uint i = 0; i < 10 ; i++) {
+      for(int i = 0; i < strLength ; i++) {
           //if(isalpha(s[i]) || isdigit(s[i])) final += s[i];
       	final += s[i];
       }
@@ -499,15 +505,35 @@ UdpEchoClient::HandleRead (Ptr<Socket> socket)
       {
       	if(it -> SendTime == timestamp)
       	{
-//      		std::cout << "GOT HERE" << std::endl;
+      		std::cout << "Match found" << std::endl;
+      		std::cout << "DS timestamp: " << it -> SendTime << std::endl;
+      		std::cout << "Packet timestamp: " << timestamp << std::endl;
+      		std::cout << std::endl;
       		m_numReceived++;
-
-      		//						std::cout << "RTT: " << Simulator::Now() - itvhdr.GetOriginalTimestamp() << std::endl;
 
       		m_RTT = m_RTT + (Simulator::Now() - timestamp);
 
       		m_sourcedTrans.erase(it);
       		break;
+      	}else
+      	{
+      		std::cout << "No match found" << std::endl;
+      		std::cout << "DS timestamp: " << it -> SendTime << std::endl;
+      		std::cout << "Packet timestamp: " << timestamp << std::endl;
+      		//std::cout << "Time equal?" << (bool)(it -> SendTime == timestamp) << std::endl;
+
+      		std::cout << "Int sendtime" << it->SendTime.GetInteger() << std::endl;
+      		std::cout << "Int rec" << timestamp.GetInteger() << std::endl;
+
+      		if(it->SendTime.GetInteger() == timestamp.GetInteger())
+      		{
+      			std::cout << "Int equal" << std::endl;
+      		}else
+      		{
+      			std::cout << "Int not equal" << std::endl;
+      		}
+
+      		std::cout << std::endl;
       	}
       }
 
