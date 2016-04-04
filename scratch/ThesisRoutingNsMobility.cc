@@ -39,15 +39,15 @@ NS_LOG_COMPONENT_DEFINE("ThesisRoutingNsMobility");
 
 int main (int argc, char *argv[])
 {
-	int debug = 0;
+	int debug = 1;
 	if(debug)
 	{
 		//Define compnents to log
-		//LogComponentEnable ("Ipv6L3Protocol", LOG_LEVEL_ALL);
-		//LogComponentEnable ("Icmpv6L4Protocol", LOG_LEVEL_ALL);
+		LogComponentEnable ("Ipv6L3Protocol", LOG_LEVEL_ALL);
+		LogComponentEnable ("Icmpv6L4Protocol", LOG_LEVEL_ALL);
 	  //LogComponentEnable ("Ipv6StaticRouting", LOG_LEVEL_ALL);
-		//LogComponentEnable ("Ipv6Interface", LOG_LEVEL_ALL);
-		//LogComponentEnable ("ThesisInternetRoutingProtocol2", LOG_LEVEL_ALL);
+		LogComponentEnable ("Ipv6Interface", LOG_LEVEL_ALL);
+		LogComponentEnable ("ThesisInternetRoutingProtocol2", LOG_LEVEL_ALL);
 		//LogComponentEnable ("ThesisUdpEchoServerApplication", LOG_LEVEL_ALL);
 
 	}
@@ -315,7 +315,7 @@ int main (int argc, char *argv[])
 		// Create a UdpEchoServer application hub
 		//
 		uint32_t packetSize = 1024;
-	  uint32_t maxPacketCount = 100;
+	  uint32_t maxPacketCount = 200;
 	  Time interPacketInterval = Seconds (1.0/packetSendFrequency);
 	  ThesisUdpEchoClientHelper client (sinkAdd, port);
 	  client.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));

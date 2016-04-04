@@ -580,6 +580,21 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		if(packet->PeekPacketTag(tag))
 		{
 			//std::cout << "Peek finished; deferred tag found, remove and start IR" << std::endl;
+			Ipv6Address destination = header.GetDestinationAddress();
+
+			Transmission t;
+			t.Destination = destination;
+			t.SendTime = Simulator::Now();
+			m_sourcedTrans.push_back(t);
+			m_numSourced++;
+
+			if(m_numSourced > 200)
+			{
+				std::cout << "Over 200" << std::endl;
+				std::cout << "Destination: " << destination << std::endl;
+				std::cout << "Source: " << header.GetSourceAddress() << std::endl;
+			}
+
 		}
 
 		//Remove DR tag
@@ -764,8 +779,11 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 			//std::cout << "Internet Rsu to Vanet destination: " << destination << std::endl;
 
-			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1 || CheckHostBits(destination))
+			NS_LOG_LOGIC("Destination: " << destination << " Interface for address: " << m_ipv6 -> GetInterfaceForAddress(destination));
+			NS_LOG_LOGIC("Current address: " <<  m_ipv6->GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1));
+			if(m_ipv6 -> GetInterfaceForAddress(destination) != -1 && CheckHostBits(destination))
 			{
+
 //				std::cout << ">>>>>> Received packet for this node; forwarding LCB <<<<<<<"<< std::endl;
 
 //				std::cout << "Header Properties: "<< std::endl;
@@ -1033,6 +1051,11 @@ ThesisInternetRoutingProtocol2::CheckHostBits(Ipv6Address hostAddress)
 	std::cout  << std::endl;
 */
 	////////////////////////////////////////////////
+
+	currentAddress.GetBytes(currentBytes);
+	hostAddress.GetBytes(hostBytes);
+
+
 	for(int i = 8; i < 16; i++)
 	{
 		if(currentBytes[i] != hostBytes[i])
@@ -1329,12 +1352,18 @@ ThesisInternetRoutingProtocol2::RouteOutput (Ptr<Packet> p, const Ipv6Header &he
 
 		std::cout << ">>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 */
+		/*
 		Transmission t;
+		if(destination.IsMulticast())
+		{
+			std::cout << "RouteInput sending to multicast (Shouldn't happen)" << std::endl;
+		}
+
 		t.Destination = destination;
 		t.SendTime = Simulator::Now();
 		m_sourcedTrans.push_back(t);
 		m_numSourced++;
-
+		*/
 		return rtentry;
 	}else
 	{

@@ -287,6 +287,7 @@ int main (int argc, char *argv[])
 
 	FlowMonitorHelper flowmon;
 	Ptr<FlowMonitor> monitor = flowmon.InstallAll ();
+	//Ptr<FlowMonitor> monitor = flowmon.Install(source);
 
 
 	Simulator::Run ();
@@ -308,6 +309,8 @@ int main (int argc, char *argv[])
   uint64_t bytesTotal = 0;
   double lastRxTime=-1;
   double firstRxTime=-1;
+  int numHop = 0;
+
   for (std::map<FlowId,FlowMonitor::FlowStats>::const_iterator i=stats.begin();i!=stats.end();
   		++i)
   {
@@ -318,15 +321,24 @@ int main (int argc, char *argv[])
   	if (lastRxTime < i->second.timeLastRxPacket.GetSeconds() )
   		lastRxTime = i->second.timeLastRxPacket.GetSeconds();
   	bytesTotal = bytesTotal + i->second.rxBytes;
+
+  	numHop += i -> second.timesForwarded;
+
+  	std::cout << "Packets in flow: " << i -> second.txPackets << std::endl;
+
+
   }
 
 
   std::cout << "Num clients = " << 1 << " "
    << "Avg throughput = "
    << bytesTotal*8/(lastRxTime-firstRxTime)/1024
-   << " kbits/sec" << std::endl;
+   << " kbits/sec"
+   << " Number of hops" << numHop
+   << std::endl;
 
 
+  //Ipv6Address test;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -150,6 +150,8 @@ ThesisUdpEchoClient::StartApplication (void)
 		}
 	}
 
+	std::cout << "Max number of packets to send: " << m_count << std::endl;
+
 /*
 	Ptr<Ipv6> ipv6 = GetNode ()->GetObject<Ipv6> ();
 	//Perform address checking here, re-bind to the correct address
@@ -323,7 +325,7 @@ ThesisUdpEchoClient::ScheduleTransmit (Time dt)
 	}
 
 	//Bind to socket
-	m_socket->Bind (Inet6SocketAddress (src, 0));
+	m_socket->Bind (Inet6SocketAddress (src, 50000));
 	//m_socket->
 
 	//Set Recv callback again in case re-binding caused problems
@@ -388,6 +390,13 @@ ThesisUdpEchoClient::Send (void)
 	if (m_sent < m_count)
 	{
 		ScheduleTransmit (m_interval + MilliSeconds(std::rand()%1000));
+	}else
+	{
+		std::cout << src << " Finished sending, not further events" << std::endl;
+		if(m_sendEvent.IsRunning())
+		{
+			m_sendEvent.Cancel();
+		}
 	}
 }
 
