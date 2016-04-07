@@ -33,13 +33,15 @@
 
 #include "ns3/mpi-interface.h"
 
+#include "ns3/flow-monitor.h"
+
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("ThesisRoutingNsMobility");
 
 int main (int argc, char *argv[])
 {
-	int debug = 1;
+	int debug = 0;
 	if(debug)
 	{
 		//Define compnents to log
@@ -58,6 +60,8 @@ int main (int argc, char *argv[])
 	uint32_t vstep = 1000; //Vertical step
 	uint32_t numRsuRow = 4; //Number of RSU to place in a row
 	uint32_t simTime = 20; //Simulation time
+	uint32_t packetSize = 1024; //Size of packet to send in bytes
+	uint32_t maxPacketCount = 200; //Maximum number of packets to send
 	double transmittingPercentage = 0.1; //Percentage of vanet nodes generating packets
 	std::string m_CSVfileName = "ThesisInternetRoutingNSMobility.csv";
 	std::string m_TraceFile = "";
@@ -71,6 +75,8 @@ int main (int argc, char *argv[])
 	cmd.AddValue ("trace","Location of the mobility trace",m_TraceFile);
 	cmd.AddValue ("simTime","Simulation time",simTime);
 	cmd.AddValue ("sFreq", "Number of packets sent per second",packetSendFrequency);
+	cmd.AddValue ("pSize" , "Size of packet to send", packetSize);
+	cmd.AddValue ("maxPacketCount" , "Maximum number of packets to send", maxPacketCount);
 	cmd.Parse (argc, argv);
 
 	NodeContainer RSU;
@@ -314,8 +320,8 @@ int main (int argc, char *argv[])
 		//
 		// Create a UdpEchoServer application hub
 		//
-		uint32_t packetSize = 1024;
-	  uint32_t maxPacketCount = 200;
+		//uint32_t packetSize = 1024;
+	  //uint32_t maxPacketCount = 200;
 	  Time interPacketInterval = Seconds (1.0/packetSendFrequency);
 	  ThesisUdpEchoClientHelper client (sinkAdd, port);
 	  client.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
@@ -484,20 +490,6 @@ int main (int argc, char *argv[])
   out << std::endl;
 
   //Print average route trip time
-  out << "AverageRTT,";
-  for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
-  {
-  	Ptr<Node> sNode = SourceNodes.Get(i);
-  	Ptr<Application> app = sNode -> GetApplication(0);
-  	//Ptr<ThesisUdpEchoClient> udpEcho =  DynamicCast<ThesisUdpEchoClient>(app);
-  	Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
-  	Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
-
-  	out << sntr -> GetAverageLatency() << ",";
-  }
-  out << std::endl;
-
-  //Print average route trip time
   out << "AverageHopCountRsuToNode,";
   for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
   {
@@ -510,6 +502,8 @@ int main (int argc, char *argv[])
   	out << sntr -> GetAverageHopCountRsuToVanet() << ",";
   }
   out << std::endl;
+
+
 
 /*
  *
@@ -590,6 +584,29 @@ int main (int argc, char *argv[])
 		out << avgNtoR <<",";
 	}
 	out << std::endl;
+
+
+	int totalNumRec = 0;
+  //Print network throughput
+  out << "Throughput (kbits/sec),";
+  for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
+  {
+  	Ptr<Node> sNode = SourceNodes.Get(i);
+  	Ptr<Application> app = sNode -> GetApplication(0);
+  	//Ptr<ThesisUdpEchoClient> udpEcho =  DynamicCast<ThesisUdpEchoClient>(app);
+  	Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
+  	Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
+
+  	//double throughput = 0.0;
+
+  	totalNumRec += sntr -> GetNumReceived();
+
+  }
+	//-6 for app start time
+	out << (totalNumRec * packetSize * 8)/(simTime - 6 )/1024.0 << ",";
+	out << std::endl;
+
+  out << std::endl;
 	out << "," << std::endl;
 	out << std::endl;
 
