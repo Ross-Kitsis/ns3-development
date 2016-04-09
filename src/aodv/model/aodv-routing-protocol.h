@@ -107,6 +107,9 @@ public:
   void SetIsHub (bool isHub) { m_isHub = isHub; }
   bool GetIsHub () const { return m_isHub; }
 
+  double GetAverageHopCountVanetToRsu(){return m_HopCountAgregatorVanetToRsu/(double)m_numRsuRec;}
+
+  int32_t GetHopCountRsuToVanet() {return m_HopCountAgregatorRsuToVanet;}
 
 protected:
   virtual void DoInitialize (void);
@@ -222,6 +225,24 @@ private:
 	 * Pointer to the point2point netdevice
 	 */
 	Ptr<NetDevice> m_pp;
+
+  /**
+   * Counter tracking the total hop count of all packets coming to the node
+   * Tracks the number of hops from the RSU to the final receiving node
+   * Divide by number of received packets to get the average hop count
+   */
+  int32_t m_HopCountAgregatorRsuToVanet;
+
+  /**
+   * Counter to track total number of hops from a VANET node an RSU (Both running AODV)
+   * Divide by number of received packets to get the average hop count
+   */
+  int32_t m_HopCountAgregatorVanetToRsu;
+
+  /**
+   * Counter tracking number of internet transmisions an RSU receives
+   */
+  int32_t m_numRsuRec;
 
   /////////////////////////////////////////
 

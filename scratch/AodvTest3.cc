@@ -63,6 +63,16 @@ private:
   uint32_t nRSU;
   uint32_t nVeh;
 
+	uint32_t numRsuRow; //Number of RSU to place in a row
+	uint32_t simTime; //Simulation time
+	double transmittingPercentage; //Percentage of vanet nodes generating packets
+	std::string m_CSVfileName;
+	std::string m_TraceFile;
+	int packetSendFrequency;
+	uint32_t packetSize;
+	uint32_t maxPacketCount;
+
+
   // network
   NodeContainer nodes;
   NodeContainer RsuNodes;
@@ -73,6 +83,9 @@ private:
   Ipv4InterfaceContainer rsuWifiInterfaces;
   Ipv4InterfaceContainer wifiInterfaces;
   Ipv4InterfaceContainer p2pInterfaces;
+
+  //Nodes sending packets
+  NodeContainer SourceNodes;
 
 
 private:
@@ -117,7 +130,15 @@ AodvTest3::AodvTest3() :
   	  		pcap (false),
   	  		printRoutes (true),
   	  		nRSU(2),
-  	  		nVeh(2)
+  	  		nVeh(2),
+  	  		numRsuRow(2),
+  	  		simTime(50),
+  	  		transmittingPercentage(0.1),
+  	  		m_CSVfileName("AodvTest3.csv"),
+  	  		m_TraceFile(""),
+  	  		packetSendFrequency(1),
+  	  		packetSize(1024),
+  	  		maxPacketCount(100)
 {
 
 }
@@ -133,11 +154,17 @@ AodvTest3::Configure (int argc, char **argv)
 
   cmd.AddValue ("pcap", "Write PCAP traces.", pcap);
   cmd.AddValue ("printRoutes", "Print routing table dumps.", printRoutes);
-  cmd.AddValue ("size", "Number of nodes.", size);
   cmd.AddValue ("time", "Simulation time, s.", totalTime);
   cmd.AddValue ("step", "Grid step, m", step);
   cmd.AddValue ("nRsu", "Number of RSU",nRSU);
   cmd.AddValue ("nVeh", "Number of Vehicle nodes", nVeh);
+  cmd.AddValue ("nRsuRow", "Number of RSU in a row", numRsuRow);
+  cmd.AddValue ("nSendPerc", "Percentage of vehicular nodes acting as sources",transmittingPercentage);
+  cmd.AddValue ("trace","Location of the mobility trace",m_TraceFile);
+  cmd.AddValue ("simTime","Simulation time",simTime);
+  cmd.AddValue ("sFreq", "Number of packets sent per second",packetSendFrequency);
+  cmd.AddValue ("pSize", "Size of packets to send", packetSize);
+  cmd.AddValue ("maxPacketCount", "Maximum number of packets to send",maxPacketCount);
 
   cmd.Parse (argc, argv);
   return true;
@@ -152,14 +179,14 @@ AodvTest3::Run ()
   InstallInternetStack ();
   InstallApplications ();
 
-  std::cout << "Starting simulation for " << totalTime << " s ...\n";
+  std::cout << "Starting simulation for " << simTime << " s ...\n";
 
-  Simulator::Stop (Seconds (totalTime));
+  Simulator::Stop (Seconds (simTime));
   Simulator::Run ();
 
 
   //Ptr<Node> source = VehNodes.Get(1);
-
+/*
   for(uint32_t i = 0; i < VehNodes.GetN(); i++)
   {
   	std::cout << "Results for node: " << i << std::endl;
@@ -171,6 +198,77 @@ AodvTest3::Run ()
   	std::cout << "Receive rate: " << udpa -> GetReceiveRate() << std::endl;
   	std::cout << "Average RTT: " << udpa -> GetAverageLatency() << std::endl;
   }
+*/
+
+  std::ofstream out (m_CSVfileName.c_str (), std::ios::app);
+
+  	//Build first row with simulation parameters
+  	out << "TotalSimulationTime," << simTime << ",SendingPercentage," << transmittingPercentage <<
+  			",NumRsu," << nRSU << ",TotalNumberOfVehicles," << nVeh <<
+  			//",SimulationArea (Km^2)," << ((nRSU/numRsuRow * hstep) * (nRSU/numRsuRow * vstep))/ (1000 * 1000) <<
+  			",PacketSendFrequency: ," << packetSendFrequency << " packets/s" <<
+  			",Packet every," << 1.0/ packetSendFrequency << "s" <<std::endl;
+
+  	//Build second row of values with node numbers
+  	out << ""<<",";
+  	for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
+  	{
+  		Ptr<Node> sNode = SourceNodes.Get(i);
+  		out << "Node: " << sNode->GetId() << ",";
+  	}
+  	out << std::endl;
+
+    //Print number of packets sent
+    out << "NumSent,";
+    for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
+    {
+    	Ptr<Node> sNode = SourceNodes.Get(i);
+    	Ptr<Application> app = sNode -> GetApplication(0);
+    	Ptr<TestUdpEchoClient> udpEcho =  DynamicCast<TestUdpEchoClient>(app);
+
+    	out << udpEcho -> GetNumSourced() << ",";
+    }
+    out << std::endl;
+
+    //Print number of packets received
+    out << "NumReceived,";
+    for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
+    {
+    	Ptr<Node> sNode = SourceNodes.Get(i);
+    	Ptr<Application> app = sNode -> GetApplication(0);
+    	Ptr<TestUdpEchoClient> udpEcho =  DynamicCast<TestUdpEchoClient>(app);
+
+    	out << udpEcho -> GetNumReceived() << ",";
+    }
+    out << std::endl;
+
+    //Print number of packets received
+    out << "ReceiveRate,";
+    for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
+    {
+    	Ptr<Node> sNode = SourceNodes.Get(i);
+    	Ptr<Application> app = sNode -> GetApplication(0);
+    	Ptr<TestUdpEchoClient> udpEcho =  DynamicCast<TestUdpEchoClient>(app);
+
+    	out << udpEcho -> GetReceiveRate() << ",";
+    }
+    out << std::endl;
+
+    //Print average route trip time
+    out << "AverageRTT,";
+    for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
+    {
+    	Ptr<Node> sNode = SourceNodes.Get(i);
+    	Ptr<Application> app = sNode -> GetApplication(0);
+    	Ptr<TestUdpEchoClient> udpEcho =  DynamicCast<TestUdpEchoClient>(app);
+
+    	out << udpEcho -> GetAverageLatency() << ",";
+    }
+    out << std::endl;
+
+
+
+
   Simulator::Destroy ();
 }
 
@@ -216,31 +314,38 @@ AodvTest3::CreateNodes ()
   // Create static grid
   MobilityHelper mobility;
   mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-                                 "MinX", DoubleValue (0.0),
-                                 "MinY", DoubleValue (0.0),
-                                 "DeltaX", DoubleValue (step),
-                                 "DeltaY", DoubleValue (0),
-                                 "GridWidth", UintegerValue (size),
+                                 "MinX", DoubleValue (500),
+                                 "MinY", DoubleValue (500),
+                                 "DeltaX", DoubleValue (1000),
+                                 "DeltaY", DoubleValue (1000),
+                                 "GridWidth", UintegerValue (numRsuRow),
                                  "LayoutType", StringValue ("RowFirst"));
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install(RsuNodes);
-  mobility.Install(VehNodes);
+  //mobility.Install(VehNodes);
 
+  /*
   //Place RSU nodes
   for (uint32_t i = 0; i < RsuNodes.GetN(); ++i)
   {
   	Ptr<ConstantPositionMobilityModel> RsuLoc = RsuNodes.Get(i) ->GetObject<ConstantPositionMobilityModel>();
   	Vector RsuPos(500 + 1000*i ,0,0);
   	RsuLoc -> SetPosition(RsuPos);
-  }
+  }*/
 
+
+
+  Ns2MobilityHelper ns2 = Ns2MobilityHelper (m_TraceFile);
+  ns2.Install(VehNodes.Begin(), VehNodes.End());
+
+  /*
   //Place Vanet nodes
   for (uint32_t i = 0; i < VehNodes.GetN(); ++i)
   {
   	Ptr<ConstantPositionMobilityModel> VLoc = VehNodes.Get(i) ->GetObject<ConstantPositionMobilityModel>();
-  	Vector VPos(400 + 1000*i ,0,0);
+  	Vector VPos(400 - 100*i ,0,0);
   	VLoc -> SetPosition(VPos);
-  }
+  }*/
 }
 
 void
@@ -253,6 +358,13 @@ AodvTest3::CreateDevices ()
   NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
   wifiMac.SetType ("ns3::AdhocWifiMac");
   YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+	wifiPhy.Set ("TxPowerStart", DoubleValue (25.0) );
+	wifiPhy.Set ("TxPowerEnd", DoubleValue (25.0) );
+	wifiPhy.Set ("TxPowerLevels", UintegerValue(1) );
+	wifiPhy.Set ("TxGain", DoubleValue (1) );
+	wifiPhy.Set ("RxGain", DoubleValue (1) );
+
+
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
   WifiHelper wifi = WifiHelper::Default ();
@@ -347,7 +459,7 @@ AodvTest3::InstallApplications ()
 		UdpEchoServerHelper server (port);
 		ApplicationContainer apps = server.Install (sink);
 		apps.Start (Seconds (0));
-		apps.Stop (Seconds (totalTime -1));
+		apps.Stop (Seconds (simTime -1));
 
 		Ptr<Ipv4> sinkv4 = sink -> GetObject<Ipv4>();
 		sinkAdd = sinkv4 -> GetAddress(1,0).GetLocal();
@@ -358,9 +470,9 @@ AodvTest3::InstallApplications ()
 	std::cout << "-----------------------" << std::endl;
 
 
-	uint32_t packetSize = 1024;
-	uint32_t maxPacketCount = 100;
-	Time interPacketInterval = Seconds (1.0);
+	//uint32_t packetSize = 1024;
+	//uint32_t maxPacketCount = 100;
+	Time interPacketInterval = Seconds (1.0/packetSendFrequency);
 	TestUdpEchoClientHelper client (sinkAdd, port);
 	client.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
 	client.SetAttribute ("Interval", TimeValue (interPacketInterval));
@@ -378,6 +490,34 @@ AodvTest3::InstallApplications ()
 		client.SetAttribute(result,AddressValue(rv4->GetAddress(1,0).GetLocal()));
 	}
 
+	//NodeContainer SourceNodes;
+
+	//Populate SourceNodes
+	uint32_t numToAdd = std::ceil(VehNodes.GetN() * transmittingPercentage);
+	for(uint32_t i = 0; i < numToAdd;i++)
+	{
+		SourceNodes.Add(VehNodes.Get(i));
+	}
+
+	Ptr<Node> source;
+	ApplicationContainer sourceApps;
+
+	for(uint32_t i = 0; i < SourceNodes.GetN();i++)
+	{
+		source = SourceNodes.Get(i);
+		//
+		// Create a UdpEchoServer application hub
+		//
+		//uint32_t packetSize = 1024;
+		//uint32_t maxPacketCount = 200;
+
+		sourceApps = client.Install (source);
+		sourceApps.Start (Seconds (6.0));
+		sourceApps.Stop (Seconds (simTime -1));
+	}
+
+
+/*
 	for(uint32_t i = 0; i < VehNodes.GetN(); i++)
 	{
 		Ptr<Node> source = VehNodes.Get(i);
@@ -388,6 +528,7 @@ AodvTest3::InstallApplications ()
 		sourceApps.Start (Seconds (1.0));
 		sourceApps.Stop (Seconds (totalTime -1));
 	}
+	*/
 ///////////////////////////////////////////////////////////////////////////////////////
 
 

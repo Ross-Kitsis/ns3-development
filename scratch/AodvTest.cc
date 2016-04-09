@@ -63,7 +63,7 @@ int main (int argc, char *argv[])
 	uint32_t nRSU = 2; //Number of RSU stations
 	//uint32_t hstep = 1000; //Horizontal step
 	//uint32_t vstep = 1000; //Vertical step
-	uint32_t numRsuRow = 4; //Number of RSU to place in a row
+	uint32_t numRsuRow = 3; //Number of RSU to place in a row
 	uint32_t simTime = 50; //Simulation time
 	double transmittingPercentage = 0.1; //Percentage of vanet nodes generating packets
 	std::string m_CSVfileName = "AODVNSMobility.csv";

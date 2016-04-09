@@ -152,6 +152,10 @@ RoutingProtocol::RoutingProtocol () :
   m_lastBcastTime (Seconds (0))
 {
   m_nb.SetCallback (MakeCallback (&RoutingProtocol::SendRerrWhenBreaksLinkToNextHop, this));
+
+  m_numRsuRec = 0;
+  m_HopCountAgregatorRsuToVanet = 0;
+  m_HopCountAgregatorVanetToRsu = 0;
 }
 
 TypeId
@@ -526,6 +530,20 @@ RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
 
           ///////////////// Local delivery, update statistics
 
+          if(m_isRSU == false)
+          {
+            TypeHeader tHeader (AODVTYPE_RERR);
+            p->PeekHeader (tHeader);
+          	if(! (tHeader == AODVTYPE_RERR) &&
+          		 !(tHeader == AODVTYPE_RREP) &&
+          		 !(tHeader == AODVTYPE_RREP_ACK) &&
+          		 !(tHeader == AODVTYPE_RREQ))
+          	{
+          		//std::cout << "Hops from RSU to VANET: " << 64 - header.GetTtl() - 2 << std::endl;
+          		m_HopCountAgregatorRsuToVanet += (64 - header.GetTtl() - 2);
+          	}
+          }
+
           ///////////////////////////////////////////////////
           lcb (p, header, iif);
         }
@@ -536,6 +554,13 @@ RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
         }
       return true;
     }
+
+  //Just before forwarding update statistics (If RSU)
+  if(m_isRSU && idev == m_wi)
+  {
+  	m_HopCountAgregatorVanetToRsu += (64 - header.GetTtl());
+    m_numRsuRec++;
+  }
 
   // Forwarding
   return Forwarding (p, header, ucb, ecb);
@@ -734,9 +759,14 @@ RoutingProtocol::NotifyAddAddress (uint32_t i, Ipv4InterfaceAddress address)
 {
   NS_LOG_FUNCTION (this << " interface " << i << " address " << address);
   Ptr<Ipv4L3Protocol> l3 = m_ipv4->GetObject<Ipv4L3Protocol> ();
-//  if (!l3->IsUp (i))
-//  	NS_LOG_LOGIC ("Is interface up? " << l3 ->IsUp(i) );
-//    return;
+
+  //RK
+  if (!l3->IsUp (i))
+  {
+  	NS_LOG_LOGIC ("Is interface up? " << l3 ->IsUp(i) );
+  	return;
+  }
+  //
 
   NS_LOG_LOGIC(l3->GetNAddresses (i));
 
@@ -1393,7 +1423,7 @@ RoutingProtocol::SendReplyAck (Ipv4Address neighbor)
 void
 RoutingProtocol::RecvReply (Ptr<Packet> p, Ipv4Address receiver, Ipv4Address sender)
 {
-  NS_LOG_FUNCTION (this << " src " << sender);
+  NS_LOG_FUNCTION (this << " src " << sender << " receiver " << receiver);
   RrepHeader rrepHeader;
   p->RemoveHeader (rrepHeader);
   Ipv4Address dst = rrepHeader.GetDst ();
@@ -1968,18 +1998,18 @@ RoutingProtocol::DoInitialize (void)
 {
   NS_LOG_FUNCTION (this);
 
-  /*
+/*
   if(m_isRSU)
   {
   	//RSU should have both physical and wifi interfaces, get pointers to both
   	m_pp = m_ipv4 -> GetNetDevice(GetP2pInterface());
   	m_wi = m_ipv4 -> GetNetDevice(GetWirelessInterface());
-  }else
+  }else if(!m_isRSU && !m_isHub)
   {
   	//Non-RSU nodes have a single wifi interface
   	m_wi = m_ipv4 -> GetNetDevice(GetWirelessInterface());
-  }*/
-
+  }
+*/
   uint32_t startTime;
   if (EnableHello)
     {
