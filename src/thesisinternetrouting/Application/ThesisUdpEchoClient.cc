@@ -15,6 +15,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#define NS_LOG_APPEND_CONTEXT                                   \
+  if (GetObject<Node> ()) { std::clog << "[node " << GetObject<Node> ()->GetId () << "] "; }
+
+
 #include "ns3/log.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/ipv6-address.h"
@@ -94,6 +99,7 @@ ThesisUdpEchoClient::~ThesisUdpEchoClient()
 	delete [] m_data;
 	m_data = 0;
 	m_dataSize = 0;
+	m_sendEvent.Cancel();
 }
 
 void
@@ -124,6 +130,7 @@ void
 ThesisUdpEchoClient::DoDispose (void)
 {
 	NS_LOG_FUNCTION (this);
+	m_sendEvent.Cancel();
 	Application::DoDispose ();
 }
 
@@ -150,7 +157,7 @@ ThesisUdpEchoClient::StartApplication (void)
 		}
 	}
 
-	std::cout << "Max number of packets to send: " << m_count << std::endl;
+	//std::cout << "Max number of packets to send: " << m_count << std::endl;
 
 /*
 	Ptr<Ipv6> ipv6 = GetNode ()->GetObject<Ipv6> ();

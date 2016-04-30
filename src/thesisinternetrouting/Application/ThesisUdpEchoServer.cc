@@ -6,6 +6,10 @@
  *
  */
 
+#define NS_LOG_APPEND_CONTEXT                                   \
+  if (GetObject<Node> ()) { std::clog << "[node " << GetObject<Node> ()->GetId () << "] "; }
+
+
 #include "ns3/log.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/ipv6-address.h"

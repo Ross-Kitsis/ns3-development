@@ -1,5 +1,9 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
+#define NS_LOG_APPEND_CONTEXT                                   \
+  if (GetObject<Node> ()) { std::clog << "[node " << GetObject<Node> ()->GetId () << "] "; }
+
+
 #include "thesisinternetrouting2.h"
 #include "ns3/ipv6-route.h"
 
@@ -154,9 +158,11 @@ ThesisInternetRoutingProtocol2::RouteInput (Ptr<const Packet> p, const Ipv6Heade
 
 	if(m_IsRSU)
 	{
+		//std::cout << "ThesisInternet2 route input RSU" << std::endl;
 		RouteInputRsu(p, header,idev,ucb,mcb,lcb,ecb);
 	}else
 	{
+		//std::cout << "ThesisInternet2 route input VANET" << std::endl;
 		RouteInputVanet(p, header,idev,ucb,mcb,lcb,ecb);
 	}
 	return true;
@@ -185,7 +191,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 		//If receiving on wifi then packets should have tags
 
 		//Create new typeHeader and peek
-		mcast::TypeHeader theader (mcast::HELLO);
+		mcast::TypeHeader theader (mcast::UNKNOWN);
 		packet -> PeekHeader(theader);
 		if(theader.Get() == mcast::INTERNET)
 		{
@@ -263,6 +269,9 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			std::cout << " Interface " << toHub.GetInterface() << std::endl;
 			 */
 
+
+			//Create new ack packet
+			//Ensure size < 4 for classification
 			Ptr<Packet> ack = Create<Packet> ();
 
 			ack -> AddHeader(Ih);
@@ -281,13 +290,13 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 */
 			Ptr<Ipv6L3Protocol> l3 = GetObject<Ipv6L3Protocol>();
 
-			Ipv6Header ackHdr;
-			ackHdr.SetSourceAddress(m_ipv6 -> GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1).GetAddress());
-			ackHdr.SetDestinationAddress(Ipv6Address(RSU_TO_VANET));
-			ackHdr.SetNextHeader(1);
-			ackHdr.SetHopLimit(2);
-			ackHdr.SetPayloadLength(ack -> GetSize());
-			ackHdr.SetTrafficClass(1);
+//			Ipv6Header ackHdr;
+//			ackHdr.SetSourceAddress(m_ipv6 -> GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1).GetAddress());
+//			ackHdr.SetDestinationAddress(Ipv6Address(RSU_TO_VANET));
+//			ackHdr.SetNextHeader(1);
+//			ackHdr.SetHopLimit(2);
+//			ackHdr.SetPayloadLength(ack -> GetSize());
+//			ackHdr.SetTrafficClass(1);
 
 			/*
 						 Ipv6Header hdr;
@@ -302,13 +311,14 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			 */
 
 			ackRoute -> SetDestination(Ipv6Address(VANET_TO_RSU));
-			//ackRoute -> SetGateway(Ipv6Address(""));
+			ackRoute -> SetGateway(Ipv6Address(VANET_TO_RSU));
 			ackRoute -> SetOutputDevice(m_wi);
 			ackRoute -> SetSource(m_ipv6 -> GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1).GetAddress());
 
 			//	l3 ->Send(ack,ackHdr.GetSourceAddress(), ackHdr.GetDestinationAddress(),1,ackRoute);
 
-			ucb(m_wi,ackRoute,ack,ackHdr);
+//			ucb(m_wi,ackRoute,ack,ackHdr);
+				ucb(m_wi,ackRoute,ack,header);
 
 		}else if(theader.Get() == mcast::INTERNET_RSU_TO_VANET)
 		{
@@ -320,8 +330,18 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			//Type 6 message - VANET node ACK recieving a packet
 			//Don't need to do any processing on this end, allow entry in queue to naturally expire
 			return true;
+		}else if(theader.Get() == mcast::HELLO)
+		{
+			//Type 1 message - VANET node sending mcast hello msg
+			//Don't need to react to this msg
+			return true;
+		}else if(theader.Get() == mcast::MCAST_CONTROL)
+		{
+			//Type 2 message - Rsu received mcast control packet
+			//Don't need to react to this
+			return true;
 		}
-
+		return true;
 	}else if(idev == m_pp)
 	{
 //		std::cout << "RSU RECV ON P2P <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
@@ -342,6 +362,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			return true;
 		}else if(theader.Get() == mcast::INTERNET_RSU_TO_RSU_REDIRECT)
 		{
+			NS_LOG_INFO("Received RSU_TO_RSU_REDIRECT");
 			//Got a packet from another RSU to forward onto VANET
 			//Remove headers, update ITVHeader, change type header, form packet and send into VANET
 			//VANET nodes should be oblivious of this redirect
@@ -375,6 +396,9 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 		}
 		else
 		{
+			NS_LOG_INFO("RSU attempting to reply into VANET");
+
+
 			RsuCacheEntry entry;
 			if(m_RsuCache.Lookup(header.GetDestinationAddress(), entry))
 			{
@@ -511,7 +535,7 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 				std::cout << "Destination: " << header.GetDestinationAddress() << std::endl;
 			}
 		}
-
+		return true;
 	}
 
 
@@ -573,6 +597,8 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 	//Input device was loopback; only packets coming through loopback should be deferred
 	if(idev == m_lo)
 	{
+		NS_LOG_INFO("Vanet node recved on loopback");
+
 		//std::cout << "VANET RECV ON LOOPBACK <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
 		uint32_t iif = (idev ? m_ipv6->GetInterfaceForDevice (idev) : -1);
@@ -668,6 +694,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		packet -> PeekHeader(theader);
 		if(theader.Get() == mcast::INTERNET)
 		{
+			NS_LOG_INFO("Received Internet packet on VANET");
 			//Received type header of type internet
 			//packet -> PeekHeader(theader);
 			//std::cout << " BREAKING? Type header with type: " << theader.Get() << std::endl;
@@ -771,6 +798,8 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 			}
 		}else if(theader.Get() == mcast::INTERNET_RSU_TO_VANET)
 		{
+			NS_LOG_INFO("Received RSU_TO_VANET packet on VANET");
+
 			//Type 4 is RSU to VANET (Handle later)
 			//std::cout << std::endl;
 	//		std::cout << ">>>>>> GOT PACKET WITH TYPE 4 - RSU forwarding back into VANET <<<<<<<"<< std::endl;
@@ -844,6 +873,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 				//Need to send out an ACK message to surrounding node to stop their retransmission
 				//Ensure sending out to a multi-cast address to avoid ARP issues
+				//Ensure Packet size is 0 (Less than 4 bytes)
 
 				Ptr<Packet> ackPacket = Create<Packet> ();
 
@@ -944,6 +974,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 		}else if(theader.Get() == mcast::INTERNET_RSU_ACK)
 		{
+			NS_LOG_INFO("Received INTERNET_RSU_ACK packet on VANET");
 
 //			std::cout << ">>>>>> GOT PACKET WITH TYPE 5 - RSU ACK <<<<<<<"<< std::endl;
 
@@ -966,16 +997,22 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 			if(m_RoutingCache.Lookup(source,destination,sendTime))
 			{
 
-			ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,sendTime);
-			//Schedule removal of entry
-			entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveThesisRoutingCacheEntry, this);
-			entry->m_RetransmitTimer.SetArguments(source,destination,sendTime);
-			entry->m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
+				ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,sendTime);
+
+				if(entry -> m_RetransmitTimer.IsRunning())
+				{
+					entry -> m_RetransmitTimer.Cancel();
+				}
+				//Schedule removal of entry
+				entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveThesisRoutingCacheEntry, this);
+				entry -> m_RetransmitTimer.SetArguments(source,destination,sendTime);
+				entry -> m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
 			}
 
 			return true;
 		}else if(theader.Get() == mcast::INTERNET_VANET_ACK)
 		{
+			NS_LOG_INFO("Received VANET_ACK packet on VANET");
 			//Ack message by a VANET node
 			//Cancel stop and cancel timer retransmission
 			//Remove entry from routing cache
@@ -1299,6 +1336,8 @@ Ptr<Ipv6Route>
 ThesisInternetRoutingProtocol2::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif,
 		Socket::SocketErrno &sockerr)
 {
+
+	//std::cout << "ThesisInternet2 route output" << std::endl;
 
 	NS_LOG_FUNCTION("   " << this << header << oif);
 
