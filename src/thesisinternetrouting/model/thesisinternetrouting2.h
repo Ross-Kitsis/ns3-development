@@ -301,6 +301,12 @@ public:
 	 */
 	void SetGeoQueryPosition(Vector v){m_GeoQueryPosition = v;}
 
+	/**
+	 * DbEntry pointer to the current RSU
+	 * Used to avoid additional processing
+	 */
+	DbEntry m_currentRsu;
+
 protected:
 
 	Vector m_GeoQueryPosition;
@@ -513,11 +519,7 @@ private:
 	 */
 	bool IsEffective(Vector SenderPosition);
 
-	/**
-	 * DbEntry pointer to the current RSU
-	 * Used to avoid additional processing
-	 */
-	DbEntry m_currentRsu;
+
 
 	/*
 	 * Strictly effective nodes will not retransmit if they are further from the RSU than the last sending node

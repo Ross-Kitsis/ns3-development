@@ -471,6 +471,13 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 
 			ucb (route -> GetOutputDevice(),route, packet, header);
 			return true;
+		}else if(theader.Get() == mcast::GEOQUERY_REQUEST)
+		{
+			NS_LOG_INFO("Recv GeoQuery request of P2P link");
+			std::cout << std::endl;
+			std::cout << "RECIVED GEOQUERY ON P2P" << std::endl;
+			std::cout << std::endl;
+			return true;
 		}
 		else
 		{
@@ -671,6 +678,8 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 	//Copy passed packet to a new packet
 	Ptr<Packet> packet = p -> Copy();
 
+	packet -> Print(std::cout);
+	std::cout << std::endl;
 
 	//Input device was loopback; only packets coming through loopback should be deferred
 	if(idev == m_lo)
@@ -746,6 +755,11 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 			}
 		}
 
+		if(!isInternet)
+		{
+			isGeoRequest = true;
+		}
+
 		//All GeoRequest destinations are assumes to have 0 filled host sections
 		//A non-zero host section indicates a reply
 		//bool isGeoRequest = true;
@@ -806,6 +820,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 			if(isGeoRequest) //GeoQuery request
 			{
+				NS_LOG_INFO("SENDING GEO REQUEST");
 				//Create new typeHeader
 				mcast::TypeHeader theader (mcast::GEOQUERY_REQUEST);
 
@@ -964,7 +979,14 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 		}
 		else if(theader.Get() == mcast::GEOQUERY_REQUEST)
 		{
-			NS_LOG_INFO("Received Internet packet on VANET");
+			NS_LOG_INFO("Received GeoQuery packet on VANET");
+
+			std::cout << std::endl;
+
+			packet -> Print(std::cout);
+
+			std::cout << std::endl;
+
 			//Received type header of type internet
 			//packet -> PeekHeader(theader);
 			//std::cout << " BREAKING? Type header with type: " << theader.Get() << std::endl;
@@ -980,6 +1002,12 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 			mcast::TypeHeader typeHeader (mcast::UNKNOWN);
 			packet -> RemoveHeader(typeHeader);
 			NS_LOG_INFO("Removed typeHeader " << typeHeader);
+
+			std::cout << "TYPE HEADER REMOVED: PACKET STATE: " << std::endl;
+
+			packet -> Print(std::cout);
+
+			std::cout << std::endl;
 
 			GeoRequestHeader Gh;
 			packet -> RemoveHeader(Gh);
@@ -1051,7 +1079,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 					//Cache does not contain and entry with the tuple (Add to cache and start timer on retransmit
 					ThesisInternetQueueEntry * entry = new ThesisInternetQueueEntry(packet, header, ucb, ecb, timeStamp);
 
-					entry->m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::SendInternetRetransmit, this);
+					entry->m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::SendGeoQueryRetransmit, this);
 					entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
 					entry->m_RetransmitTimer.Schedule(backoff);
 
@@ -1303,6 +1331,41 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 				ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,sendTime);
 				//Schedule removal of entry
 				entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveThesisRoutingCacheEntry, this);
+				entry -> m_RetransmitTimer.SetArguments(source,destination,sendTime);
+				entry -> m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
+			}
+
+			return true;
+		}else if(theader.Get() == mcast::GEOQUERY_RSU_ACK)
+		{
+			NS_LOG_INFO("Received GEOQUERY_RSU_ACK packet on VANET");
+
+			//			std::cout << ">>>>>> GOT PACKET WITH TYPE 5 - RSU ACK <<<<<<<"<< std::endl;
+
+			/////////////////////////Remove headers; packet will be discarded after this anyway
+			mcast::TypeHeader typeHeader (mcast::UNKNOWN);
+			packet -> RemoveHeader(typeHeader);
+
+			GeoRequestHeader Gh;
+			packet -> RemoveHeader(Gh);
+			////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+			//Remove with delay
+			Ipv6Address source = header.GetSourceAddress();
+			Ipv6Address destination = header.GetDestinationAddress();
+			Time sendTime = Gh.GetTimestamp();
+
+			if(m_RoutingCache.Lookup(source,destination,sendTime))
+			{
+
+				ThesisInternetQueueEntry * entry = m_GeoRoutingQueue.GetRoutingEntry(source,destination,sendTime);
+
+				if(entry -> m_RetransmitTimer.IsRunning())
+				{
+					entry -> m_RetransmitTimer.Cancel();
+				}
+				//Schedule removal of entry
+				entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveGeoRoutingCacheEntry, this);
 				entry -> m_RetransmitTimer.SetArguments(source,destination,sendTime);
 				entry -> m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
 			}

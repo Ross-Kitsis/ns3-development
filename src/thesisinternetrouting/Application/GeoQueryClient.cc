@@ -155,6 +155,10 @@ GeoQueryClient::ScheduleTransmit (Time dt)
 		}
 	}
 
+
+	std::cout << "GeoQueryClient got here" << std::endl;
+	std::cout << std::endl;
+
 	//Bind to socket
 	m_socket->Bind (Inet6SocketAddress (src, 50001));
 	//m_socket->
@@ -164,15 +168,13 @@ GeoQueryClient::ScheduleTransmit (Time dt)
 
 	//std::cout << " ****** New address bound and callbacks set *******" << std::endl;
 
-	m_sendEvent = Simulator::Schedule (dt, &GeoQueryClient::Send, this);
-
 	//Set parameters to query in zone
 	Vector toQuery;
-	Ptr<Node> theNode = GetObject<Node>();
-	Ptr<Ipv6> v6 = theNode -> GetObject<Ipv6>();
-	Ptr<thesis::ThesisInternetRoutingProtocol2> routing = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(v6 -> GetRoutingProtocol());
+	//Ptr<Node> theNode = GetObject<Node>();
+	//Ptr<Ipv6> v6 = theNode -> GetObject<Ipv6>();
+	Ptr<thesis::ThesisInternetRoutingProtocol2> routing = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(ipv6 -> GetRoutingProtocol());
 
-	Ipv6Address rsu = routing -> m_RsuDestination;
+	Ipv6Address rsu = routing -> m_currentRsu.GetRsuAddress();
 	bool locFound = false;
 
 
@@ -182,7 +184,7 @@ GeoQueryClient::ScheduleTransmit (Time dt)
 	{
 		int output = 0 + (rand() % (int)(size - 0 + 1));
 		entry = m_db -> GetEntry(output);
-		if(entry.GetRsuAddress() != rsu)
+		if(!entry.GetRsuAddress().IsEqual(rsu))
 		{
 			locFound = true;
 			toQuery.x = entry.GetRsuPosition().x + 100;
@@ -191,6 +193,9 @@ GeoQueryClient::ScheduleTransmit (Time dt)
 
 	}
 
+	std::cout << "Selected entry rsu: " << entry.GetRsuAddress() << std::endl;
+
+
 	routing -> SetGeoQueryPosition(toQuery);
 
 	Ipv6Address network = entry.GetRsuAddress().CombinePrefix(Ipv6Prefix(64));
@@ -198,6 +203,9 @@ GeoQueryClient::ScheduleTransmit (Time dt)
 	uint8_t currentBytes[16];
 	uint8_t netBytes[16];
 	uint8_t destBytes[16];
+
+	network.GetBytes(netBytes);
+	src.GetBytes(currentBytes);
 
 	for(int i = 0; i < 16; i ++)
 	{
@@ -212,10 +220,14 @@ GeoQueryClient::ScheduleTransmit (Time dt)
 
 	m_peerAddress = Ipv6Address(destBytes);
 
-	m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
+	std::cout << "Geo Client Peer Address" << Ipv6Address::ConvertFrom(m_peerAddress) << std::endl;
 
+//	m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
 
+//	m_sendEvent = Simulator::Schedule (dt, &GeoQueryClient::Send, this);
 //	Ipv6Address peer()
+
+	m_sendEvent = Simulator::Schedule (dt, &GeoQueryClient::Send, this);
 
 }
 /**
@@ -231,11 +243,14 @@ GeoQueryClient::Send (void)
 	// call to the trace sinks before the packet is actually sent,
 	// so that tags added to the packet can be sent as well
 
-	p = Create<Packet> (m_size);
+	p = Create<Packet> (1024);
 	m_txTrace (p);
+
+	int conRes = m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
+
 	m_socket->Send (p);
-
-
+	//int sendRes = m_socket->SendTo(p,1,m_peerAddress);
+	std::cout << "GeoClient send results: " << conRes << std::endl;
 
 	++m_sent;
 

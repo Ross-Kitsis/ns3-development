@@ -184,6 +184,7 @@ GeoRequestHeader::Deserialize(Buffer::Iterator start)
 
 	m_hopCount = i.ReadU8();
 
+	//Deserialize query position
 	m_QueryPosition.x =(double) (i.ReadLsbtohU64 ()/1000.0);
 	m_QueryPosition.y =(double) (i.ReadLsbtohU64 ()/1000.0);
 
@@ -195,7 +196,7 @@ GeoRequestHeader::Deserialize(Buffer::Iterator start)
 void
 GeoRequestHeader::Print (std::ostream &os) const
 {
-	os << "Internet Header: Original Position: " << m_OriginPosition <<
+	os << "GeoRequest Header: Original Position: " << m_OriginPosition <<
 												" Origin Velocity: " << m_OriginVelocity << " "
 												" Time: " << m_timestamp <<
 												" DTN: " << m_isDtnTolerant <<

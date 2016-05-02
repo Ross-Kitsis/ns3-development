@@ -24,6 +24,7 @@ def build(bld):
         'model/ITVHeader.cc',
         'model/GeoRequestHeader.cc',
         'Application/GeoQueryClient.cc',
+        'helper/GeoClientHelper.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('thesisinternetrouting')
@@ -49,6 +50,7 @@ def build(bld):
         'model/ITVHeader.h',
         'model/GeoRequestHeader.h',
         'Application/GeoQueryClient.h',
+        'helper/GeoClientHelper.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

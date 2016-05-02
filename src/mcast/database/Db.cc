@@ -157,13 +157,13 @@ Db::GetNumEntry()
 }
 
 DbEntry
-Db::GetEntry(int i)
+Db::GetEntry(int index)
 {
 	DbEntry * toReturn;
 	int count = 0;
 	for(std::list<DbEntry>::iterator it = m_db.begin(); it!= m_db.end(); ++it)
 	{
-		if(count == i)
+		if(count == index)
 		{
 			toReturn = &*it;
 			break;
