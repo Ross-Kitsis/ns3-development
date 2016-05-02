@@ -191,7 +191,15 @@ public:
    *  multicast group.
    *
    */
-  void DoSendMcastControl(Ptr<Packet> p);
+  void DoSendMcastControl();
+
+  /**
+   * Attempt to send a control message
+   */
+  void ScheduleSendControl();
+
+  EventId m_transmitControlEvent;
+  EventId m_scheduleControlEvent;
 
 
 	///////Skip split horizon implementation in Ripng/////////////////
@@ -258,6 +266,7 @@ protected:
 	 * Start protocol operation
 	 */
 	void DoInitialize ();
+
 
 private:
 	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)

@@ -123,14 +123,33 @@ TypeHeader::Deserialize (Buffer::Iterator start)
 	{
 		m_type = (MessageType) type;
 		break;
+	}case GEOQUERY_REQUEST:
+	{
+		m_type = (MessageType) type;
+		break;
+	}case GEOQUERY_REPLY:
+	{
+		m_type = (MessageType) type;
+		break;
+	}case GEOQUERY_RSU_ACK:
+	{
+		m_type = (MessageType) type;
+		break;
+	}case GEOREPLY_RSU_ACK:
+	{
+		m_type = (MessageType) type;
+		break;
+	}case GEOREPLY_VANET_ACK:
+	{
+		m_type = (MessageType) type;
+		break;
 	}
-
 	default:
 		m_valid = false;
 		m_type = UNKNOWN;
 	}
 
-	std::cout << "Deserialized type header with type: " << m_type << std::endl;
+//	std::cout << "Deserialized type header with type: " << m_type << std::endl;
 
 
 	uint32_t dist = i.GetDistanceFrom (start);
@@ -177,7 +196,28 @@ TypeHeader::Print (std::ostream &os) const
 	{
 		os << "RSU_TO_RSU_REDIRECT" << std::endl;
 		break;
+	}case GEOQUERY_REQUEST:
+	{
+		os << "GEOQUERY REQUEST" << std::endl;
+		break;
+	}case GEOQUERY_REPLY:
+	{
+		os << "GEOQUERY REPLY" << std::endl;;
+		break;
+	}case GEOQUERY_RSU_ACK:
+	{
+		os << "Qeo Query ACK" << std::endl;
+		break;
+	}case GEOREPLY_RSU_ACK:
+	{
+		os << "GeoReply RSU ACK" << std::endl;
+		break;
+	}case GEOREPLY_VANET_ACK:
+	{
+		os << "GeoReply VANET ACK" << std::endl;
+		break;
 	}
+
 	default:
 		os << "UNKNOWN_TYPE";
 		break;

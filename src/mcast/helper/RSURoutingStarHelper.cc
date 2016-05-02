@@ -88,19 +88,19 @@ RSURoutingStarHelper::CreateRouteBetweenHubAndSpoke(Ptr<Node> Hub, Ptr<Node> Spo
 	Ptr<Ipv6> spokeV6 = Spoke-> GetObject<Ipv6>();
 	uint32_t spokeP2pInt = GetP2pInterface(spokeV6);
 
-	std::cout << "Got here, spokeP2pInt: " << spokeP2pInt << std::endl;
+	//std::cout << "Got here, spokeP2pInt: " << spokeP2pInt << std::endl;
 
   Ipv6Address spokeAddress = spokeV6 ->GetAddress(spokeP2pInt, 1).GetAddress();
 
   uint32_t hubInterface = GetHubNetworkInterface(hubV6,spokeAddress);
-  std::cout << "Got here, hubInt: " << hubInterface << std::endl;
+  //std::cout << "Got here, hubInt: " << hubInterface << std::endl;
 
   Ipv6Address hubAddress = hubV6 ->GetAddress(hubInterface,1).GetAddress();
 
   Ptr<Ipv6StaticRouting> routing = StaticRouting.GetStaticRouting(spokeV6);
   routing -> SetDefaultRoute(hubAddress,spokeP2pInt,Ipv6Address("::"),1);
 
-  std::cout << "Inital route added " << std::endl;
+  //std::cout << "Inital route added " << std::endl;
 
 	//Create routes from hub to spokes
 	uint32_t spokeWifiInt = GetWirelessInterface(spokeV6);
@@ -108,11 +108,11 @@ RSURoutingStarHelper::CreateRouteBetweenHubAndSpoke(Ptr<Node> Hub, Ptr<Node> Spo
 
 	Ptr<Ipv6StaticRouting> hubRouting = StaticRouting.GetStaticRouting(hubV6);
 
-	std::cout << "Adding hub route to: " << spokeWirelessAddress.CombinePrefix(64) << " via: " << spokeAddress << std::endl;
+	//std::cout << "Adding hub route to: " << spokeWirelessAddress.CombinePrefix(64) << " via: " << spokeAddress << std::endl;
 
 	hubRouting -> AddNetworkRouteTo(spokeWirelessAddress.CombinePrefix(Ipv6Prefix(64)),Ipv6Prefix(64), spokeAddress, hubInterface, 1);
 
-	std::cout << "Adding hub route to: " << spokeWirelessAddress.CombinePrefix(64) << " via: " << spokeAddress << "DONE---" << std::endl;
+	//std::cout << "Adding hub route to: " << spokeWirelessAddress.CombinePrefix(64) << " via: " << spokeAddress << "DONE---" << std::endl;
 
 
 }
@@ -148,7 +148,7 @@ RSURoutingStarHelper::CreateStaticRoutes(NodeContainer Hub, NodeContainer Spokes
 
 		Ptr<Ipv6StaticRouting> hubRouting = StaticRouting.GetStaticRouting(hubV6);
 
-		std::cout << "Adding hub route to: " << spokeWirelessAddress.CombinePrefix(64) << " via: " << spokeAddress << std::endl;
+		//std::cout << "Adding hub route to: " << spokeWirelessAddress.CombinePrefix(64) << " via: " << spokeAddress << std::endl;
 
 		hubRouting -> AddNetworkRouteTo(spokeWirelessAddress.CombinePrefix(Ipv6Prefix(64)),Ipv6Prefix(64), spokeAddress, hubInterface, 1);
 
@@ -173,7 +173,7 @@ RSURoutingStarHelper::GetP2pInterface(Ptr<Ipv6> ipv6)
 
 	for(uint32_t j = 0; j < ipv6 -> GetNInterfaces(); j++)
 	{
-		std::cout << ipv6->GetNetDevice(j)->GetInstanceTypeId().GetName() << std::endl;
+		//std::cout << ipv6->GetNetDevice(j)->GetInstanceTypeId().GetName() << std::endl;
 		if(ipv6->GetNetDevice(j)->GetInstanceTypeId().GetName().compare(p2pd.GetTypeId().GetName()) == 0)
 		{
 			interface = j;
@@ -216,8 +216,8 @@ RSURoutingStarHelper::GetHubNetworkInterface(Ptr<Ipv6> ipv6, Ipv6Address network
 
 			Ipv6Address net = ipv6 ->GetAddress(j,1).GetAddress().CombinePrefix(Ipv6Prefix(64));
 
-			std::cout << "GetHubNetworkInterface: Network -> " << network.CombinePrefix(Ipv6Prefix(64)) << std::endl;
-			std::cout << "GetHubNetworkInterface: Net -> " << net << std::endl;
+			//std::cout << "GetHubNetworkInterface: Network -> " << network.CombinePrefix(Ipv6Prefix(64)) << std::endl;
+			//std::cout << "GetHubNetworkInterface: Net -> " << net << std::endl;
 
 			if(net.IsEqual(network.CombinePrefix(Ipv6Prefix(64))))
 			{

@@ -149,8 +149,10 @@ ThesisRoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr
 
   //////////////////////////////////////////////////////
 
-	TypeHeader tHeader(HELLO);
+	TypeHeader tHeader(UNKNOWN);
 	p->PeekHeader(tHeader);
+
+	NS_LOG_LOGIC("Route output type header: " << tHeader);
 
   //////////////////////////////////////////////////////
 
@@ -184,17 +186,33 @@ ThesisRoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv6Header &header
 		return false;
 	}
 
+	//std::cout << "mcast route input" << std::endl;
+
+
+
 	//Peek header but do not actually remove
-	TypeHeader tHeader(HELLO);
+	TypeHeader tHeader(UNKNOWN);
 	p->PeekHeader(tHeader);
-	if(tHeader.Get() == 1 || tHeader.Get() == 2)
+
+	//p->Print(std::cout);
+
+	//std::cout<< std::endl;
+
+	//std::cout << "Type: "  << (MessageType) tHeader.Get() << std::endl;
+	NS_LOG_LOGIC("Message type: " << (MessageType)tHeader.Get());
+
+	if(tHeader.Get() == HELLO || tHeader.Get() == MCAST_CONTROL ||
+			dst.IsEqual(Ipv6Address(MCAST_ALL_NODE)) ||
+			dst.IsEqual(Ipv6Address(MCAST_CONTROL_GRP)))
 	{
+		NS_LOG_LOGIC("Received packet with HELLO/CONTROL");
 		//Type of packet is hello or control
+		//std::cout << "Received MCast hello or control packet" << std::endl;
 		lcb(p,header,iif);
 		toReturn = true;
 	}else
 	{
-		//Type of packet is something else (Either internet, query or unknown)
+		//Type of packet is something else (Either internet, query or RSU something)
 		toReturn = false;
 	}
 	return toReturn;
@@ -279,7 +297,7 @@ void
 ThesisRoutingProtocol::SetIpv6 (Ptr<Ipv6> ipv6)
 {
 
-	std::cout << "Setting IPv6 in routing protocol \n";
+	//std::cout << "Setting IPv6 in routing protocol \n";
 
 	NS_LOG_FUNCTION (this << ipv6);
   NS_ASSERT (m_ipv6 == 0 && ipv6 != 0);
@@ -330,9 +348,41 @@ ThesisRoutingProtocol::DoSendHello()
 {
 	NS_LOG_FUNCTION (this);
 
-  for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
-  {
-    uint32_t interface = iter->second;
+//	std::cout << "Sending hello packet" << std::endl;
+
+	//Perform address checking here, re-bind to the correct address
+	for(uint32_t i = 0; i < m_ipv6 ->GetNInterfaces();i++)
+	{
+		for(uint32_t j = 0; j < m_ipv6 ->GetNAddresses(i); j++)
+		{
+			Ipv6Address srcAdd = m_ipv6 ->GetAddress(i,j).GetAddress();
+			if(!srcAdd.IsLinkLocal())
+			{
+				m_globalAddress = srcAdd;
+				break;
+			}
+		}
+	}
+
+	//m_recvSocket = Socket::CreateSocket (theNode, tid);
+	Inet6SocketAddress local = Inet6SocketAddress (MCAST_ALL_NODE, MCAST_PORT);
+	if(Ipv6Address(MCAST_ALL_NODE).IsMulticast())
+	{
+  	Ptr<UdpSocket> Udp = DynamicCast<UdpSocket>(m_recvSocket);
+  	if(Udp)
+  	{
+  		Udp -> MulticastJoinGroup(0,Ipv6Address(MCAST_ALL_NODE));
+  	}else
+  	{
+  		NS_FATAL_ERROR ("Error: Failed to join multicast group");
+  	}
+	}
+	m_recvSocket->Bind (local);
+	m_recvSocket->SetRecvCallback (MakeCallback (&ThesisRoutingProtocol::Receive, this));
+
+  //for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
+  //{
+  //  uint32_t interface = iter->second;
     //Assume no interface exclusions
 
     //Skip MTU and RTE stuff
@@ -365,22 +415,57 @@ ThesisRoutingProtocol::DoSendHello()
 
   	Ptr<Packet> packet = Create<Packet>();
   	packet->AddHeader(helloHeader);
+
   	TypeHeader theader (HELLO);
   	packet->AddHeader(theader);
 
 
-  	NS_LOG_LOGIC("Sending packet to: " << destination << " from address " << interface);
-  	iter->first->SendTo(packet, 0, Inet6SocketAddress(MCAST_ALL_NODE, MCAST_PORT));
-
-  }
+  	NS_LOG_LOGIC("Sending packet to: " << destination);
+  	//std::cout << "Sending -- " << std::endl;
+  	//iter->first->SendTo(packet, 0, Inet6SocketAddress(MCAST_ALL_NODE, MCAST_PORT));
+  	m_recvSocket -> SendTo(packet,0,Inet6SocketAddress(MCAST_ALL_NODE, MCAST_PORT));
+ // }
 
 }
 
 void
-ThesisRoutingProtocol::DoSendMcastControl(Ptr<Packet> p)
+ThesisRoutingProtocol::DoSendMcastControl()
 {
-	std::cout << "Running doSendMCastControl" << std::endl;
+	//std::cout << "Running doSendMCastControl" << std::endl;
 	NS_LOG_FUNCTION(this);
+
+	for(uint32_t i = 0; i < m_ipv6 ->GetNInterfaces();i++)
+	{
+		for(uint32_t j = 0; j < m_ipv6 ->GetNAddresses(i); j++)
+		{
+			Ipv6Address srcAdd = m_ipv6 ->GetAddress(i,j).GetAddress();
+			if(!srcAdd.IsLinkLocal())
+			{
+				m_globalAddress = srcAdd;
+				break;
+			}
+		}
+	}
+
+	//m_recvSocket = Socket::CreateSocket (theNode, tid);
+	Inet6SocketAddress local = Inet6SocketAddress (MCAST_CONTROL_GRP, MCAST_PORT);
+	if(Ipv6Address(MCAST_CONTROL_GRP).IsMulticast())
+	{
+		Ptr<UdpSocket> Udp = DynamicCast<UdpSocket>(m_mctrlSocket);
+		if(Udp)
+		{
+			Udp -> MulticastJoinGroup(0,Ipv6Address(MCAST_CONTROL_GRP));
+		}else
+		{
+			NS_FATAL_ERROR ("Error: Failed to join multicast group");
+		}
+	}
+	m_mctrlSocket->Bind (local);
+	m_mctrlSocket->SetRecvCallback (MakeCallback (&ThesisRoutingProtocol::Receive, this));
+
+
+
+
 
 	Ipv6Address Id = m_globalAddress;
 	Ipv6Address source = m_globalAddress;
@@ -388,9 +473,9 @@ ThesisRoutingProtocol::DoSendMcastControl(Ptr<Packet> p)
 	Vector position = m_ipv6->GetObject<MobilityModel>()->GetPosition();
 	Vector velocity = m_ipv6->GetObject<MobilityModel>()->GetVelocity();
 
-  for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
-  {
-  	uint32_t interface = iter->second;
+  //for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
+  //{
+  	//uint32_t interface = iter->second;
 
   	//Get A value
   	double a = m_mutils.getA(velocity, position);
@@ -418,10 +503,10 @@ ThesisRoutingProtocol::DoSendMcastControl(Ptr<Packet> p)
   	packet->AddHeader(theader);
 
   	//Send packet
-  	NS_LOG_LOGIC("Sending packet to: " << destination << " from address " << interface);
-  	iter->first->SendTo(packet, 0, Inet6SocketAddress(destination, MCAST_PORT));
-
-  }
+  	NS_LOG_LOGIC("Sending packet to: " << destination);
+  	//iter->first->SendTo(packet, 0, Inet6SocketAddress(destination, MCAST_PORT));
+  	m_mctrlSocket -> SendTo(packet,0,Inet6SocketAddress(destination, MCAST_PORT));
+  //}
 }
 
 Ptr<Ipv6Route>
@@ -625,10 +710,10 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 	if(m_mutils.IsInZor(position,eventPos,cHeader.GetA(),cHeader.GetB()))
 	{
 		//Node is in the Zor
-		std::cout << "Node is in ZoR" << std::endl;
+		//std::cout << "Node is in ZoR" << std::endl;
 		if(m_neighbors.IsNeighbor(cHeader.GetSource()))
 		{
-			std::cout << "Mcast Sender is a neighbor" << std::endl;
+			//std::cout << "Mcast Sender is a neighbor" << std::endl;
 			//Source of packet is a neighbor, have information on the last sender
 
 			//Use center coordinates to find apex current node is closest to
@@ -655,7 +740,7 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 			//Check if packet is initial transmit or if a retransmission
 			if(cHeader.GetId().IsEqual(cHeader.GetSource()))
 			{
-				std::cout << "Initial transmit receieved" << std::endl;
+				//std::cout << "Initial transmit receieved" << std::endl;
 				//Event vehicle sent this packet, use center in cHeader
 				double SenderDistanceToApex = m_mutils.GetDistanceBetweenPoints(ClosestApex.x, ClosestApex.y,
 						cHeader.GetCenter().x, cHeader.GetCenter().y);
@@ -685,7 +770,7 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 							 * Transmission will be effective, send packet after backoff
 							*/
 
-							std::cout << "Efficent retransmission -> resending" << std::endl;
+							//std::cout << "Efficent retransmission -> resending" << std::endl;
 
 							McastRetransmit * toSend = new McastRetransmit();
 
@@ -721,7 +806,7 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 
 			}else
 			{
-				std::cout << "Event vehicle sent packet, processing" << std::endl;
+				//std::cout << "Event vehicle sent packet, processing" << std::endl;
 				/*
 				 * //Event vehicle sent this packet, use center in cHeader
 				double SenderDistanceToApex = m_mutils.GetDistanceBetweenPoints(ClosestApex.x, ClosestApex.y,
@@ -759,7 +844,7 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 							if(m_neighbors.HaveCloserNeighbor(ClosestApex,NodeDistanceToApex))
 							{
 
-								std::cout << "Efficent transmission -> resending after original sender sent" << std::endl;
+								//std::cout << "Efficent transmission -> resending after original sender sent" << std::endl;
 
 								/**
 								 * Have a neighbor closer to the apex than current position
@@ -826,8 +911,8 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 
 			int delay = ((int)((10 * backoff) * 10))/10;
 
-			std::cout << "Mcast received but source not in "
-					<< " not in ntable. Retransmitting" << std::endl;
+			//std::cout << "Mcast received but source not in "
+			//		<< " not in ntable. Retransmitting" << std::endl;
 
 			//DoSendMcastRetransmit(toSend);
 
@@ -835,14 +920,14 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 			toSend->timerToSend.SetArguments(toSend);
 			toSend->timerToSend.Schedule(Time(MilliSeconds(delay)));
 
-			std::cout << "Time set, pushing in queue" << std::endl;
+			//std::cout << "Time set, pushing in queue" << std::endl;
 
 			//Add to retransmit queue
 			m_mr.push_back(*toSend);
 		}
 	}else
 	{
-		std::cout << "Mcast received but node not in ZoR, drop packet" << std::endl;
+		//std::cout << "Mcast received but node not in ZoR, drop packet" << std::endl;
 		//Not in ZoR; drop packet and do nothing at the moment
 		return;
 	}
@@ -852,8 +937,8 @@ ThesisRoutingProtocol::ProcessMcastControl(ControlHeader cHeader, Ptr<Packet> pa
 void
 ThesisRoutingProtocol::PurgeMcastRetransmitEntry(McastRetransmit *mr)
 {
-
-	std::cout << "Attempting to purge retransmit entry" << std::endl;
+	NS_LOG_FUNCTION(this);
+	//std::cout << "Attempting to purge retransmit entry" << std::endl;
 
 	/*
 	TypeHeader tHeader(HELLO);
@@ -894,7 +979,7 @@ ThesisRoutingProtocol::PurgeMcastRetransmitEntry(McastRetransmit *mr)
 //			it ->GetPacket()->AddHeader(temp);
 //			it ->GetPacket()->AddHeader(tHeader);
 			m_mr.erase(it);
-			std::cout << "REMOVED" << std::endl;
+			//std::cout << "REMOVED" << std::endl;
 			break;
 		}
 	}
@@ -902,7 +987,7 @@ ThesisRoutingProtocol::PurgeMcastRetransmitEntry(McastRetransmit *mr)
 //	mr->GetPacket()->AddHeader(cHeader);
 //	mr->GetPacket()->AddHeader(tHeader);
 
-	std::cout << "Packet purged, going back to resend >>>>>>>>>" << std::endl;
+	//std::cout << "Packet purged, going back to resend >>>>>>>>>" << std::endl;
 
 	return;
 }
@@ -924,20 +1009,20 @@ ThesisRoutingProtocol::DoSendMcastRetransmit(McastRetransmit *mr)
 	toSend -> AddHeader(tHeader);
 
 	NS_LOG_FUNCTION(this);
-	std::cout << " <<<<<<<<<<<<<<<<<<<<<<<<< Retransmitting mcast packet >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
-	std::cout << " <<<<<<<<<<<<<<<<<<<<<<<<<$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+	//std::cout << " <<<<<<<<<<<<<<<<<<<<<<<<< Retransmitting mcast packet >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+	//std::cout << " <<<<<<<<<<<<<<<<<<<<<<<<<$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
 
 	//Timer expired; retransmit the packet - assume packet is correctly formed at this point
-	for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
-	  {
-	  	uint32_t interface = iter->second;
+	//for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
+	//  {
+	// 	uint32_t interface = iter->second;
 
-	  	//Send packet
-	  	Ipv6Address destination = Ipv6Address(MCAST_CONTROL_GRP);
-	  	NS_LOG_LOGIC("Sending packet to: " << destination << " from address " << interface);
-	  	iter->first->SendTo(toSend, 0, Inet6SocketAddress(destination, MCAST_PORT));
+	//Send packet
+	Ipv6Address destination = Ipv6Address(MCAST_CONTROL_GRP);
+	NS_LOG_LOGIC("Sending packet to: " << destination);
+	m_mctrlSocket->SendTo(toSend, 0, Inet6SocketAddress(destination, MCAST_PORT));
 
-	  }
+	  //}
 	//Purge mcast entry from list of entries to retransmit
 	PurgeMcastRetransmitEntry(mr);
 
@@ -1060,6 +1145,11 @@ void
 ThesisRoutingProtocol::DoDispose ()
 {
 	NS_LOG_FUNCTION(this);
+
+	if(m_helloTimer.IsRunning())
+	{
+		m_helloTimer.Cancel();
+	}
 }
 
 void
@@ -1079,7 +1169,11 @@ ThesisRoutingProtocol::DoInitialize ()
   		if (address.GetScope() == Ipv6InterfaceAddress::GLOBAL)
   		{
   			NS_LOG_LOGIC ("	MCAST: adding socket to " << address.GetAddress ());
+
+
   			TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+  			//TypeId tid = TypeId::LookupByName("ns3::Ipv6RawSocketFactory");
+
   			Ptr<Node> theNode = GetObject<Node> ();
   			Ptr<Socket> socket = Socket::CreateSocket (theNode, tid);
   			Inet6SocketAddress local = Inet6SocketAddress (address.GetAddress (), MCAST_PORT);
@@ -1110,10 +1204,17 @@ ThesisRoutingProtocol::DoInitialize ()
   if (!m_recvSocket)
   {
   	NS_LOG_LOGIC ("MCAST multicast interface: adding receiving socket");
+
+
   	TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+		//TypeId tid = TypeId::LookupByName("ns3::Ipv6RawSocketFactory");
+
+
   	Ptr<Node> theNode = GetObject<Node> ();
   	m_recvSocket = Socket::CreateSocket (theNode, tid);
   	Inet6SocketAddress local = Inet6SocketAddress (MCAST_ALL_NODE, MCAST_PORT);
+
+
   	if(Ipv6Address(MCAST_ALL_NODE).IsMulticast())
   	{
 	  	Ptr<UdpSocket> Udp = DynamicCast<UdpSocket>(m_recvSocket);
@@ -1125,6 +1226,7 @@ ThesisRoutingProtocol::DoInitialize ()
 	  		NS_FATAL_ERROR ("Error: Failed to join multicast group");
 	  	}
   	}
+
   	m_recvSocket->Bind (local);
   	m_recvSocket->SetRecvCallback (MakeCallback (&ThesisRoutingProtocol::Receive, this));
   	m_recvSocket->SetIpv6RecvHopLimit (true);
@@ -1135,7 +1237,14 @@ ThesisRoutingProtocol::DoInitialize ()
   if (!m_mctrlSocket)
   {
   	NS_LOG_LOGIC ("MCAST multicast interface: adding receiving socket for control");
+
+
+
   	TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+//		TypeId tid = TypeId::LookupByName("ns3::Ipv6RawSocketFactory");
+
+
+
   	Ptr<Node> theNode = GetObject<Node> ();
   	m_mctrlSocket = Socket::CreateSocket (theNode, tid);
   	Inet6SocketAddress local = Inet6SocketAddress (MCAST_CONTROL_GRP, MCAST_PORT);
@@ -1167,6 +1276,30 @@ ThesisRoutingProtocol::DoInitialize ()
   }
 	Ipv6RoutingProtocol::DoInitialize ();
 }
+
+void
+ThesisRoutingProtocol::ScheduleSendControl()
+{
+	NS_LOG_FUNCTION(this);
+
+	double v = m_rng -> GetValue();
+	double eventProbability = 0.01;
+
+	//m_globalAddress = m_ipv6 -> GetAddress(1,1).GetAddress();
+
+	if(v < eventProbability)
+	{
+		//std::cout << "value: " << v << "Sending mcast packet" << std::endl;
+		m_scheduleControlEvent = Simulator::Schedule(Seconds(5),&ThesisRoutingProtocol::ScheduleSendControl,this);
+		m_transmitControlEvent = Simulator::Schedule(Seconds(0.),&ThesisRoutingProtocol::DoSendMcastControl, this);
+	}else
+	{
+		//std::cout << "waiting to send" << std::endl;
+		m_scheduleControlEvent = Simulator::Schedule(Seconds(5),&ThesisRoutingProtocol::ScheduleSendControl,this);
+	}
+
+}
+
 
 }
 }

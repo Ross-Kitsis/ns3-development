@@ -25,7 +25,7 @@ McastHelper2::Copy (void) const
 Ptr<Ipv6RoutingProtocol>
 McastHelper2::Create (Ptr<Node> node) const
 {
-	std::cout << "Creating new mcast protocol (new) for" << node << std::endl;
+	//std::cout << "Creating new mcast protocol (new) for" << node << std::endl;
 	Ptr<mcast::ThesisRoutingProtocol> agent = m_agentFactory.Create<mcast::ThesisRoutingProtocol> ();
 	node->AggregateObject (agent);
 

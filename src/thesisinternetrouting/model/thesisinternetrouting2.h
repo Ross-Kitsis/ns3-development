@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
-#ifndef THESISINTERNETROUTING_H
-#define THESISINTERNETROUTING_H
+#ifndef THESISINTERNETROUTING2_H
+#define THESISINTERNETROUTING2_H
 
 /*NS3 L3 and code components*/
 #include "ns3/node.h"
@@ -31,6 +31,7 @@
 #include <list>
 #include <math.h>
 
+
 //Mcast files
 #include "ns3/Db.h"
 #include "ns3/mcast-packet.h"
@@ -42,6 +43,7 @@
 #include "Thesis-Internet-Routing-Queue.h"
 #include "RsuCache.h"
 #include "ITVHeader.h"
+#include "GeoRequestHeader.h"
 
 //Tracing
 #include "ns3/traced-value.h"
@@ -287,7 +289,22 @@ public:
   }
   double GetAverageHopCountVanetToRsu(){return m_HopCountAgregatorVanetToRsu/(double)m_numRsuRec;}
 
+
+	/**
+	 * Current RSU address; set by the lookup method
+	 * Used to determine where the packet is being routed towards
+	 */
+	Ipv6Address m_RsuDestination;
+
+	/**
+	 * Set geoquery position
+	 */
+	void SetGeoQueryPosition(Vector v){m_GeoQueryPosition = v;}
+
 protected:
+
+	Vector m_GeoQueryPosition;
+
 	/**
 	 * \brief Dispose this object.
 	 */
@@ -452,12 +469,6 @@ private:
 	bool m_IsDtnTolerant;
 
 	/**
-	 * Current RSU address; set by the lookup method
-	 * Used to determine where the packet is being routed towards
-	 */
-	Ipv6Address m_RsuDestination;
-
-	/**
 	 * Pointer to the RSU cache
 	 * Used to manage database of entries coming through the RSU
 	 * Not used on VANET nodes
@@ -483,6 +494,13 @@ private:
 	 *
 	 */
 	ThesisInternetRoutingQueue m_RoutingRtoVCache;
+
+	/**
+	 * Pointer to a third cache for geocast
+	 * Could potentially be same as m_RoutingCache
+	 * But third cache used for simplicity
+	 */
+	ThesisInternetRoutingQueue m_GeoRoutingQueue;
 
 	/*
 	 * Utilities created in mcast routing protocol
@@ -520,6 +538,13 @@ private:
 	void SendInternetRetransmit(Ipv6Address source, Ipv6Address destination, Time sendTime);
 
 	/**
+	 * Retransmits a packet from the routing queue once timer has expired
+	 * Arguments define a unique routing queue entry
+	 * Before retransmitting the entry is removed from the queue
+	 */
+	void SendGeoQueryRetransmit(Ipv6Address source, Ipv6Address destination, Time sendTime);
+
+	/**
 	 * Send Ack message after RSU receives msg on wifi
 	 */
 	void SendAckMessage(Ptr<Packet> ack, UnicastForwardCallback ucb);
@@ -533,6 +558,11 @@ private:
 	 * Remove timer expired, remove routing queue entry (Used by VANET nodes to remove entries in their queue)
 	 */
 	void RemoveThesisRoutingCacheEntry(Ipv6Address source, Ipv6Address destination, Time sendTime);
+
+	/**
+	 * Remove timer expired in GeoRequest
+	 */
+	void RemoveGeoRoutingCacheEntry(Ipv6Address source, Ipv6Address destination, Time sendTime);
 
 	/**
 	 * Remove timer expired, remove routing queue entry (Used by VANET nodes to remove entries in their queue)

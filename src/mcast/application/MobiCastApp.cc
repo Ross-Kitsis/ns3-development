@@ -192,7 +192,7 @@ MobiCastApp::Send ()
 
 	Ptr<Packet> p = Create<Packet> (1024);
 
-	m_routing->DoSendMcastControl(p);
+	m_routing->DoSendMcastControl();
 }
 
 void

@@ -130,6 +130,10 @@ public:
 
 	DbEntry GetEntryForCurrentPosition(Vector position);
 
+	DbEntry GetEntry(int i);
+
+	int GetNumEntry();
+
 private:
 
 	double GetAreaOfTriangle(Vector A, Vector B, Vector C);

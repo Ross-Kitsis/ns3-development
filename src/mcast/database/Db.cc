@@ -150,6 +150,30 @@ Db::CreateDatabase(NodeContainer c, uint32_t length, uint32_t width)
 	}
 }
 
+int
+Db::GetNumEntry()
+{
+	return m_db.size();
+}
+
+DbEntry
+Db::GetEntry(int i)
+{
+	DbEntry * toReturn;
+	int count = 0;
+	for(std::list<DbEntry>::iterator it = m_db.begin(); it!= m_db.end(); ++it)
+	{
+		if(count == i)
+		{
+			toReturn = &*it;
+			break;
+		}else
+		{
+			count++;
+		}
+	}
+	return *toReturn;
+}
 
 DbEntry
 Db::GetEntryForCurrentPosition(Vector position)

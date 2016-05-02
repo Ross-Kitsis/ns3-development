@@ -49,6 +49,11 @@ enum MessageType
   INTERNET_RSU_ACK = 5, //!< Ack that RSU got msg (RSU TO VANET)
   INTERNET_VANET_ACK = 6, //!< ThesisInternetRouting type VANET TO VANET ACK of success
   INTERNET_RSU_TO_RSU_REDIRECT = 7, //!< ThesisInternetRouting RSU to RSU transmission if a node changes zones before reply could go out
+  GEOQUERY_REQUEST = 8, //!< Geographic query request sent by a VANET node
+  GEOQUERY_REPLY = 9, //!< Geographic query reply sent by a VANET node
+  GEOQUERY_RSU_ACK = 10, //!< Geographic query request ack from RSU
+  GEOREPLY_RSU_ACK = 11, //!<Georeply rsu ack
+  GEOREPLY_VANET_ACK = 12, //!Georeply vanet ack
 
   UNKNOWN = 128
 };
