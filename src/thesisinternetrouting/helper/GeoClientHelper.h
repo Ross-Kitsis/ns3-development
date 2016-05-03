@@ -28,7 +28,7 @@ public:
 	/*
 	 * \brief Constructor
 	 */
-	GeoClientHelper();
+	GeoClientHelper(uint32_t port);
 
 	//Destructor
 	virtual ~GeoClientHelper();

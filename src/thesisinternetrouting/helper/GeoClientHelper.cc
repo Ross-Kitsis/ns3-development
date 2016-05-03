@@ -12,10 +12,12 @@
 namespace ns3
 {
 
-GeoClientHelper::GeoClientHelper()
+GeoClientHelper::GeoClientHelper(uint32_t port)
 	: m_ifIndex(0)
 {
   m_factory.SetTypeId (GeoQueryClient::GetTypeId ());
+  //SetAttribute ("RemoteAddress", AddressValue (Address(address)));
+  SetAttribute ("RemotePort", UintegerValue (port));
 }
 
 GeoClientHelper::~GeoClientHelper()

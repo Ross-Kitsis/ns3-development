@@ -508,6 +508,13 @@ private:
 	 */
 	ThesisInternetRoutingQueue m_GeoRoutingQueue;
 
+	/**
+	 * Pointer to a third cache for geocast
+	 * Could potentially be same as m_RoutingCache
+	 * But third cache used for simplicity
+	 */
+	ThesisInternetRoutingQueue m_GeoQueryReplyCache;
+
 	/*
 	 * Utilities created in mcast routing protocol
 	 * Primarily used to find distances between points
@@ -570,6 +577,20 @@ private:
 	 * Remove timer expired, remove routing queue entry (Used by VANET nodes to remove entries in their queue)
 	 */
 	void RemoveThesisRoutingRtVCacheEntry(Ipv6Address source, Ipv6Address destination, Time sendTime);
+
+	/**
+	 * Remove enrty from geo query reply cache
+	 */
+	void RemoveGeoQueryReplyCacheEntry(Ipv6Address source, Ipv6Address destination, Time sendTime);
+
+	/**
+	 * Send GeoQuery reply
+	 * 1. Send ACK
+	 * 2. LCB to server
+	 * 3. Server needs to send
+	 *
+	 */
+	void SendGeoQueryReply(Ipv6Address source, Ipv6Address destination, Time sendTime);
 
   /**
    * Hop count limit

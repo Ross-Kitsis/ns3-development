@@ -82,6 +82,30 @@ private:
 
 	Ptr<Db> m_db;
 
+
+	typedef struct Transmission
+	{
+		Ipv6Address Destination;
+		Time SendTime;
+	}Transmission;
+
+	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)
+	typedef std::list<Transmission> Transmissions;
+
+	//Iterator for routes
+	typedef std::list<Transmission>::iterator TransmissionsIt;
+
+	/**
+	 * List of transmissions used to keep track of receieved packets
+	 */
+	Transmissions m_sourcedTrans;
+
+	int m_numReceived;
+
+	Time m_RTT;
+
+	int strLength;
+
 };
 
 } /* namespace ns3 */

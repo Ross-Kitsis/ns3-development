@@ -54,6 +54,7 @@ enum MessageType
   GEOQUERY_RSU_ACK = 10, //!< Geographic query request ack from RSU
   GEOREPLY_RSU_ACK = 11, //!<Georeply rsu ack
   GEOREPLY_VANET_ACK = 12, //!Georeply vanet ack
+  GEOQUERY_SENDINGREPLY = 13, //!< Sent by a node which will send a geoquery reply
 
   UNKNOWN = 128
 };

@@ -143,7 +143,12 @@ TypeHeader::Deserialize (Buffer::Iterator start)
 	{
 		m_type = (MessageType) type;
 		break;
+	}case GEOQUERY_SENDINGREPLY:
+	{
+		m_type = (MessageType) type;
+		break;
 	}
+
 	default:
 		m_valid = false;
 		m_type = UNKNOWN;
@@ -215,6 +220,10 @@ TypeHeader::Print (std::ostream &os) const
 	}case GEOREPLY_VANET_ACK:
 	{
 		os << "GeoReply VANET ACK" << std::endl;
+		break;
+	}case GEOQUERY_SENDINGREPLY:
+	{
+		os  << "GeoQuery Sending Reply" << std::endl;
 		break;
 	}
 

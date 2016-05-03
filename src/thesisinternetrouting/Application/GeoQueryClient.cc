@@ -59,30 +59,30 @@ TypeId
 GeoQueryClient::GetTypeId (void)
 {
 	static TypeId tid = TypeId ("ns3::GeoQueryClient")
-    						.SetParent<Application> ()
-    						.SetGroupName("Applications")
-    						.AddConstructor<GeoQueryClient> ()
-    						.AddAttribute ("MaxPackets",
-    								"The maximum number of packets the application will send",
-    								UintegerValue (100),
-    								MakeUintegerAccessor (&GeoQueryClient::m_count),
-    								MakeUintegerChecker<uint32_t> ())
-    								.AddAttribute ("Interval",
-    										"The time to wait between packets",
-    										TimeValue (Seconds (1.0)),
-    										MakeTimeAccessor (&GeoQueryClient::m_interval),
-    										MakeTimeChecker ())
-    										.AddAttribute ("RemoteAddress",
-    												"The destination Address of the outbound packets",
-    												AddressValue (),
-    												MakeAddressAccessor (&GeoQueryClient::m_peerAddress),
-    												MakeAddressChecker ())
-    												.AddAttribute ("RemotePort",
-    														"The destination port of the outbound packets",
-    														UintegerValue (0),
-    														MakeUintegerAccessor (&GeoQueryClient::m_peerPort),
-    														MakeUintegerChecker<uint16_t> ())
-    														;
+    								.SetParent<Application> ()
+    								.SetGroupName("Applications")
+    								.AddConstructor<GeoQueryClient> ()
+    								.AddAttribute ("MaxPackets",
+    										"The maximum number of packets the application will send",
+    										UintegerValue (100),
+    										MakeUintegerAccessor (&GeoQueryClient::m_count),
+    										MakeUintegerChecker<uint32_t> ())
+    										.AddAttribute ("Interval",
+    												"The time to wait between packets",
+    												TimeValue (Seconds (1.0)),
+    												MakeTimeAccessor (&GeoQueryClient::m_interval),
+    												MakeTimeChecker ())
+    												.AddAttribute ("RemoteAddress",
+    														"The destination Address of the outbound packets",
+    														AddressValue (),
+    														MakeAddressAccessor (&GeoQueryClient::m_peerAddress),
+    														MakeAddressChecker ())
+    														.AddAttribute ("RemotePort",
+    																"The destination port of the outbound packets",
+    																UintegerValue (0),
+    																MakeUintegerAccessor (&GeoQueryClient::m_peerPort),
+    																MakeUintegerChecker<uint16_t> ())
+    																;
 	return tid;
 }
 
@@ -222,10 +222,10 @@ GeoQueryClient::ScheduleTransmit (Time dt)
 
 	std::cout << "Geo Client Peer Address" << Ipv6Address::ConvertFrom(m_peerAddress) << std::endl;
 
-//	m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
+	//	m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
 
-//	m_sendEvent = Simulator::Schedule (dt, &GeoQueryClient::Send, this);
-//	Ipv6Address peer()
+	//	m_sendEvent = Simulator::Schedule (dt, &GeoQueryClient::Send, this);
+	//	Ipv6Address peer()
 
 	m_sendEvent = Simulator::Schedule (dt, &GeoQueryClient::Send, this);
 
@@ -243,7 +243,53 @@ GeoQueryClient::Send (void)
 	// call to the trace sinks before the packet is actually sent,
 	// so that tags added to the packet can be sent as well
 
-	p = Create<Packet> (1024);
+	//Add timestamp
+	Time currentTime = Simulator::Now();
+
+	int64_t currentNS = currentTime.GetNanoSeconds();
+
+	/*
+		  uint8_t * timeData = new uint8_t[8];
+
+			for(int i = 0; i < 8; i++)
+			{
+				timeData[i] = currentNS >> 8*i;
+			}
+	 */
+
+
+	uint8_t * newdata;
+	newdata = new uint8_t [1024];
+
+	std::string str;
+	std::ostringstream o;
+	o << currentNS;
+	str += o.str();
+
+
+	//		std::cout << "String length " << str.length() << std::endl;
+
+	strLength = str.length();
+
+	memcpy (newdata, str.c_str(), str.length());
+	uint32_t newSize = 1024 - str.length();
+
+
+	uint8_t *data = new uint8_t[1024];
+
+	memcpy (&newdata[str.length()] , data, newSize);
+
+	//std::cout << "(2) Created packet with size: " << m_dataSize << std::endl;
+	//std::cout << "(2) Packet size: " << m_size << std::endl;
+	p = Create<Packet> (newdata,1024);
+
+	Transmission t;
+	t.Destination = Ipv6Address::ConvertFrom(m_peerAddress);
+	t.SendTime = currentTime;
+	m_sourcedTrans.push_back(t);
+
+
+	p = Create<Packet> (newdata,1024);
 	m_txTrace (p);
 
 	int conRes = m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
@@ -311,7 +357,46 @@ GeoQueryClient::HandleRead (Ptr<Socket> socket)
 					Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " <<
 					Inet6SocketAddress::ConvertFrom (from).GetPort ());
 		}
+
+		packet->RemoveAllPacketTags ();
+		packet->RemoveAllByteTags ();
+
+		uint8_t * Data;
+		Data = new uint8_t [strLength];
+
+		packet-> CopyData(Data,strLength);
+
+		std::string s( reinterpret_cast< char const* >(Data) ) ;
+
+		std::string final;
+		for(int i = 0; i < strLength ; i++) {
+			//if(isalpha(s[i]) || isdigit(s[i])) final += s[i];
+			final += s[i];
+		}
+
+		s = final;
+
+		//build up value by combining bytes
+		uint64_t NSValue = atoll(final.c_str());
+
+		Time timestamp = Time::FromInteger(NSValue, Time::NS);
+		for(TransmissionsIt it = m_sourcedTrans.begin(); it != m_sourcedTrans.end(); it++)
+		{
+			if(it -> SendTime == timestamp)
+			{
+				//      		std::cout << "Match found" << std::endl;
+				//      		std::cout << "DS timestamp: " << it -> SendTime << std::endl;
+				//      		std::cout << "Packet timestamp: " << timestamp << std::endl;
+				//     		std::cout << std::endl;
+				m_numReceived++;
+
+				m_RTT = m_RTT + (Simulator::Now() - timestamp);
+
+				m_sourcedTrans.erase(it);
+				break;
+			}
+		}
 	}
 }
-
 } /* namespace ns3 */
+

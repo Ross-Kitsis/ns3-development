@@ -25,6 +25,8 @@ def build(bld):
         'model/GeoRequestHeader.cc',
         'Application/GeoQueryClient.cc',
         'helper/GeoClientHelper.cc',
+        'Application/GeoQueryServer.cc',
+        'helper/GeoQueryServerHelper.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('thesisinternetrouting')
@@ -51,6 +53,8 @@ def build(bld):
         'model/GeoRequestHeader.h',
         'Application/GeoQueryClient.h',
         'helper/GeoClientHelper.h',
+        'Application/GeoQueryServer.h',
+        'helper/GeoQueryServerHelper.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

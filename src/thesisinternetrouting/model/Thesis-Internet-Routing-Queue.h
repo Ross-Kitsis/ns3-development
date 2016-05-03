@@ -24,11 +24,13 @@ class ThesisInternetQueueEntry
 public:
 	typedef Ipv6RoutingProtocol::UnicastForwardCallback UnicastForwardCallback;
 	typedef Ipv6RoutingProtocol::ErrorCallback ErrorCallback;
+	typedef Ipv6RoutingProtocol::LocalDeliverCallback LocalDeliveryCallback;
 
 	ThesisInternetQueueEntry (Ptr<Packet> pa = 0, Ipv6Header const & h = Ipv6Header (),
 			UnicastForwardCallback ucb = UnicastForwardCallback (),
-			ErrorCallback ecb = ErrorCallback (), Time SendTime = Time()) :
-				m_packet (pa), m_header (h), m_ucb (ucb), m_ecb (ecb), m_SendTime(SendTime)
+			ErrorCallback ecb = ErrorCallback (), Time SendTime = Time(),
+			LocalDeliveryCallback lcb = LocalDeliveryCallback()) :
+				m_packet (pa), m_header (h), m_ucb (ucb), m_ecb (ecb), m_SendTime(SendTime), m_lcb(lcb)
 	{}
 
 	/**
@@ -47,6 +49,7 @@ public:
 	ErrorCallback GetErrorCallback () const { return m_ecb; }
 	void SetErrorCallback (ErrorCallback ecb) { m_ecb = ecb; }
 
+
 	Ptr<Packet> GetPacket () const { return m_packet; }
 	void SetPacket (Ptr<Packet> p) { m_packet = p; }
 
@@ -60,6 +63,10 @@ public:
 
 	/// Timer to retransmit
 	Timer m_RetransmitTimer;
+
+	LocalDeliveryCallback GetLocalDeliveryCallback() const {return m_lcb;}
+	void SetLocalDeliveryCallback (LocalDeliveryCallback lcb) {m_lcb = lcb;}
+
 
 private:
 
@@ -77,6 +84,9 @@ private:
 
 	/// Timestamp of when packet was sent
 	Time m_SendTime;
+
+	// Local Delivery callback
+	LocalDeliveryCallback m_lcb;
 };
 
 
