@@ -44,6 +44,7 @@
 #include "RsuCache.h"
 #include "ITVHeader.h"
 #include "GeoRequestHeader.h"
+#include "GeoReplyHeader.h"
 
 //Tracing
 #include "ns3/traced-value.h"
@@ -505,15 +506,20 @@ private:
 	 * Pointer to a third cache for geocast
 	 * Could potentially be same as m_RoutingCache
 	 * But third cache used for simplicity
+	 * Used to route packets towards RSU
 	 */
 	ThesisInternetRoutingQueue m_GeoRoutingQueue;
 
 	/**
-	 * Pointer to a third cache for geocast
-	 * Could potentially be same as m_RoutingCache
-	 * But third cache used for simplicity
+	 * Cache used to track which node will be sending
+	 * reply
 	 */
 	ThesisInternetRoutingQueue m_GeoQueryReplyCache;
+
+	/**
+	 * Reply queue used to route packets between V2V nodes
+	 */
+	ThesisInternetRoutingQueue m_GeoReplyQueue;
 
 	/*
 	 * Utilities created in mcast routing protocol
@@ -526,6 +532,15 @@ private:
 	 */
 	bool IsEffective(Vector SenderPosition);
 
+	/**
+	 * Remove Enrty from GeoReply Queue
+	 */
+  void RemoveGeoReplyQueue(Ipv6Address source, Ipv6Address destination, Time sendTime);
+
+  /**
+   * Send geo reply retransmit
+   */
+  void SendGeoReplyRetransmitVanet(Ipv6Address source, Ipv6Address destination, Time timestamp);
 
 
 	/*

@@ -338,7 +338,7 @@ GeoQueryClient::HandleRead (Ptr<Socket> socket)
 
 	//std::cout << std::endl;
 	//std::cout << std::endl;
-	//std::cout << "UDP ECHO CLIENT RECEIEVED PACKET BACK" << std:: endl;
+	std::cout << "GEO CLIENT RECEIEVED PACKET BACK" << std:: endl;
 
 
 	Ptr<Packet> packet;

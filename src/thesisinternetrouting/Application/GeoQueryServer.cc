@@ -157,7 +157,7 @@ GeoQueryServer::HandleRead (Ptr<Socket> socket)
 
 
 
-  		/*
+
   		if (InetSocketAddress::IsMatchingType (from))
         {
           NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server received " << packet->GetSize () << " bytes from " <<
@@ -190,7 +190,7 @@ GeoQueryServer::HandleRead (Ptr<Socket> socket)
                        Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " <<
                        Inet6SocketAddress::ConvertFrom (from).GetPort ());
         }
-*/
+
       //std::cout << "Server attempted to send reply to " << from  << " ToSend: " << toSend << std::endl;
       //std::cout << "Socket send result: " << sendResult << std::endl;
       //std::cout << "" << std::endl;

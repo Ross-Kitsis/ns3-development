@@ -428,9 +428,64 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 		{
 			NS_LOG_INFO("RSU RECV GEOQUERY_SENDINGREPLY ACK Msg");
 
-			std::cout << "GOT HERE" << std::endl;
+			//std::cout << "GOT HERE" << std::endl;
 
 			//Dont need to do anything here
+			return true;
+		}else if(theader.Get() == mcast::GEOQUERY_REPLY)
+		{
+			NS_LOG_INFO("RSU RECV GEOREPLY");
+
+			//RSU Got a geo reply packet
+			/*
+			 * 1. Destination in current zone: drop and do nothing
+			 * 2. Destination in different zone: forward
+			 *
+			 */
+			Ipv6Address currentAdd = m_ipv6 -> GetAddress(m_ipv6->GetInterfaceForDevice(m_wi),1).GetAddress();
+			Ipv6Address destination = header.GetDestinationAddress();
+
+			uint8_t currentAddBytes[16];
+			currentAdd.GetBytes(currentAddBytes);
+
+			uint8_t destAddBytes[16];
+			destination.GetBytes(destAddBytes);
+
+			std::cout << "-----------------" << std::endl;
+			std::cout << "Destination: " << destination << std::endl;
+			std::cout << "Current : " << currentAdd << std::endl;
+
+			bool currentZone = true;
+			for(int i = 0; i < 8; i++)
+			{
+				if(currentAddBytes[i] != destAddBytes[i])
+				{
+					currentZone = false;
+				}
+			}
+
+			if(currentZone == false)
+			{
+				//Current zone = false means need to forward to the RSU
+
+				Ipv6RoutingTableEntry toHub = m_sr6 -> GetDefaultRoute();
+				Ptr<Ipv6Route> route = Create<Ipv6Route> ();
+				route -> SetDestination(toHub.GetDestNetwork());
+				route -> SetGateway(toHub.GetGateway());
+				route -> SetOutputDevice(m_ipv6 -> GetNetDevice(toHub.GetInterface()));
+				route -> SetSource(m_ipv6 -> GetAddress(1,1).GetAddress());
+
+				ucb (route -> GetOutputDevice(),route, packet, header);
+
+			}else
+			{
+				//Current zone = true means need to modify header and route into VANET
+
+				//Should only happen when node retransmits a packet, dont need to do anything here
+				//NS_LOG_INFO("RSU FOR QUERY ZONE RECV REPLY");
+
+			}
+
 			return true;
 		}
 		return true;
@@ -497,6 +552,67 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 			/////////////////////////////////////////////////////////////////////////////
 
 			ucb (route -> GetOutputDevice(),route, packet, header);
+			return true;
+		}else if(theader.Get() == mcast::GEOQUERY_REPLY)
+		{
+			NS_LOG_INFO("Recv GeoQueryREPLY RECIEVED on CORRECT ZONE P2P link");
+
+			mcast::TypeHeader theader (mcast::UNKNOWN);
+			packet -> RemoveHeader(theader);
+
+			GeoReplyHeader GR;
+			packet -> RemoveHeader(GR);
+
+			RsuCacheEntry entry;
+			if(m_RsuCache.Lookup(header.GetDestinationAddress(), entry))
+			{
+				Ipv6Address destination = header.GetDestinationAddress();
+
+				Ptr<Ipv6Route> route = Lookup(destination,m_wi);
+				if(route)
+				{
+					//Get Mobility
+					Ptr<Node> theNode = GetObject<Node>();
+					Ptr<MobilityModel> mobility = theNode -> GetObject<MobilityModel>();
+
+					//Set gateway
+					route -> SetGateway(Ipv6Address(RSU_TO_VANET));
+
+					Vector predictedPosition = GetPredictedNodePosition(header.GetDestinationAddress(), entry.GetSendingNodePosition(),
+							entry.GetSendingNodeVelocity(),entry.GetSendTime());
+
+					DbEntry t1 = m_Db -> GetEntryForCurrentPosition(predictedPosition);
+
+					int intCheck = m_ipv6 ->GetInterfaceForAddress(t1.GetRsuAddress());
+
+					if(intCheck != -1)
+					{
+						//Interface for address was found meaning this is the RSU for the zone, forward normally
+						//					std::cout << "Predicted position: " << predictedPosition << std::endl;
+						GeoReplyHeader GH(mobility -> GetPosition(), Simulator::Now(), false, mobility -> GetPosition(),mobility -> GetVelocity(),predictedPosition,0);
+						packet -> AddHeader(GH);
+
+						//Create type header add to packet
+						mcast::TypeHeader RToVheader (mcast::GEOQUERY_REPLY);
+						packet -> AddHeader(RToVheader);
+
+						ucb (route -> GetOutputDevice(),route, packet, header);
+						return true;
+					}else
+					{
+						NS_LOG_INFO("GeoQuery Reply, node in a different zone, redirect");
+					}
+
+				}
+			}
+
+			return true;
+		}else if(theader.Get() == mcast::GEOREPLY_VANET_ACK)
+		{
+			NS_LOG_INFO("Recv GEOREPLY ACK from VANET");
+
+			//Dont need to do anything here
+
 			return true;
 		}
 		else
@@ -777,7 +893,16 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 		if(!isInternet)
 		{
-			isGeoRequest = true;
+			//isGeoRequest = true;
+			for(int i = 8; i < 16; i++)
+			{
+				if(currentBytes[i] != destBytes[i])
+				{
+					isGeoRequest = false;
+					break;
+				}
+				isGeoRequest = true;
+			}
 		}
 
 		//All GeoRequest destinations are assumes to have 0 filled host sections
@@ -880,6 +1005,34 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 			}else// GeoQuery Reply
 			{
+				NS_LOG_INFO("SENDING GEOREPLY");
+				mcast::TypeHeader theader (mcast::GEOQUERY_REPLY);
+
+				GeoReplyHeader GH;
+
+				//Add reply headers
+				packet -> AddHeader(GH);
+				packet -> AddHeader(theader);
+
+
+				//Find actual route to send packet, send using UCB callback
+				Ptr<Ipv6Route> route;
+				Ipv6Address destination = header.GetDestinationAddress();
+
+				//Ipv6Address destination =m_Db -> Get
+
+				Ipv6Address source = header.GetSourceAddress();
+
+				Ptr<NetDevice> ndev = m_wi;
+
+				route = Lookup(destination,ndev);
+
+				//Found route; forward along
+				if(route)
+				{
+					ucb (ndev,route, packet, header);
+					return true;
+				}
 
 			}
 		}
@@ -1487,6 +1640,180 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 				entry -> m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
 			}
 			return true;
+		}else if(theader.Get() == mcast::GEOQUERY_REPLY)
+		{
+			NS_LOG_INFO("VANET NODE RECV GEOQUERY REPLY");
+
+			//Check zone; if incorrect zone then dont retransmit (Current implementation assuming 1 hop)
+			Ipv6Address currentAdd = m_ipv6 ->GetAddress(m_ipv6->GetInterfaceForDevice(m_wi),1).GetAddress();
+			Ipv6Address destination = header.GetDestinationAddress();
+
+			uint8_t currentBytes[16];
+			uint8_t destBytes[16];
+
+			currentAdd.GetBytes(currentBytes);
+			destination.GetBytes(destBytes);
+
+			bool correctZone = true;
+			for(int i = 0; i < 8; i++)
+			{
+				if(currentBytes[i] != destBytes[i])
+				{
+					correctZone = false;
+					break;
+				}
+			}
+
+			if(!correctZone)
+			{
+				//Same zone, don't do anything here
+				return true;
+			}else
+			{
+				NS_LOG_INFO("RECV GEOREPLY ON VANET NODE IN TARGET ZONE");
+
+				//Check if current address equal to destination or if
+				Ipv6Address destination = header.GetDestinationAddress();
+
+				//std::cout << "Internet Rsu to Vanet destination: " << destination << std::endl;
+
+				NS_LOG_LOGIC("Destination: " << destination << " Interface for address: " << m_ipv6 -> GetInterfaceForAddress(destination));
+				NS_LOG_LOGIC("Current address: " <<  m_ipv6->GetAddress(m_ipv6 -> GetInterfaceForDevice(m_wi),1));
+				if(m_ipv6 -> GetInterfaceForAddress(destination) != -1 && CheckHostBits(destination))
+				{
+					//Received query reply for this node, remove all headers and send upwards
+					//Remove headers before forwarding up, maybe thats causing the problem??
+					mcast::TypeHeader typeHeader (mcast::UNKNOWN);
+					packet -> RemoveHeader(typeHeader);
+
+					GeoReplyHeader Gh;
+					packet -> RemoveHeader(Gh);
+
+					int32_t iif = m_ipv6->GetInterfaceForDevice (idev);
+					lcb (packet, header, iif);
+
+
+					//Need to send am ACK packet to allow others to clear caches
+					Ptr<Packet> ackPacket = Create<Packet> ();
+
+					mcast::TypeHeader ackHeader (mcast::GEOREPLY_VANET_ACK);
+
+					ackPacket -> AddHeader(Gh);
+					ackPacket -> AddHeader(ackHeader);
+
+					Ptr<Ipv6Route> ackEntry = Create<Ipv6Route> ();
+					ackEntry -> SetDestination(Ipv6Address(VANET_TO_RSU));
+					ackEntry -> SetGateway(Ipv6Address(VANET_TO_RSU));
+					ackEntry -> SetOutputDevice(m_wi);
+					ackEntry -> SetSource(Ipv6Address(VANET_TO_RSU));
+
+					//Send Ack Message
+					ucb (m_wi,ackEntry, ackPacket, header);
+
+					return true;
+				}else
+				{
+					//For other node start retransmission process
+
+					//Remove headers before forwarding up, maybe thats causing the problem??
+					mcast::TypeHeader typeHeader (mcast::UNKNOWN);
+					packet -> RemoveHeader(typeHeader);
+
+					GeoReplyHeader Gh;
+					packet -> RemoveHeader(Gh);
+
+					if(m_isStrictEffective)
+					{
+						//VANET routing mode is strictly effective; check effectivity of retransmitting
+						if(!IsEffectiveV2VTransmission(Gh.GetSenderPosition(),Gh.GetPredictedPosition()))
+						{
+							return true;
+						}
+					}
+
+					//Check hop count; if exceed max then drop packets
+					//std::cout << "Checking hop count limit of: " << (unsigned)m_hopCountLimit << std::endl;
+					if(Gh.GetHopCount() > m_hopCountLimit)
+					{
+						return true;
+					}
+
+					///////////////////////////////////////////////////////////////////////////////////////////////////
+
+					Time backoff = GetV2VBackoffDuration(Gh.GetSenderPosition(), Gh.GetPredictedPosition());
+					Ipv6Address source = header.GetSourceAddress();
+					Ipv6Address destination = header.GetDestinationAddress();
+					Time timeStamp = Gh.GetOriginalTimestamp();
+
+					bool CacheContains = m_GeoReplyQueue.Lookup(source, destination, timeStamp);
+					if(CacheContains)
+					{
+
+						//Cache contains entry with the source,destination,timestamp tuple already (Stop timer on retransmit and remove)
+						ThesisInternetQueueEntry * entry = m_GeoReplyQueue.GetRoutingEntry(source,destination,timeStamp);
+
+						//Stop timer before removing
+						entry -> m_RetransmitTimer.Cancel();
+
+						//Remove queue entry to stop retransmit
+						//					m_RoutingCache.RemoveRoutingQueueEntry(source,destination,timeStamp);
+
+						//Schedule remove with delay
+						entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveGeoReplyQueue, this);
+						entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
+						entry->m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
+
+					}else
+					{
+						//Re-Add headers before placing into queue
+						packet ->AddHeader(Gh);
+						packet ->AddHeader(typeHeader);
+
+						//Cache does not contain and entry with the tuple (Add to cache and start timer on retransmit
+						ThesisInternetQueueEntry * entry = new ThesisInternetQueueEntry(packet, header, ucb, ecb, timeStamp);
+
+						//Timer * toRetransmit = entry -> GetTimer();
+
+						entry->m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::SendInternetRetransmitIntoVanet, this);
+						entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
+						entry->m_RetransmitTimer.Schedule(backoff);
+
+						m_RoutingRtoVCache.AddRoutingEntry(entry);
+
+						return true;
+					}
+
+
+				}
+			}
+
+			return true;
+		}else if(theader.Get() == mcast::GEOREPLY_VANET_ACK)
+		{
+			NS_LOG_INFO("RECV Geo REPLY on VANET");
+			//Need to clear cached retransmissions
+			mcast::TypeHeader ack(mcast::UNKNOWN);
+			packet -> RemoveHeader(ack);
+
+			GeoReplyHeader Gh;
+			packet -> RemoveHeader(Gh);
+
+			//Schedule removal with delay
+			Ipv6Address source = header.GetSourceAddress();
+			Ipv6Address destination = header.GetSourceAddress();
+			Time sendTime = Gh.GetOriginalTimestamp();
+
+			if(m_RoutingCache.Lookup(source,destination,sendTime))
+			{
+
+				ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,sendTime);
+				//Schedule removal of entry
+				entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveGeoReplyQueue, this);
+				entry -> m_RetransmitTimer.SetArguments(source,destination,sendTime);
+				entry -> m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
+			}
+
+			return true;
 		}
 	}
 
@@ -1547,6 +1874,64 @@ ThesisInternetRoutingProtocol2::CheckHostBits(Ipv6Address hostAddress)
 	}
 
 	return toReturn;
+}
+
+void
+ThesisInternetRoutingProtocol2::SendGeoReplyRetransmitVanet(Ipv6Address source, Ipv6Address destination, Time timestamp)
+{
+	NS_LOG_FUNCTION(this);
+
+	ThesisInternetQueueEntry * entry = m_RoutingRtoVCache.GetRoutingEntry(source,destination,timestamp);
+	UnicastForwardCallback ucb = entry -> GetUnicastForwardCallback();
+
+	//Get mobility model properties and extract values needed for header
+	Ptr<MobilityModel> mobility = m_ipv6 -> GetObject<MobilityModel>();
+	Vector position = mobility -> GetPosition();
+	Vector velocity = mobility -> GetVelocity();
+
+	Ptr<Packet> packet = entry -> GetPacket();
+
+	//Remove headers to modify Internet header - need to change sender parameters
+	mcast::TypeHeader theader (mcast::UNKNOWN);
+	packet -> RemoveHeader(theader);
+
+	GeoReplyHeader Gh;
+	packet -> RemoveHeader(Gh);
+
+	//Update sender position and velocity
+	Gh.SetSenderPosition(position);
+	Gh.SetSenderVelocity(velocity);
+
+	//Update hop count
+	uint8_t newHopCount = Gh.GetHopCount() + 1;
+	Gh.SetHopCount(newHopCount);
+
+	//Re-add headers
+	packet -> AddHeader(Gh);
+	packet -> AddHeader(theader);
+
+	//Create route to send forward packet
+	Ptr<Ipv6Route> route = Create<Ipv6Route>();
+
+	route -> SetDestination(destination);
+	route -> SetSource(source);
+	route -> SetOutputDevice(m_wi);
+	route -> SetGateway(Ipv6Address(RSU_TO_VANET));
+
+	if(m_RoutingRtoVCache.Lookup(source,destination,timestamp))
+	{
+
+		ThesisInternetQueueEntry * entry = m_RoutingRtoVCache.GetRoutingEntry(source,destination,timestamp);
+		//Schedule removal of entry
+		entry-> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveGeoReplyQueue, this);
+		entry-> m_RetransmitTimer.SetArguments(source,destination,timestamp);
+		entry-> m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
+	}
+
+	//NS_LOG_INFO(""packet);
+
+	ucb (route -> GetOutputDevice(),route, packet, entry -> GetIpv6Header());
+
 }
 
 void
@@ -1892,6 +2277,12 @@ void
 ThesisInternetRoutingProtocol2::RemoveThesisRoutingRtVCacheEntry(Ipv6Address source, Ipv6Address destination, Time sendTime)
 {
 	m_RoutingRtoVCache.RemoveRoutingQueueEntry(source,destination,sendTime);
+}
+
+void
+ThesisInternetRoutingProtocol2::RemoveGeoReplyQueue(Ipv6Address source, Ipv6Address destination, Time sendTime)
+{
+	m_GeoReplyQueue.RemoveRoutingQueueEntry(source,destination,sendTime);
 }
 
 Ptr<Ipv6Route>
