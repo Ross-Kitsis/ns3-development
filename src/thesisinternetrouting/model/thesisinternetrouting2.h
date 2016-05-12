@@ -308,6 +308,21 @@ public:
 	 */
 	DbEntry m_currentRsu;
 
+	/**
+	 * Pointer to the loopback netdevice
+	 */
+	Ptr<NetDevice> m_lo;
+
+	/**
+	 * Pointer to the wifi netdevice
+	 */
+	Ptr<NetDevice> m_wi;
+
+	/**
+	 * Pointer to the point2point netdevice
+	 */
+	Ptr<NetDevice> m_pp;
+
 protected:
 
 	Vector m_GeoQueryPosition;
@@ -414,20 +429,7 @@ private:
 	 */
 	bool m_hasMcast;
 
-	/**
-	 * Pointer to the loopback netdevice
-	 */
-	Ptr<NetDevice> m_lo;
 
-	/**
-	 * Pointer to the wifi netdevice
-	 */
-	Ptr<NetDevice> m_wi;
-
-	/**
-	 * Pointer to the point2point netdevice
-	 */
-	Ptr<NetDevice> m_pp;
 
 	/**
 	 * Pointer to Ipv6StaticRouting (Used by RSU)

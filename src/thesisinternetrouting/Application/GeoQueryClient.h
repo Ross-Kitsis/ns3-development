@@ -36,6 +36,21 @@ public:
 
 	void SetRsuDatabase(Ptr<Db> db);
 
+  double GetReceiveRate() {return m_numReceived/(double)m_sent;}
+  int32_t GetNumReceived(){return m_numReceived;}
+  int32_t GetNumSourced(){return m_sent;}
+  Time GetAverageLatency()
+  {
+  	if(m_numReceived == 0)
+  	{
+  		return Time(Seconds(0));
+  	}else
+  	{
+  		return m_RTT/m_numReceived;
+  	}
+  }
+
+
 protected:
 	virtual void DoDispose (void);
 

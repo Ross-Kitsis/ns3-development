@@ -151,9 +151,9 @@ GeoQueryServer::HandleRead (Ptr<Socket> socket)
   while ((packet = socket->RecvFrom (from)))
     {
   		Ipv6Address toSend = Inet6SocketAddress::ConvertFrom(from).GetIpv6();
-  		std::cout << "1 GeoQuery Server received packet from: " << toSend << std::endl;
-  		std::cout << "2 GeoQuery Server received packet from: " << toSend << std::endl;
-  		std::cout << "3 GeoQuery Server received packet from: " << toSend << std::endl;
+  		//std::cout << "1 GeoQuery Server received packet from: " << toSend << std::endl;
+  		//std::cout << "2 GeoQuery Server received packet from: " << toSend << std::endl;
+  		//std::cout << "3 GeoQuery Server received packet from: " << toSend << std::endl;
 
 
 

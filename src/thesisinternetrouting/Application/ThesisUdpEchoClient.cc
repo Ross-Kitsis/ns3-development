@@ -396,6 +396,7 @@ ThesisUdpEchoClient::Send (void)
 
 	if (m_sent < m_count)
 	{
+		//ScheduleTransmit (m_interval + MilliSeconds(std::rand()%100));
 		ScheduleTransmit (m_interval + MilliSeconds(std::rand()%1000));
 	}else
 	{
