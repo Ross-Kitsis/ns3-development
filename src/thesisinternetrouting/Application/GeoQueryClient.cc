@@ -166,7 +166,34 @@ GeoQueryClient::ScheduleTransmit (Time dt)
 	Vector toQuery;
 	//Ptr<Node> theNode = GetObject<Node>();
 	//Ptr<Ipv6> v6 = theNode -> GetObject<Ipv6>();
-	Ptr<thesis::ThesisInternetRoutingProtocol2> routing = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(ipv6 -> GetRoutingProtocol());
+
+	/////////////////////////////////////////////////
+	///// Need to modify based on if using list routing
+	//// Or regular routing
+
+
+	//Regular
+//	Ptr<thesis::ThesisInternetRoutingProtocol2> routing = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(ipv6 -> GetRoutingProtocol());
+
+	//List Routing
+
+	Ptr<Ipv6ListRouting> lr = DynamicCast<Ipv6ListRouting>(ipv6 -> GetRoutingProtocol());
+	thesis::ThesisInternetRoutingProtocol2 th;
+	Ptr<thesis::ThesisInternetRoutingProtocol2> routing;
+
+	int16_t interface;
+	for(uint32_t j = 0; j < lr ->GetNRoutingProtocols(); j++)
+	{
+
+		if(lr -> GetRoutingProtocol(j,interface) -> GetInstanceTypeId().GetName().compare(th.GetTypeId().GetName()) == 0)
+		{
+			//std::cout << "Cast Succeeded" << std::endl;
+			routing = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(lr -> GetRoutingProtocol(j,interface));
+			break;
+		}
+	}
+
+	//////////////////////////////////////////////////
 
 	Ipv6Address rsu = routing -> m_currentRsu.GetRsuAddress();
 	bool locFound = false;
@@ -221,6 +248,8 @@ GeoQueryClient::ScheduleTransmit (Time dt)
 	//	m_sendEvent = Simulator::Schedule (dt, &GeoQueryClient::Send, this);
 	//	Ipv6Address peer()
 
+	std::cout << "Got Here in geo client" << std::endl;
+
 	m_sendEvent = Simulator::Schedule (dt, &GeoQueryClient::Send, this);
 
 }
@@ -241,6 +270,10 @@ GeoQueryClient::Send (void)
 	Time currentTime = Simulator::Now();
 
 	int64_t currentNS = currentTime.GetNanoSeconds();
+
+//	std::cout << std::endl;
+//	std::cout << "GeoClient Sending at Time: " << currentTime.GetNanoSeconds() << std::endl;
+//	std::cout << std::endl;
 
 	/*
 		  uint8_t * timeData = new uint8_t[8];
@@ -288,17 +321,20 @@ GeoQueryClient::Send (void)
 
 	//int conRes = m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
 
-	m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
+//	m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
 
 	Ptr<Ipv6> ipv6 = GetNode ()->GetObject<Ipv6> ();
 	Ptr<thesis::ThesisInternetRoutingProtocol2> routing = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(ipv6 -> GetRoutingProtocol());
 
 
-//	m_socket -> SendTo(p,0,m_peerAddress);
+	Inet6SocketAddress toSendAdd(Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort);
 
-	m_socket->Send (p);
+//	std::cout << m_peerAddress << std::endl;
+	/*int s =*/ m_socket -> SendTo(p,0,toSendAdd);
+
+//	m_socket->Send (p);
 	//int sendRes = m_socket->SendTo(p,1,m_peerAddress);
-	//std::cout << "GeoClient send results: " << conRes << std::endl;
+//	std::cout << "GeoClient send results: " << s << std::endl;
 
 	++m_sent;
 
@@ -382,6 +418,12 @@ GeoQueryClient::HandleRead (Ptr<Socket> socket)
 		uint64_t NSValue = atoll(final.c_str());
 
 		Time timestamp = Time::FromInteger(NSValue, Time::NS);
+
+	//	std::cout << std::endl;
+	//	std::cout << "GeoClient received Timestamp: " << timestamp << std::endl;
+	//	std::cout << std::endl;
+
+
 		for(TransmissionsIt it = m_sourcedTrans.begin(); it != m_sourcedTrans.end(); it++)
 		{
 			if(it -> SendTime == timestamp)

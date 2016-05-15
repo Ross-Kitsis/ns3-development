@@ -147,6 +147,10 @@ TypeHeader::Deserialize (Buffer::Iterator start)
 	{
 		m_type = (MessageType) type;
 		break;
+	}case GEOREPLY_RSU_REDIRECT:
+	{
+		m_type = (MessageType) type;
+		break;
 	}
 
 	default:
@@ -224,6 +228,10 @@ TypeHeader::Print (std::ostream &os) const
 	}case GEOQUERY_SENDINGREPLY:
 	{
 		os  << "GeoQuery Sending Reply" << std::endl;
+		break;
+	}case GEOREPLY_RSU_REDIRECT:
+	{
+		os << "GeoReply RSU Redirect" << std::endl;
 		break;
 	}
 

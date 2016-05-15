@@ -21,6 +21,7 @@
 #include "ns3/thesisinternetrouting2.h"
 #include "ns3/thesisinternetrouting-helper2.h"
 #include "ns3/ThesisPing6Helper.h"
+#include "ns3/GeoQueryClient.h"
 
 #include "ns3/Db.h"
 
@@ -35,9 +36,14 @@
 
 #include "ns3/flow-monitor.h"
 
+#include "ns3/GeoClientHelper.h"
+#include "ns3/GeoQueryServerHelper.h"
+#include "ns3/GeoQueryClient.h"
+
+
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("ThesisRoutingNsMobility");
+NS_LOG_COMPONENT_DEFINE("ThesisRoutingGeo");
 
 int main (int argc, char *argv[])
 {
@@ -45,13 +51,13 @@ int main (int argc, char *argv[])
 	if(debug)
 	{
 		//Define compnents to log
-		//LogComponentEnable ("Ipv6L3Protocol", LOG_LEVEL_ALL);
-		//LogComponentEnable ("Icmpv6L4Protocol", LOG_LEVEL_ALL);
+		LogComponentEnable ("Ipv6L3Protocol", LOG_LEVEL_ALL);
+		LogComponentEnable ("Icmpv6L4Protocol", LOG_LEVEL_ALL);
 	  //LogComponentEnable ("Ipv6StaticRouting", LOG_LEVEL_ALL);
-		//LogComponentEnable ("Ipv6Interface", LOG_LEVEL_ALL);
-		//LogComponentEnable ("ThesisInternetRoutingProtocol2", LOG_LEVEL_ALL);
+		LogComponentEnable ("Ipv6Interface", LOG_LEVEL_ALL);
+		LogComponentEnable ("ThesisInternetRoutingProtocol2", LOG_LEVEL_ALL);
 		//LogComponentEnable ("ThesisUdpEchoServerApplication", LOG_LEVEL_ALL);
-		LogComponentEnable ("WifiMacQueue",LOG_LEVEL_ALL);
+
 	}
 
 	uint32_t nVeh = 2; //Number of vehicle
@@ -63,7 +69,7 @@ int main (int argc, char *argv[])
 	uint32_t packetSize = 1024; //Size of packet to send in bytes
 	uint32_t maxPacketCount = 200; //Maximum number of packets to send
 	double transmittingPercentage = 0.1; //Percentage of vanet nodes generating packets
-	std::string m_CSVfileName = "ThesisInternetRoutingNSMobility.csv";
+	std::string m_CSVfileName = "GeoQuery.csv";
 	std::string m_TraceFile = "";
 	int packetSendFrequency = 1;
 
@@ -167,10 +173,6 @@ int main (int argc, char *argv[])
 	Ipv6StaticRoutingHelper staticRoutingHelper;
 	ThesisInternetRoutingHelper2 tihelper;
 
-	//Increase rwait
-	tihelper.Set("rWait",UintegerValue(100000));
-
-
 	//m_rng = CreateObject<UniformRandomVariable>();
 	Ptr<Db> RsuDatabase = CreateObject<Db>();
 
@@ -194,10 +196,8 @@ int main (int argc, char *argv[])
 	wifiMac.SetType ("ns3::AdhocWifiMac");
 
 	YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
-	wifiPhy.Set ("TxPowerStart", DoubleValue (25.0) );
-	wifiPhy.Set ("TxPowerEnd", DoubleValue (25.0) );
-//	wifiPhy.Set ("TxPowerStart", DoubleValue (16.5) );
-//	wifiPhy.Set ("TxPowerEnd", DoubleValue (16.5) );
+	wifiPhy.Set ("TxPowerStart", DoubleValue (20.0) );
+	wifiPhy.Set ("TxPowerEnd", DoubleValue (20.0) );
 	wifiPhy.Set ("TxPowerLevels", UintegerValue(1) );
 	wifiPhy.Set ("TxGain", DoubleValue (1) );
 	wifiPhy.Set ("RxGain", DoubleValue (1) );
@@ -294,17 +294,34 @@ int main (int argc, char *argv[])
 	 */
 ////////////////////////////////////////////////////////
 
-	Ptr<Node> sink = Hub.Get(0);
-
-	Ipv6Address sinkAdd = sink -> GetObject<Ipv6>() -> GetAddress(1,1).GetAddress();
-
   NS_LOG_INFO ("Create Applications.");
 
-  uint16_t port = 9;  // well-known echo port number
+  uint16_t port = 123;  // well-known echo port number
+/*
   ThesisUdpEchoServerHelper server (port);
   ApplicationContainer apps = server.Install (sink);
   apps.Start (Seconds (1.0));
   apps.Stop (Seconds (simTime -1));
+*/
+
+  //Install geoquery server on all nodes
+  /*
+  for(uint32_t i = 0; i < VehNodes.GetN(); i++)
+  {
+  	Ptr<Node> sink = VehNodes.Get(i);
+
+  	Ipv6Address sinkAdd = sink -> GetObject<Ipv6>() -> GetAddress(1,1).GetAddress();
+
+  	NS_LOG_INFO ("Add Geo Servers to all Veh Nodes");
+
+  	//uint16_t port = 123;  // well-known echo port number
+  	GeoQueryServerHelper server (port);
+  	ApplicationContainer apps = server.Install (sink);
+  	apps.Start (Seconds (1.0));
+  	apps.Stop (Seconds (simTime -1));
+  }*/
+
+  //Server integrated into routing protocol now
 
 	////////////////// Create container with nodes which will be sending data
 	//Will need to be modified later to add more source nodes
@@ -326,16 +343,18 @@ int main (int argc, char *argv[])
 		source = SourceNodes.Get(i);
 		sourceAdd = source -> GetObject<Ipv6>() -> GetAddress(1,1).GetAddress();
 		//
-		// Create a UdpEchoServer application hub
+		// Create a GeoQuery application hub
 		//
 		//uint32_t packetSize = 1024;
 	  //uint32_t maxPacketCount = 200;
 	  Time interPacketInterval = Seconds (1.0/packetSendFrequency);
-	  ThesisUdpEchoClientHelper client (sinkAdd, port);
-	  client.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
-	  client.SetAttribute ("Interval", TimeValue (interPacketInterval));
-	  client.SetAttribute ("PacketSize", UintegerValue (packetSize));
-	  sourceApps = client.Install (source);
+		GeoClientHelper geoclient(port);
+		geoclient.SetRsuDatabase(RsuDatabase);
+
+		geoclient.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
+		geoclient.SetAttribute ("Interval", TimeValue (interPacketInterval));
+
+	 	sourceApps = geoclient.Install (source);
 	  sourceApps.Start (Seconds (6.0));
 	  sourceApps.Stop (Seconds (simTime -1));
 	}
@@ -362,24 +381,12 @@ int main (int argc, char *argv[])
 
 //////////////////////////////////////////////////////////////////////////
 
-  Names::Add("WifiNode1", source);
-  Names::Add("Hub", sink);
-
   //Set ipv6 forwarding
 	for(uint32_t i = 0; i < AllNodes.GetN();i++)
 	{
 		Ptr<Ipv6> v6 = AllNodes.Get(i)->GetObject<Ipv6>();
 		v6 ->SetAttribute("IpForward",BooleanValue(true));
 		v6 ->SetAttribute("SendIcmpv6Redirect",BooleanValue(false));
-	}
-
-	for(uint32_t i = 0; i < VehNodes.GetN();i++)
-	{
-  	Ptr<Node> sNode = VehNodes.Get(i);
-		Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
-		Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
-
-		sntr -> setRwait(50);
 	}
 
 //  Ptr<OutputStreamWrapper> routingStream = Create<OutputStreamWrapper> (&std::cout);
@@ -410,27 +417,6 @@ int main (int argc, char *argv[])
 		}
 	}
 */
-	Ptr<Ipv6> sourcev6 = source -> GetObject<Ipv6>();
-	Ptr<thesis::ThesisInternetRoutingProtocol2> tr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sourcev6 -> GetRoutingProtocol());
-
-	int numSent = tr -> GetNumSourced();
-	int numRec  = tr -> GetNumReceived();
-	double recRate =  tr -> GetReceiveRate();
-	Time aRTT = tr->GetAverageLatency();
-	double avgHopCount = tr->GetAverageHopCountRsuToVanet();
-/*
-  std::ofstream out (m_CSVfileName.c_str (), std::ios::app);
-
-  out << (Simulator::Now ()).GetSeconds () << ","
-      << kbs << ","
-      << packetsReceived << ","
-      << m_nSinks << ","
-      << m_protocolName << ","
-      << m_txp << ""
-      << std::endl;
-
-  out.close ();
-	*/
 
   std::ofstream out (m_CSVfileName.c_str (), std::ios::app);
 
@@ -457,10 +443,11 @@ int main (int argc, char *argv[])
   	Ptr<Node> sNode = SourceNodes.Get(i);
   	Ptr<Application> app = sNode -> GetApplication(0);
   	//Ptr<ThesisUdpEchoClient> udpEcho =  DynamicCast<ThesisUdpEchoClient>(app);
-  	Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
-  	Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
+  	//Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
+  	//Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
+  	Ptr<GeoQueryClient> gc =  DynamicCast<GeoQueryClient>(app);
 
-  	out << sntr -> GetNumSourced() << ",";
+  	out << gc -> GetNumSourced() << ",";
   }
   out << std::endl;
 
@@ -471,10 +458,13 @@ int main (int argc, char *argv[])
   	Ptr<Node> sNode = SourceNodes.Get(i);
   	Ptr<Application> app = sNode -> GetApplication(0);
   	//Ptr<ThesisUdpEchoClient> udpEcho =  DynamicCast<ThesisUdpEchoClient>(app);
-  	Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
-  	Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
+  	//Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
+  	//Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
 
-  	out << sntr -> GetNumReceived() << ",";
+
+  	Ptr<GeoQueryClient> gc =  DynamicCast<GeoQueryClient>(app);
+  	out << gc -> GetNumReceived() << ",";
+
   }
   out << std::endl;
 
@@ -485,10 +475,14 @@ int main (int argc, char *argv[])
   	Ptr<Node> sNode = SourceNodes.Get(i);
   	Ptr<Application> app = sNode -> GetApplication(0);
   	//Ptr<ThesisUdpEchoClient> udpEcho =  DynamicCast<ThesisUdpEchoClient>(app);
-  	Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
-  	Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
+  	//Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
+  	//Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
 
-  	out << sntr -> GetReceiveRate() << ",";
+  	//out << sntr -> GetReceiveRate() << ",";
+
+  	Ptr<GeoQueryClient> gc =  DynamicCast<GeoQueryClient>(app);
+  	out << gc -> GetReceiveRate() << ",";
+
   }
   out << std::endl;
 
@@ -499,134 +493,18 @@ int main (int argc, char *argv[])
   	Ptr<Node> sNode = SourceNodes.Get(i);
   	Ptr<Application> app = sNode -> GetApplication(0);
   	//Ptr<ThesisUdpEchoClient> udpEcho =  DynamicCast<ThesisUdpEchoClient>(app);
-  	Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
-  	Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
+  	//Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
+  	//Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
 
-  	out << sntr -> GetAverageLatency() << ",";
-  }
-  out << std::endl;
-
-  //Print average route trip time
-  out << "AverageHopCountRsuToNode,";
-  for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
-  {
-  	Ptr<Node> sNode = SourceNodes.Get(i);
-  	Ptr<Application> app = sNode -> GetApplication(0);
-  	//Ptr<ThesisUdpEchoClient> udpEcho =  DynamicCast<ThesisUdpEchoClient>(app);
-  	Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
-  	Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
-
-  	out << sntr -> GetAverageHopCountRsuToVanet() << ",";
-  }
-  out << std::endl;
-
-
-
-/*
- *
- *
- *  	Ptr<Application> app = sNode -> GetApplication(0);
-  	Ptr<ThesisUdpEchoClient> udpEcho =  DynamicCast<ThesisUdpEchoClient>(app);
-
- *
-	//out << "";
-	if(app)
-	{
-		//std::cout << "App name: " <<app -> GetInstanceTypeId().GetName() << std::endl;
-
-	}else
-	{
-		std::cout << "Could not get app" << std::endl;
-
-	}
-*/
-
-	std::cout << "Node: " << source->GetId() << "Num Packets sent: " << numSent << std::endl;
-	std::cout << "Node: " << source->GetId() << "Num Packets received: " << numRec << std::endl;
-	std::cout << "Node: " << source->GetId() << "Receive rate: " << recRate << std::endl;
-	std::cout << "Node: " << source->GetId() << "Average RTT: " << aRTT << std::endl;
-	std::cout << "Node: " << source->GetId() << "Average Hop Count (RSU to Node): " << avgHopCount << std::endl;
-
-	for(uint32_t i = 0; i < RSU.GetN(); i++)
-	{
-		Ptr<Ipv6> rsuv6 = RSU.Get(i) -> GetObject<Ipv6>();
-		Ptr<Ipv6ListRouting> lr = DynamicCast<Ipv6ListRouting>(rsuv6 -> GetRoutingProtocol());
-		thesis::ThesisInternetRoutingProtocol2 th;
-		Ptr<thesis::ThesisInternetRoutingProtocol2> toExtract;
-
-		int16_t interface;
-		for(uint32_t j = 0; j < lr ->GetNRoutingProtocols(); j++)
-		{
-			if(lr -> GetRoutingProtocol(j,interface) -> GetInstanceTypeId().GetName().compare(th.GetTypeId().GetName()) == 0)
-			{
-				toExtract = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(lr -> GetRoutingProtocol(j,interface));
-				break;
-			}
-		}
-
-		double avgNtoR = toExtract -> GetAverageHopCountVanetToRsu();
-		std::cout << "RSU: " << RSU.Get(i)->GetId() << " Average Hop Count (Node to RSU): " << avgNtoR << std::endl;
-
-	}
-
-  out << std::endl;
-
-  //Print Rsu numbers for header in csv file
-  out<<",";
-	for(uint32_t i = 0; i < RSU.GetN(); i++)
-	{
-		out << "RSU: " << i <<",";
-	}
-	out <<std::endl;
-
-	out << "AverageHopCountVanetToRsu,";
-	for(uint32_t i = 0; i < RSU.GetN(); i++)
-	{
-		Ptr<Ipv6> rsuv6 = RSU.Get(i) -> GetObject<Ipv6>();
-		Ptr<Ipv6ListRouting> lr = DynamicCast<Ipv6ListRouting>(rsuv6 -> GetRoutingProtocol());
-		thesis::ThesisInternetRoutingProtocol2 th;
-		Ptr<thesis::ThesisInternetRoutingProtocol2> toExtract;
-
-		int16_t interface;
-		for(uint32_t j = 0; j < lr ->GetNRoutingProtocols(); j++)
-		{
-			if(lr -> GetRoutingProtocol(j,interface) -> GetInstanceTypeId().GetName().compare(th.GetTypeId().GetName()) == 0)
-			{
-				toExtract = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(lr -> GetRoutingProtocol(j,interface));
-				break;
-			}
-		}
-
-		double avgNtoR = toExtract -> GetAverageHopCountVanetToRsu();
-		out << avgNtoR <<",";
-	}
-	out << std::endl;
-
-
-	int totalNumRec = 0;
-  //Print network throughput
-  out << "Throughput (kbits/sec),";
-  for(uint32_t i = 0; i < SourceNodes.GetN(); i++)
-  {
-  	Ptr<Node> sNode = SourceNodes.Get(i);
-  	Ptr<Application> app = sNode -> GetApplication(0);
-  	//Ptr<ThesisUdpEchoClient> udpEcho =  DynamicCast<ThesisUdpEchoClient>(app);
-  	Ptr<Ipv6> sNodev6 = sNode -> GetObject<Ipv6>();
-  	Ptr<thesis::ThesisInternetRoutingProtocol2> sntr = DynamicCast<thesis::ThesisInternetRoutingProtocol2>(sNodev6 -> GetRoutingProtocol());
-
-  	//double throughput = 0.0;
-
-  	totalNumRec += sntr -> GetNumReceived();
+  	//out << sntr -> GetAverageLatency() << ",";
+  	Ptr<GeoQueryClient> gc =  DynamicCast<GeoQueryClient>(app);
+  	out << gc -> GetAverageLatency() << ",";
 
   }
-	//-6 for app start time
-	out << (totalNumRec * packetSize * 8)/(simTime - 6 )/1024.0 << ",";
-	out << std::endl;
+  out << std::endl;
 
   out << std::endl;
-	out << "," << std::endl;
-	out << std::endl;
-
+  out << std::endl;
 	////////////////////////////////////////////
 
 	Simulator::Destroy ();

@@ -92,6 +92,32 @@ ThesisInternetRoutingQueue::GetRoutingEntry(Ipv6Address source, Ipv6Address dest
 	return toReturn;
 }
 
+int
+ThesisInternetRoutingQueue::GetNumActive(Time theshold, double factor)
+{
+	int numActive = 0;
+
+	for(RoutingQueueI it = m_queue.begin(); it != m_queue.end(); it++)
+	{
+		ThesisInternetQueueEntry * entry = it -> first;
+		Time setDelay = entry->GetInitialDelay();
+
+
+
+		//std::cout << "Delay: " << entry-> m_RetransmitTimer.GetDelay() << std::endl;
+		//std::cout << "Theshold: " << theshold << std::endl;
+		//std::cout << "Delay remaining: " << entry->m_RetransmitTimer.GetDelayLeft() << std::endl;
+		//std::cout << "Initial Delay: " << entry -> GetInitialDelay() << std::endl;
+
+		if(setDelay == theshold)
+		{
+			numActive++;
+		}
+	}
+
+	return numActive;
+}
+
 
 } /* namespace ns3 */
 }

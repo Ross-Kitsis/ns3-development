@@ -67,6 +67,16 @@ public:
 	LocalDeliveryCallback GetLocalDeliveryCallback() const {return m_lcb;}
 	void SetLocalDeliveryCallback (LocalDeliveryCallback lcb) {m_lcb = lcb;}
 
+	/*
+	 * The initial delay of the timer
+	 * Can be used for better timer management due to using
+	 * Schedule instead of set delay
+	 */
+	Time m_initialDelayTime;
+
+	Time GetInitialDelay() const { return m_initialDelayTime;}
+	void SetInitialDelay(Time initDelay) { m_initialDelayTime = initDelay;}
+
 
 private:
 
@@ -123,6 +133,14 @@ public:
 	 * Return routing entry
 	 */
 	ThesisInternetQueueEntry* GetRoutingEntry(Ipv6Address source, Ipv6Address destination, Time sendTime);
+
+	/**
+	 * Lookup the number of active cache entries
+	 * Active cache entries are defined as candidates for retransmission
+	 * The theshold parameter specified the cooldown period
+	 * Entries with the cooldown initial delay are inactive
+	 */
+	int GetNumActive(Time theshold, double factor);
 
 private:
 	/// Container for the network routes - pair RipNgRoutingTableEntry *, EventId (update event)

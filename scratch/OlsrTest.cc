@@ -128,7 +128,7 @@ OlsrTest::OlsrTest() :
   	  				step (100),
   	  				totalTime (95),
   	  				pcap (false),
-  	  				printRoutes (true),
+  	  				printRoutes (false),
   	  				nRSU(2),
   	  				nVeh(2),
   	  				numRsuRow(2),
@@ -156,7 +156,7 @@ OlsrTest::Configure (int argc, char **argv)
 	cmd.AddValue ("printRoutes", "Print routing table dumps.", printRoutes);
 	cmd.AddValue ("time", "Simulation time, s.", totalTime);
 	cmd.AddValue ("step", "Grid step, m", step);
-	cmd.AddValue ("nRsu", "Number of RSU",nRSU);
+	cmd.AddValue ("nRSU", "Number of RSU",nRSU);
 	cmd.AddValue ("nVeh", "Number of Vehicle nodes", nVeh);
 	cmd.AddValue ("nRsuRow", "Number of RSU in a row", numRsuRow);
 	cmd.AddValue ("nSendPerc", "Percentage of vehicular nodes acting as sources",transmittingPercentage);
@@ -306,7 +306,27 @@ OlsrTest::Run ()
 		out << ar->GetAverageHopCountVanetToRsu() <<",";
 	}
 	out << std::endl;
+	out << std::endl;
 
+	int totalNumRec = 0;
+	//Print network throughput
+	out << "Throughput (kbits/sec),";
+	for(uint32_t i = 1; i < SourceNodes.GetN(); i++)
+	{
+		Ptr<Node> sNode = SourceNodes.Get(i);
+		Ptr<Application> app = sNode -> GetApplication(0);
+		Ptr<TestUdpEchoClient> udpEcho =  DynamicCast<TestUdpEchoClient>(app);
+
+		int numRec = udpEcho -> GetNumReceived();
+
+		if(udpEcho -> GetReceiveRate() <= 100)
+		{
+			totalNumRec = totalNumRec + numRec;
+		}
+	}
+	//-6 for app start time
+	out << (totalNumRec * packetSize * 8)/(simTime - 6 )/1024.0 << ",";
+	out << std::endl;
 
 
 	Simulator::Destroy ();
@@ -362,7 +382,7 @@ OlsrTest::CreateNodes ()
 			"LayoutType", StringValue ("RowFirst"));
 	mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
 	mobility.Install(RsuNodes);
-	mobility.Install(VehNodes);
+	//mobility.Install(VehNodes);
 
 	/*
   //Place RSU nodes
@@ -374,11 +394,11 @@ OlsrTest::CreateNodes ()
   }*/
 
 
-/*
+
 	Ns2MobilityHelper ns2 = Ns2MobilityHelper (m_TraceFile);
 	ns2.Install(VehNodes.Begin(), VehNodes.End());
-*/
 
+/*
   //Place Vanet nodes
   for (uint32_t i = 0; i < VehNodes.GetN(); ++i)
   {
@@ -386,6 +406,7 @@ OlsrTest::CreateNodes ()
   	Vector VPos(400 - 100*i ,499,0);
   	VLoc -> SetPosition(VPos);
   }
+  */
 }
 
 void
@@ -398,11 +419,11 @@ OlsrTest::CreateDevices ()
 	NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
 	wifiMac.SetType ("ns3::AdhocWifiMac");
 	YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
-	//wifiPhy.Set ("TxPowerStart", DoubleValue (25.0) );
-	//wifiPhy.Set ("TxPowerEnd", DoubleValue (25.0) );
-	//wifiPhy.Set ("TxPowerLevels", UintegerValue(1) );
-	//wifiPhy.Set ("TxGain", DoubleValue (1) );
-	//wifiPhy.Set ("RxGain", DoubleValue (1) );
+	wifiPhy.Set ("TxPowerStart", DoubleValue (25.0) );
+	wifiPhy.Set ("TxPowerEnd", DoubleValue (25.0) );
+	wifiPhy.Set ("TxPowerLevels", UintegerValue(1) );
+	wifiPhy.Set ("TxGain", DoubleValue (1) );
+	wifiPhy.Set ("RxGain", DoubleValue (1) );
 
 
 	YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();

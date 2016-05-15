@@ -106,6 +106,8 @@ ThesisInternetRoutingProtocol2::ThesisInternetRoutingProtocol2() :
 	m_HopCountAgregatorVanetToRsu = 0;
 	m_HopCountAgregatorRsuToVanet = 0;
 	m_numRsuRec = 0;
+	m_activeLimit = 30;
+	m_GeoServerPort = 123;
 	//m_ThesisInternetRoutingCacheCooldown = Seconds(5);
 	//m_hopCountLimit = 10;
 }
@@ -624,10 +626,10 @@ ThesisInternetRoutingProtocol2::RouteInputRsu (Ptr<const Packet> p, const Ipv6He
 						NS_LOG_INFO("GeoQuery Reply, node in a different zone, redirect");
 
 
-						std::cout << "GeoQuery Node predicted in another zone" << std::endl;
-						std::cout << "Destination Address: " << destination << std::endl;
-						std::cout << "Source: " << header.GetSourceAddress() << std::endl;
-						std::cout << "Predicted network: " << t1.GetRsuAddress() << std::endl;
+//						std::cout << "GeoQuery Node predicted in another zone" << std::endl;
+//						std::cout << "Destination Address: " << destination << std::endl;
+//						std::cout << "Source: " << header.GetSourceAddress() << std::endl;
+//						std::cout << "Predicted network: " << t1.GetRsuAddress() << std::endl;
 
 						//Predicted position in another zone
 
@@ -976,6 +978,22 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 			return true;
 		}
 
+		if(header.GetDestinationAddress().IsMulticast())
+		{
+			std::cout << "Got multicast destination" << std::endl;
+			Ptr<NetDevice> ndev = m_wi;
+			Ptr<Ipv6Route> route;
+			Ipv6Address destination = header.GetDestinationAddress();
+			route = Lookup(destination,ndev);
+			//Found route; forward along
+			if(route)
+			{
+				ucb (ndev,route, packet, header);
+				return true;
+			}
+			return true;
+		}
+
 
 		bool isInternet = false;
 		bool isGeoRequest = false;
@@ -1257,9 +1275,16 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 				entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveThesisRoutingCacheEntry, this);
 				entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
 				entry->m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
-
+				entry -> SetInitialDelay(m_ThesisInternetRoutingCacheCooldown);
 			}else
 			{
+				//Check if number of active transmissions greater than some value
+				//std::cout << "Active Cache size: " << m_RoutingCache.GetNumActive(m_ThesisInternetRoutingCacheCooldown,0.1) << std::endl;
+				if(m_RoutingCache.GetNumActive(m_ThesisInternetRoutingCacheCooldown, 0.1) > m_activeLimit)
+				{
+					return true;
+				}
+
 				//Re-Add headers before placing into queue
 				packet ->AddHeader(Ih);
 				packet ->AddHeader(typeHeader);
@@ -1270,6 +1295,8 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 				entry->m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::SendInternetRetransmit, this);
 				entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
 				entry->m_RetransmitTimer.Schedule(backoff);
+
+				entry -> SetInitialDelay(backoff);
 
 				m_RoutingCache.AddRoutingEntry(entry);
 
@@ -1362,7 +1389,8 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 					entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveGeoRoutingCacheEntry, this);
 					entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
 					entry->m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
-
+					entry -> SetInitialDelay(m_ThesisInternetRoutingCacheCooldown);
+					return true;
 				}else
 				{
 					//Re-Add headers before placing into queue
@@ -1375,6 +1403,8 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 					entry->m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::SendGeoQueryRetransmit, this);
 					entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
 					entry->m_RetransmitTimer.Schedule(backoff);
+
+					entry -> SetInitialDelay(backoff);
 
 					m_GeoRoutingQueue.AddRoutingEntry(entry);
 
@@ -1429,9 +1459,31 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 					entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
 					entry->m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
 
+					entry ->SetInitialDelay(m_ThesisInternetRoutingCacheCooldown);
+
 					return true;
 				}else
 				{
+
+					if(m_GeoQueryReplyCache.GetNumActive(m_ThesisInternetRoutingCacheCooldown,0.1) > m_activeLimit)
+					{
+						//Too many active elements already just cache and set for removal
+						packet ->AddHeader(Gh);
+						packet ->AddHeader(typeHeader);
+
+						//Cache does not contain and entry with the tuple (Add to cache and start timer on retransmit
+						ThesisInternetQueueEntry * entry = new ThesisInternetQueueEntry(packet, header, ucb, ecb, timeStamp, lcb);
+
+						entry->m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::SendGeoQueryReply, this);
+						entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
+						entry->m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
+
+						m_GeoQueryReplyCache.AddRoutingEntry(entry);
+
+						entry -> SetInitialDelay(m_ThesisInternetRoutingCacheCooldown);
+
+					}
+
 					//Re-Add headers before placing into queue
 					packet ->AddHeader(Gh);
 					packet ->AddHeader(typeHeader);
@@ -1444,6 +1496,8 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 					entry->m_RetransmitTimer.Schedule(toWait);
 
 					m_GeoQueryReplyCache.AddRoutingEntry(entry);
+
+					entry -> SetInitialDelay(toWait);
 
 					return true;
 				}
@@ -1598,8 +1652,17 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 					entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
 					entry->m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
 
+					entry -> SetInitialDelay(m_ThesisInternetRoutingCacheCooldown);
+
 				}else
 				{
+
+					if(m_RoutingRtoVCache.GetNumActive(m_ThesisInternetRoutingCacheCooldown, 0.1) > m_activeLimit)
+					{
+						return true;
+					}
+
+
 					//Re-Add headers before placing into queue
 					packet ->AddHeader(itvhdr);
 					packet ->AddHeader(typeHeader);
@@ -1614,6 +1677,8 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 					entry->m_RetransmitTimer.Schedule(backoff);
 
 					m_RoutingRtoVCache.AddRoutingEntry(entry);
+
+					entry -> SetInitialDelay(backoff);
 
 					return true;
 				}
@@ -1726,6 +1791,9 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 				entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveGeoRoutingCacheEntry, this);
 				entry -> m_RetransmitTimer.SetArguments(source,destination,sendTime);
 				entry -> m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
+
+				entry -> SetInitialDelay(m_ThesisInternetRoutingCacheCooldown);
+
 			}
 
 			return true;
@@ -1763,6 +1831,9 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 				entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveGeoQueryReplyCacheEntry, this);
 				entry -> m_RetransmitTimer.SetArguments(source,destination,sendTime);
 				entry -> m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
+
+				entry -> SetInitialDelay(m_ThesisInternetRoutingCacheCooldown);
+
 			}
 			return true;
 		}else if(theader.Get() == mcast::GEOQUERY_REPLY)
@@ -1889,6 +1960,10 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 						entry->m_RetransmitTimer.SetArguments(source,destination,timeStamp);
 						entry->m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
 
+						entry -> SetInitialDelay(m_ThesisInternetRoutingCacheCooldown);
+
+						return true;
+
 					}else
 					{
 						//Re-Add headers before placing into queue
@@ -1908,6 +1983,8 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 
 						m_GeoReplyQueue.AddRoutingEntry(entry);
 
+						entry -> SetInitialDelay(backoff);
+
 						return true;
 					}
 
@@ -1918,7 +1995,7 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 			return true;
 		}else if(theader.Get() == mcast::GEOREPLY_VANET_ACK)
 		{
-			NS_LOG_INFO("RECV Geo REPLY on VANET");
+			NS_LOG_INFO("RECV VANET ACK on VANET");
 			//Need to clear cached retransmissions
 			mcast::TypeHeader ack(mcast::UNKNOWN);
 			packet -> RemoveHeader(ack);
@@ -1931,14 +2008,23 @@ ThesisInternetRoutingProtocol2::RouteInputVanet (Ptr<const Packet> p, const Ipv6
 			Ipv6Address destination = header.GetSourceAddress();
 			Time sendTime = Gh.GetOriginalTimestamp();
 
-			if(m_RoutingCache.Lookup(source,destination,sendTime))
+
+			if(m_GeoReplyQueue.Lookup(source,destination,sendTime))
 			{
 
-				ThesisInternetQueueEntry * entry = m_RoutingCache.GetRoutingEntry(source,destination,sendTime);
+				ThesisInternetQueueEntry * entry = m_GeoReplyQueue.GetRoutingEntry(source,destination,sendTime);
+
+				if(entry -> m_RetransmitTimer.IsRunning())
+				{
+				 entry-> m_RetransmitTimer.Cancel();
+				}
+
 				//Schedule removal of entry
 				entry -> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveGeoReplyQueue, this);
 				entry -> m_RetransmitTimer.SetArguments(source,destination,sendTime);
 				entry -> m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
+
+				entry -> SetInitialDelay(m_ThesisInternetRoutingCacheCooldown);
 			}
 
 			return true;
@@ -2054,6 +2140,8 @@ ThesisInternetRoutingProtocol2::SendGeoReplyRetransmitVanet(Ipv6Address source, 
 		entry-> m_RetransmitTimer.SetFunction(&ThesisInternetRoutingProtocol2::RemoveGeoReplyQueue, this);
 		entry-> m_RetransmitTimer.SetArguments(source,destination,timestamp);
 		entry-> m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
+
+		entry -> SetInitialDelay(m_ThesisInternetRoutingCacheCooldown);
 	}
 
 	//NS_LOG_INFO(""packet);
@@ -2329,7 +2417,21 @@ ThesisInternetRoutingProtocol2::SendGeoQueryReply(Ipv6Address source, Ipv6Addres
 	ucb (m_wi,ackEntry, ackPacket, entry -> GetIpv6Header());
 
 	//Need to deliver to server
-	lcb (packet, entry->GetIpv6Header(), m_ipv6->GetInterfaceForDevice(m_wi));
+
+	NS_LOG_INFO("Current Address: " << m_ipv6 ->GetAddress(1,1).GetAddress());
+
+	Ipv6Header toSendUp;
+
+	toSendUp.SetDestinationAddress(m_ipv6 ->GetAddress(1,1).GetAddress());
+	toSendUp.SetFlowLabel(entry->GetIpv6Header().GetFlowLabel());
+	toSendUp.SetHopLimit(entry->GetIpv6Header().GetHopLimit());
+	toSendUp.SetNextHeader(entry->GetIpv6Header().GetNextHeader());
+	toSendUp.SetPayloadLength(entry->GetIpv6Header().GetPayloadLength());
+	toSendUp.SetSourceAddress(entry->GetIpv6Header().GetSourceAddress());
+	toSendUp.SetTrafficClass(entry->GetIpv6Header().GetTrafficClass());
+
+	//lcb (packet, entry->GetIpv6Header(), m_ipv6->GetInterfaceForDevice(m_wi));
+	lcb (packet, toSendUp , m_ipv6->GetInterfaceForDevice(m_wi));
 
 }
 
@@ -2381,35 +2483,41 @@ ThesisInternetRoutingProtocol2::SendGeoQueryRetransmit(Ipv6Address source, Ipv6A
 	entry->m_RetransmitTimer.Schedule(m_ThesisInternetRoutingCacheCooldown);
 
 	ucb (route -> GetOutputDevice(),route, packet, entry -> GetIpv6Header());
+	entry -> SetInitialDelay(m_ThesisInternetRoutingCacheCooldown);
 }
 
 void
 ThesisInternetRoutingProtocol2::RemoveThesisRoutingCacheEntry(Ipv6Address source, Ipv6Address destination, Time sendTime)
 {
+	NS_LOG_FUNCTION(this);
 	m_RoutingCache.RemoveRoutingQueueEntry(source,destination,sendTime);
 }
 
 void
 ThesisInternetRoutingProtocol2::RemoveGeoRoutingCacheEntry(Ipv6Address source, Ipv6Address destination, Time sendTime)
 {
+	NS_LOG_FUNCTION(this);
 	m_GeoRoutingQueue.RemoveRoutingQueueEntry(source,destination,sendTime);
 }
 
 void
 ThesisInternetRoutingProtocol2::RemoveGeoQueryReplyCacheEntry(Ipv6Address source, Ipv6Address destination, Time sendTime)
 {
+	NS_LOG_FUNCTION(this);
 	m_GeoQueryReplyCache.RemoveRoutingQueueEntry(source,destination,sendTime);
 }
 
 void
 ThesisInternetRoutingProtocol2::RemoveThesisRoutingRtVCacheEntry(Ipv6Address source, Ipv6Address destination, Time sendTime)
 {
+	NS_LOG_FUNCTION(this);
 	m_RoutingRtoVCache.RemoveRoutingQueueEntry(source,destination,sendTime);
 }
 
 void
 ThesisInternetRoutingProtocol2::RemoveGeoReplyQueue(Ipv6Address source, Ipv6Address destination, Time sendTime)
 {
+	NS_LOG_FUNCTION(this);
 	m_GeoReplyQueue.RemoveRoutingQueueEntry(source,destination,sendTime);
 }
 
@@ -2757,13 +2865,24 @@ ThesisInternetRoutingProtocol2::DoDispose()
 void
 ThesisInternetRoutingProtocol2::DoInitialize()
 {
-
+	//std::cout << "rWait: " << m_rWait << std::endl;
 	if(!m_IsRSU)
 	{
 		SetIpToZone();
 
 		m_wi = m_ipv6 -> GetNetDevice(GetWirelessInterface());
 
+
+		///Geo Server
+		TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+		Ptr<Node> node = GetObject<Node>();
+
+		m_GeoServerSocket = Socket::CreateSocket (node, tid);
+
+		Inet6SocketAddress local6 = Inet6SocketAddress (Ipv6Address::GetAny (), m_GeoServerPort);
+		m_GeoServerSocket->Bind (local6);
+		m_GeoServerSocket->SetRecvCallback (MakeCallback (&ThesisInternetRoutingProtocol2::HandleGeoRead, this));
+		///////
 	}else if (m_IsRSU)
 	{
 		SetInterfacePointers();
@@ -2780,6 +2899,66 @@ ThesisInternetRoutingProtocol2::DoInitialize()
 		AddNetworkRouteTo(Ipv6Address(RSU_TO_VANET),Ipv6Prefix::GetOnes(),Ipv6Address(RSU_TO_VANET),m_ipv6->GetInterfaceForDevice(m_wi),Ipv6Address ("::"));
 
 	}
+
+}
+
+void
+ThesisInternetRoutingProtocol2::HandleGeoRead(Ptr<Socket> socket)
+{
+	NS_LOG_FUNCTION(this);
+
+	Ptr<Packet> packet;
+	Address from;
+
+
+	while ((packet = socket->RecvFrom (from)))
+	{
+		Ipv6Address toSend = Inet6SocketAddress::ConvertFrom(from).GetIpv6();
+		//std::cout << "1 GeoQuery Server received packet from: " << toSend << std::endl;
+		//std::cout << "2 GeoQuery Server received packet from: " << toSend << std::endl;
+		//std::cout << "3 GeoQuery Server received packet from: " << toSend << std::endl;
+
+
+
+
+		if (InetSocketAddress::IsMatchingType (from))
+		{
+			NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server received " << packet->GetSize () << " bytes from " <<
+					InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " <<
+					InetSocketAddress::ConvertFrom (from).GetPort ());
+		}
+		else if (Inet6SocketAddress::IsMatchingType (from))
+		{
+			NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server received " << packet->GetSize () << " bytes from " <<
+					Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " <<
+					Inet6SocketAddress::ConvertFrom (from).GetPort ());
+		}
+
+		packet->RemoveAllPacketTags ();
+		packet->RemoveAllByteTags ();
+
+		NS_LOG_LOGIC ("Echoing packet");
+		//int sendResult = socket->SendTo (packet, 0, from);
+		socket->SendTo (packet, 0, from);
+
+		if (InetSocketAddress::IsMatchingType (from))
+		{
+			NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server sent " << packet->GetSize () << " bytes to " <<
+					InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " <<
+					InetSocketAddress::ConvertFrom (from).GetPort ());
+		}
+		else if (Inet6SocketAddress::IsMatchingType (from))
+		{
+			NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server sent " << packet->GetSize () << " bytes to " <<
+					Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " <<
+					Inet6SocketAddress::ConvertFrom (from).GetPort ());
+		}
+
+		//std::cout << "Server attempted to send reply to " << from  << " ToSend: " << toSend << std::endl;
+		//std::cout << "Socket send result: " << sendResult << std::endl;
+		//std::cout << "" << std::endl;
+	}
+
 
 }
 
@@ -2881,11 +3060,22 @@ ThesisInternetRoutingProtocol2::SetIpToZone()
 
 					//					std::cout << "Address refreshed to current zone" << std::endl;
 
+					//GeoServer Socket Management
+					//Only perform management if its been initialized already
+					if(m_GeoServerSocket != 0)
+					{
+						Inet6SocketAddress local6 = Inet6SocketAddress (Ipv6Address::GetAny (), m_GeoServerPort);
+						m_GeoServerSocket->Bind (local6);
+						m_GeoServerSocket->SetRecvCallback (MakeCallback (&ThesisInternetRoutingProtocol2::HandleGeoRead, this));
+					}
 					break;
 				}
 			}
 		}
 	}
+
+
+
 
 	m_CheckPositionTimer.SetFunction(&ThesisInternetRoutingProtocol2::SetIpToZone,this);
 	m_CheckPositionTimer.Schedule(m_CheckPosition);
@@ -3063,7 +3253,18 @@ ThesisInternetRoutingProtocol2::IsEffective(Vector SenderPosition)
 		//		std::cout << "Ineffective transmission detected; current distance further from RSU than sending node" << std::endl;
 	}
 
-	return isEffective;
+/*
+	double SenderDistanceToRsu = utils.GetDistanceBetweenPoints(SenderPosition.x, SenderPosition.y, m_currentRsu.GetRsuPosition().x, m_currentRsu.GetRsuPosition().y);
+	double SenderDistanceToCurrent = utils.GetDistanceBetweenPoints(SenderPosition.x, SenderPosition.y, currentPos.x, currentPos.y);
+
+	bool isCloserThanSenderCorrectSide = false;
+	if(SenderDistanceToRsu < SenderDistanceToCurrent)
+	{
+		isCloserThanSenderCorrectSide = true;
+	}
+*/
+
+	return isEffective /*&& isCloserThanSenderCorrectSide*/;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////

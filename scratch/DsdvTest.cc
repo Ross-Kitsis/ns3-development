@@ -10,12 +10,12 @@
 #include <cmath>
 #include "ns3/udp-echo-helper.h"
 #include "ns3/udp-echo-client.h"
-#include "ns3/dsdv-helper.h"
+#include "ns3/dsdv-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/csma-module.h"
 #include "ns3/ipv4-static-routing-helper.h"
 #include "ns3/ipv4-routing-table-entry.h"
-#include "ns3/olsr-helper.h"
+#include "ns3/olsr-module.h"
 #include "ns3/test-udp-echo-client.h"
 #include "ns3/test-udp-echo-helper.h"
 #include <string>
@@ -32,10 +32,10 @@ using namespace ns3;
  *
  * ping 10.0.0.4
  */
-class AodvTest3
+class DsdvTest
 {
 public:
-	AodvTest3 ();
+	DsdvTest ();
 	/// Configure script parameters, \return true on successful configuration
 	bool Configure (int argc, char **argv);
 	/// Run simulation
@@ -114,7 +114,7 @@ int main (int argc, char **argv)
 		//LogComponentEnable ("DsdvRoutingProtocol", LOG_LEVEL_ALL );
 	}
 
-	AodvTest3 test;
+	DsdvTest test;
 	if (!test.Configure (argc, argv))
 		NS_FATAL_ERROR ("Configuration failed. Aborted.");
 
@@ -123,18 +123,18 @@ int main (int argc, char **argv)
 	return 0;
 }
 
-AodvTest3::AodvTest3() :
+DsdvTest::DsdvTest() :
   	  				size (10),
   	  				step (100),
   	  				totalTime (95),
   	  				pcap (false),
-  	  				printRoutes (true),
+  	  				printRoutes (false),
   	  				nRSU(2),
   	  				nVeh(2),
   	  				numRsuRow(2),
   	  				simTime(50),
   	  				transmittingPercentage(0.1),
-  	  				m_CSVfileName("AodvTest3.csv"),
+  	  				m_CSVfileName("DsdvTest.csv"),
   	  				m_TraceFile(""),
   	  				packetSendFrequency(1),
   	  				packetSize(1024),
@@ -144,7 +144,7 @@ AodvTest3::AodvTest3() :
 }
 
 bool
-AodvTest3::Configure (int argc, char **argv)
+DsdvTest::Configure (int argc, char **argv)
 {
 	// Enable AODV logs by default. Comment this if too noisy
 	// LogComponentEnable("AodvRoutingProtocol", LOG_LEVEL_ALL);
@@ -156,7 +156,7 @@ AodvTest3::Configure (int argc, char **argv)
 	cmd.AddValue ("printRoutes", "Print routing table dumps.", printRoutes);
 	cmd.AddValue ("time", "Simulation time, s.", totalTime);
 	cmd.AddValue ("step", "Grid step, m", step);
-	cmd.AddValue ("nRSU", "Number of RSU",nRSU);
+	cmd.AddValue ("nRsu", "Number of RSU",nRSU);
 	cmd.AddValue ("nVeh", "Number of Vehicle nodes", nVeh);
 	cmd.AddValue ("nRsuRow", "Number of RSU in a row", numRsuRow);
 	cmd.AddValue ("nSendPerc", "Percentage of vehicular nodes acting as sources",transmittingPercentage);
@@ -171,7 +171,7 @@ AodvTest3::Configure (int argc, char **argv)
 }
 
 void
-AodvTest3::Run ()
+DsdvTest::Run ()
 {
 	//  Config::SetDefault ("ns3::WifiRemoteStationManager::RtsCtsThreshold", UintegerValue (1)); // enable rts cts all the time.
 	CreateNodes ();
@@ -273,7 +273,7 @@ AodvTest3::Run ()
 		Ptr<Node> sNode = SourceNodes.Get(i);
 		Ptr<Ipv4> sv4 = sNode -> GetObject<Ipv4>();
 		Ptr<Ipv4RoutingProtocol> srp = sv4 -> GetRoutingProtocol();
-		Ptr<aodv::RoutingProtocol> sap = DynamicCast<aodv::RoutingProtocol>(srp);
+		Ptr<dsdv::RoutingProtocol> sap = DynamicCast<dsdv::RoutingProtocol>(srp);
 
 		Ptr<Application> app = sNode -> GetApplication(0);
 		Ptr<TestUdpEchoClient> udpEcho =  DynamicCast<TestUdpEchoClient>(app);
@@ -297,52 +297,28 @@ AodvTest3::Run ()
 	for(uint32_t i = 0; i < RsuNodes.GetN(); i++)
 	{
 		Ptr<Ipv4> rsuv4 = RsuNodes.Get(i) -> GetObject<Ipv4>();
-		//Ptr<aodv::RoutingProtocol> ar DynamicCast<aodv::RoutingProtocol>(rsuv4 -> GetRoutingProtocol());
+		//Ptr<dsdv::RoutingProtocol> ar DynamicCast<dsdv::RoutingProtocol>(rsuv4 -> GetRoutingProtocol());
 
 		Ptr<Ipv4RoutingProtocol> rv4 = rsuv4 -> GetRoutingProtocol();
-		Ptr<aodv::RoutingProtocol> ar = DynamicCast<aodv::RoutingProtocol>(rv4);
+		Ptr<dsdv::RoutingProtocol> ar = DynamicCast<dsdv::RoutingProtocol>(rv4);
 
 		//std::cout << "Rsu: " << i << "Average hop count to RSU: " << ar->GetAverageHopCountVanetToRsu() << std::endl;
 		out << ar->GetAverageHopCountVanetToRsu() <<",";
 	}
 	out << std::endl;
 
-	int totalNumRec = 0;
-	//Print network throughput
-	out << "Throughput (kbits/sec),";
-	for(uint32_t i = 1; i < SourceNodes.GetN(); i++)
-	{
-		Ptr<Node> sNode = SourceNodes.Get(i);
-		Ptr<Application> app = sNode -> GetApplication(0);
-		Ptr<TestUdpEchoClient> udpEcho =  DynamicCast<TestUdpEchoClient>(app);
-
-		int numRec = udpEcho -> GetNumReceived();
-
-		if(udpEcho -> GetReceiveRate() <= 100)
-		{
-			totalNumRec = totalNumRec + numRec;
-		}
-	}
-	//-6 for app start time
-	out << (totalNumRec * packetSize * 8)/(simTime - 6 )/1024.0 << ",";
-	out << std::endl;
-
-	out << std::endl;
-	out << "," << std::endl;
-	out << std::endl;
-	out << std::endl;
 
 
 	Simulator::Destroy ();
 }
 
 void
-AodvTest3::Report (std::ostream &)
+DsdvTest::Report (std::ostream &)
 {
 }
 
 void
-AodvTest3::CreateNodes ()
+DsdvTest::CreateNodes ()
 {
 	std::cout << "Creating " << (unsigned)size << " nodes " << step << " m apart.\n";
 
@@ -386,7 +362,7 @@ AodvTest3::CreateNodes ()
 			"LayoutType", StringValue ("RowFirst"));
 	mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
 	mobility.Install(RsuNodes);
-	//mobility.Install(VehNodes);
+//	mobility.Install(VehNodes);
 
 	/*
   //Place RSU nodes
@@ -402,18 +378,20 @@ AodvTest3::CreateNodes ()
 	Ns2MobilityHelper ns2 = Ns2MobilityHelper (m_TraceFile);
 	ns2.Install(VehNodes.Begin(), VehNodes.End());
 
+
 	/*
   //Place Vanet nodes
   for (uint32_t i = 0; i < VehNodes.GetN(); ++i)
   {
   	Ptr<ConstantPositionMobilityModel> VLoc = VehNodes.Get(i) ->GetObject<ConstantPositionMobilityModel>();
-  	Vector VPos(400 - 100*i ,0,0);
+  	Vector VPos(400 - 100*i ,499,0);
   	VLoc -> SetPosition(VPos);
   }*/
+
 }
 
 void
-AodvTest3::CreateDevices ()
+DsdvTest::CreateDevices ()
 {
 	//	PointToPointHelper pointToPoint;
 	//	pointToPoint.SetDeviceAttribute("DataRate",StringValue("10Gbps"));
@@ -439,38 +417,50 @@ AodvTest3::CreateDevices ()
 
 	if (pcap)
 	{
-		wifiPhy.EnablePcapAll (std::string ("aodv"));
+		wifiPhy.EnablePcapAll (std::string ("dsdv"));
 	}
 }
 
 void
-AodvTest3::InstallInternetStack ()
+DsdvTest::InstallInternetStack ()
 {
 
 	//OlsrHelper olsr;
 
-	//DsdvHelper dsdv;
+	DsdvHelper dsdv;
 	//dsdv.Set ("PeriodicUpdateInterval", TimeValue (Seconds (5)));
 	//dsdv.Set ("SettlingTime", TimeValue (Seconds (5)));
 
 
-	AodvHelper aodv;
+	//AodvHelper aodv;
 
-	aodv.Set("EnableHello",BooleanValue(false));
+	//aodv.Set("EnableHello",BooleanValue(false));
 
 	// you can configure AODV attributes here using aodv.Set(name, value)
 	InternetStackHelper stack;
 
-	aodv.isHub = false;
-	aodv.isRsu = false;
-	stack.SetRoutingHelper (aodv); // has effect on the next Install ()
+	//olsr.SetIsHub(true);
+	//olsr.isRsu = true;
+	stack.SetRoutingHelper (dsdv); // has effect on the next Install ()
 	stack.Install (VehNodes);
 
-	aodv.isHub = false;
-	aodv.isRsu = true;
-	stack.SetRoutingHelper (aodv); // has effect on the next Install ()
-
+	//olsr.SetIsHub(true);
+	//olsr.isRsu = true;
+	stack.SetRoutingHelper (dsdv); // has effect on the next Install ()
 	stack.Install (RsuNodes);
+
+	for(uint32_t i = 0; i < RsuNodes.GetN(); i++)
+	{
+		Ptr<Ipv4> rsuv4 = RsuNodes.Get(i) -> GetObject<Ipv4>();
+		//Ptr<dsdv::RoutingProtocol> ar DynamicCast<dsdv::RoutingProtocol>(rsuv4 -> GetRoutingProtocol());
+
+		Ptr<Ipv4RoutingProtocol> rv4 = rsuv4 -> GetRoutingProtocol();
+		Ptr<dsdv::RoutingProtocol> ar = DynamicCast<dsdv::RoutingProtocol>(rv4);
+
+		ar -> SetIsRsu(true);
+	}
+
+
 	Ipv4AddressHelper address;
 	address.SetBase ("10.0.0.0", "255.0.0.0");
 	wifiInterfaces = address.Assign (wifiDevices);
@@ -504,13 +494,13 @@ AodvTest3::InstallInternetStack ()
 
 	if (printRoutes)
 	{
-		Ptr<OutputStreamWrapper> routingStream = Create<OutputStreamWrapper> ("aodv.routes", std::ios::out);
-		aodv.PrintRoutingTableAllAt (Seconds (8), routingStream);
+		Ptr<OutputStreamWrapper> routingStream = Create<OutputStreamWrapper> ("dsdv.routes", std::ios::out);
+		dsdv.PrintRoutingTableAllAt (Seconds (8), routingStream);
 	}
 }
 
 void
-AodvTest3::InstallApplications ()
+DsdvTest::InstallApplications ()
 {
 	//V4PingHelper ping (interfaces.GetAddress (size - 1));
 	//ping.SetAttribute ("Verbose", BooleanValue (true));

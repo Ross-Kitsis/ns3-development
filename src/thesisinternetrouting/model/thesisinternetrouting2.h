@@ -290,6 +290,8 @@ public:
   }
   double GetAverageHopCountVanetToRsu(){return m_HopCountAgregatorVanetToRsu/(double)m_numRsuRec;}
 
+  //Allows setting of rWait value
+  void setRwait(int rWait){m_rWait = rWait;}
 
 	/**
 	 * Current RSU address; set by the lookup method
@@ -322,6 +324,11 @@ public:
 	 * Pointer to the point2point netdevice
 	 */
 	Ptr<NetDevice> m_pp;
+
+	/**
+	 * Max number of active retransmissions
+	 */
+	int m_activeLimit;
 
 protected:
 
@@ -357,6 +364,13 @@ protected:
 	 *
 	 */
 	void DeleteRoute(ThesisInternetRoutingTableEntry2 *route);
+
+	////////////////////////////////// GeoQuery Server Components
+
+	Ptr<Socket> m_GeoServerSocket;
+	void HandleGeoRead (Ptr<Socket> socket);
+	uint16_t m_GeoServerPort;
+
 
 
 private:
